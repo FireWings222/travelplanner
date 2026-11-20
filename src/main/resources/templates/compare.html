@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('비용 비교')}"></head>
+<body data-page="compare">
+<header th:replace="~{layout :: header('compare')}"></header>
+<main id="main">
+
+  <div class="container workspace">
+    <div id="trip-summary" class="trip-summary" hidden></div>
+    <div class="page-title"><span class="eyebrow">같은 여행, 두 가지 방법</span><h1>일일투어 vs 자유여행</h1><p>투어 상품과 같은 관광지를 개인 일정으로 방문할 때의 비용과 시간을 비교하세요.</p></div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    
+    <div class="actions page-actions">
+      <a class="soft" href="/tours">다른 투어 보기</a>
+      <a class="soft" id="edit-comparison" href="#comparison-settings" hidden>비교 조건 수정</a>
+      <a class="soft" id="edit-transport" href="#comparison-legs" hidden>자유여행 교통수단 변경</a>
+    </div>
+    <div id="comparison-summary"></div><div id="comparison-sides"></div>
+    <div id="comparison-settings"></div><div id="comparison-legs"></div>
+  </div>
+</main>
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

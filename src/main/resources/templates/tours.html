@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('일일투어')}"></head>
+<body data-page="tours">
+<header th:replace="~{layout :: header('tours')}"></header>
+<main id="main">
+
+  <div class="container workspace">
+    <div id="trip-summary" class="trip-summary" hidden></div>
+    <div class="page-title"><span class="eyebrow">현지 체험</span><h1>일일투어 둘러보기</h1><p>방문 장소와 포함 비용을 확인하고 자유여행과 비교할 투어를 선택하세요.</p></div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    
+    <div class="actions page-actions"><a class="soft" href="/itinerary">여행 일정</a><a class="primary" href="#register">상품 직접 등록</a></div>
+    <form id="tour-search" class="panel section filter-bar">
+      <label>여행지<select name="destination" required></select></label>
+      <label>투어 날짜<input name="date" type="date"></label>
+      <label>판매 플랫폼<select name="platform"><option value="">전체 플랫폼</option><option value="KLOOK">클룩</option><option value="MYREALTRIP">마이리얼트립</option><option value="NOL">NOL / 야놀자</option><option value="OTHER">기타</option></select></label>
+      <button class="primary">투어 검색</button>
+    </form>
+    <div id="tour-shortlist"></div>
+    <div id="tour-list" class="tour-list"></div>
+    <section class="panel section" id="register">
+      <h2>투어 상품 직접 등록</h2><p class="muted">상품 페이지에서 확인한 가격, 일정, 포함 사항을 입력하세요.</p>
+      <form id="tour-form">
+        <div class="form-grid">
+          <label>여행지<select name="destination" required></select></label>
+          <label>판매 플랫폼<select name="platform" required><option value="KLOOK">클룩</option><option value="MYREALTRIP">마이리얼트립</option><option value="NOL">NOL / 야놀자</option><option value="OTHER">기타</option></select></label>
+          <label>상품명<input name="name" required maxlength="150"></label>
+          <label>예약 URL<input name="bookingUrl" type="url" placeholder="https://" required maxlength="1000"></label>
+          <label>이미지 URL<input name="imageUrl" type="url" placeholder="https://" maxlength="1000"></label>
+          <label>이동수단<select name="mode" id="tour-mode"></select></label>
+          <label>출발 시간<input name="departure" type="time" required value="08:30"></label>
+          <label>종료 시간<input name="arrival" type="time" required value="17:30"></label>
+          <label>집합 장소<input name="meetingPlace" required maxlength="150"></label>
+          <label>종료 장소<input name="endPlace" required maxlength="150"></label>
+          <label>취소 정책<input name="cancellation" maxlength="1000"></label>
+        </div>
+        <fieldset><legend>포함 항목</legend><div class="checks">
+          <label><input name="transportIncluded" type="checkbox" checked> 관광지 간 이동</label>
+          <label><input name="admissionIncluded" type="checkbox"> 입장료</label>
+          <label><input name="mealIncluded" type="checkbox"> 식사</label>
+          <label><input name="guideIncluded" type="checkbox" checked> 가이드</label>
+        </div></fieldset>
+        <fieldset><legend>방문 관광지</legend><div id="tour-stops" class="checks"></div><div id="tour-stop-order" class="muted"></div></fieldset>
+        <fieldset><legend>가격 적용 기간</legend><div id="tour-prices"></div><button type="button" class="soft" id="add-price">가격 기간 추가</button></fieldset>
+        <div id="tour-extras"></div><div class="actions"><button class="primary">투어 등록</button></div>
+        <div id="register-status" class="status" role="status"></div>
+      </form>
+    </section>
+  </div>
+</main>
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

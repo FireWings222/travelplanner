@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('여행 검색')}"></head>
+<body data-page="home">
+<header th:replace="~{layout :: header('home')}"></header>
+<main id="main">
+
+  <section class="hero container">
+    <div class="hero-text">
+      <span class="eyebrow"><span class="eyebrow-line"></span> 나만의 여행 계획</span>
+      <h1>여행의 시작,<br>가볍게 <em>계획해요.</em></h1>
+      <p>목적지까지 가는 길부터 현지 일정까지.<br>이동 시간과 비용을 한곳에서 비교해 보세요.</p>
+    </div>
+    <figure class="hero-image"><figcaption><span class="location-pin" aria-hidden="true"></span> 일본 교토 · 아라시야마</figcaption></figure>
+  </section>
+  <div class="container search-wrap">
+    <section class="panel search-panel" aria-labelledby="search-heading">
+      <div class="panel-heading"><div><h2 id="search-heading">어디로 떠나시나요?</h2><p>출발지와 목적지를 선택해 여행을 시작하세요.</p></div><button type="button" class="soft sample-button" id="example">오사카 샘플 불러오기</button></div>
+      <form id="trip-form">
+        <div class="search-grid">
+          <label>출발지<input name="origin" list="city-list" placeholder="예: 서울" required maxlength="40" autocomplete="off"></label>
+          <label>목적지<input name="destination" list="city-list" placeholder="예: 일본 오사카" required maxlength="40" autocomplete="off"></label>
+          <label>여행 시작일<input type="date" name="start" required></label>
+          <label>여행 종료일<input type="date" name="end" required></label>
+          <label>성인<input name="adults" type="number" value="2" min="1" max="30" required></label>
+          <label>아동<input name="children" type="number" value="0" min="0" max="30" required></label>
+        </div>
+        <datalist id="city-list"></datalist>
+        <div class="search-bottom">
+          <label>예산 (원)<input name="budget" type="number" min="0" max="999999999999" placeholder="선택 입력"></label>
+          <label>선호 교통수단<select name="preferredMode" id="preferred-mode"></select></label>
+          <label>여행 유형<select name="type"><option value="COUPLE">커플 여행</option><option value="SOLO">혼자 여행</option><option value="FAMILY">가족 여행</option><option value="FRIENDS">친구 여행</option><option value="OTHER">기타</option></select></label>
+          <button class="primary search-submit" type="submit"><span class="search-icon" aria-hidden="true"></span> 여행 검색</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+  </div>
+  <section class="container home-extra" aria-labelledby="destinations-heading">
+    <div class="panel-heading"><div><h2 id="destinations-heading">둘러볼 수 있는 여행지</h2><p>도시를 선택해 목적지에 바로 입력하세요.</p></div></div>
+    <div id="catalog" class="city-grid"></div>
+  </section>
+</main>
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

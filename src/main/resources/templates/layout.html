@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f8f5">
+    <title th:text="${title + ' | TravelPlanner'}">TravelPlanner</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/5.3.8/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/site.css">
+    <script type="module" src="/js/app.js"></script>
+</head>
+<body>
+<header th:fragment="header(active)" class="site-header">
+    <a class="skip-link" href="#main">본문으로 이동</a>
+    <div class="container header-inner">
+        <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><i></i></span>Travel<span>Planner</span></a>
+        <nav aria-label="주 메뉴">
+            <a href="/search" th:attr="aria-current=${active == 'routes'} ? 'page'">경로 비교</a>
+            <a href="/itinerary" th:attr="aria-current=${active == 'plan'} ? 'page'">여행 일정</a>
+            <a href="/tours" th:attr="aria-current=${active == 'tours'} ? 'page'">일일투어</a>
+            <a href="/compare" th:attr="aria-current=${active == 'compare'} ? 'page'">비용 비교</a>
+        </nav>
+        <a class="saved-link" href="/itinerary#saved">저장한 여행</a>
+    </div>
+</header>
+<footer th:fragment="footer" class="site-footer"><div class="container footer-inner"><a class="brand" href="/">Travel<span>Planner</span></a><span>샘플 운임·입장료·환율은 테스트용 가상 가격입니다.</span></div></footer>
+</body>
+</html>
