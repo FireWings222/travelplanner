@@ -9,20 +9,14 @@ import java.util.Map;
 @Component
 public class SampleCatalog implements TravelProviders.Catalog {
     private final List<Destination> places = List.of(
-            new Destination("seoul", "서울", "KR", "대한민국 한국 Seoul"),
-            new Destination("busan", "부산", "KR", "대한민국 한국 Busan"),
-            new Destination("jeju", "제주", "KR", "대한민국 한국 Jeju"),
-            new Destination("osaka", "일본 오사카", "JP", "Osaka Japan"),
-            new Destination("kyoto", "일본 교토", "JP", "Kyoto Japan"),
-            new Destination("tokyo", "일본 도쿄", "JP", "Tokyo Japan"));
+            new Destination("seoul", "서울", "대한민국 한국 Seoul"),
+            new Destination("busan", "부산", "대한민국 한국 Busan"),
+            new Destination("jeju", "제주", "대한민국 한국 Jeju"));
 
     private final Map<String, Place> centers = Map.of(
             "seoul", new Place("seoul", "서울역", 37.555, 126.971),
             "busan", new Place("busan", "부산역", 35.115, 129.042),
-            "jeju", new Place("jeju", "제주시 중심", 33.500, 126.531),
-            "osaka", new Place("osaka", "오사카역", 34.702, 135.496),
-            "kyoto", new Place("kyoto", "교토역", 34.985, 135.758),
-            "tokyo", new Place("tokyo", "도쿄역", 35.681, 139.767));
+            "jeju", new Place("jeju", "제주시 중심", 33.500, 126.531));
 
     private final List<Attraction> sights = List.of(
             kr("palace", "seoul", "경복궁", "조선 왕조의 궁궐", 120, 3000, 37.5796, 126.9770),
@@ -34,34 +28,19 @@ public class SampleCatalog implements TravelProviders.Catalog {
             kr("seongsan", "jeju", "성산일출봉", "제주 동쪽의 응회구", 90, 5000, 33.4590, 126.9425),
             kr("doldam", "jeju", "함덕해수욕장", "제주 북쪽 해변", 90, 0, 33.5432, 126.6694),
             kr("dongmun", "jeju", "동문시장", "제주시 전통시장", 60, 0, 33.5117, 126.5263),
-            jp("dotonbori", "osaka", "도톤보리", "도톤보리강과 난바 거리", 90, 0, 34.6687, 135.5013),
-            jp("osaka-castle", "osaka", "오사카성", "천수각과 오사카성 공원", 120, 1200, 34.6873, 135.5262),
-            jp("umeda", "osaka", "우메다 전망대", "우메다 스카이 빌딩 전망대", 75, 2000, 34.7053, 135.4897),
-            jp("fushimi", "kyoto", "후시미 이나리 신사", "붉은 도리이 산책로", 90, 0, 34.9671, 135.7727),
-            jp("kiyomizu", "kyoto", "기요미즈데라", "히가시야마의 목조 사찰", 90, 500, 34.9949, 135.7850),
-            jp("arashiyama", "kyoto", "아라시야마", "대나무숲과 강변 산책로", 120, 0, 35.0170, 135.6719),
-            jp("kinkaku", "kyoto", "금각사", "연못과 금빛 누각", 60, 500, 35.0394, 135.7292),
-            jp("sensoji", "tokyo", "센소지", "아사쿠사의 불교 사찰", 90, 0, 35.7148, 139.7967),
-            jp("skytree", "tokyo", "도쿄 스카이트리", "스미다의 전망대", 75, 2400, 35.7101, 139.8107),
-            jp("ueno", "tokyo", "우에노 공원", "박물관이 모인 도심 공원", 90, 0, 35.7146, 139.7745));
+            kr("gimnyeong", "jeju", "김녕해수욕장", "제주 동북쪽의 해변 산책로", 60, 0, 33.5570, 126.7590));
 
+    /** CatalogService의 도시 검색에 사용되는 국내 샘플 도시 목록을 반환합니다. */
     public List<Destination> destinations() { return places; }
+    /** 일정과 투어에서 고를 수 있는 국내 샘플 관광지 목록을 반환합니다. */
     public List<Attraction> attractions() { return sights; }
+    /** JourneyService와 SampleRoutes에서 사용할 도시 중심 위치를 도시 ID로 찾습니다. */
     public Place center(String destination) { return centers.get(destination); }
 
+    /** 카탈로그에 등록할 관광지의 좌표, 기본 체류 시간, 원화 샘플 입장료를 한 항목으로 만듭니다. */
     private static Attraction kr(String id, String city, String name, String description, int minutes,
                                  int admission, double lat, double lon) {
-        return attraction(id, city, name, description, minutes, Currency.KRW, admission, lat, lon);
-    }
-
-    private static Attraction jp(String id, String city, String name, String description, int minutes,
-                                 int admission, double lat, double lon) {
-        return attraction(id, city, name, description, minutes, Currency.JPY, admission, lat, lon);
-    }
-
-    private static Attraction attraction(String id, String city, String name, String description, int minutes,
-                                         Currency currency, int admission, double lat, double lon) {
         return new Attraction(id, city, name, description, minutes,
-                new Fare(currency, BigDecimal.valueOf(admission), BigDecimal.valueOf(admission / 2), null), lat, lon);
+                new Fare(BigDecimal.valueOf(admission), BigDecimal.valueOf(admission / 2), null), lat, lon);
     }
 }

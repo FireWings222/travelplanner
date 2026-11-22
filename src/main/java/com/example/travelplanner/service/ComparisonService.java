@@ -24,6 +24,7 @@ public class ComparisonService {
                          Side independent, Journey journey, BigDecimal tourMinusIndependentKrw,
                          List<String> notices, String recommendation) {}
 
+    /** 투어, 카탈로그, 이동, 입장료와 요금 계산을 비용 비교 기능에 연결합니다. */
     public ComparisonService(TourService tours, CatalogService catalog, JourneyService journeys, Pricing pricing,
                              PlanService plans) {
         this.tours = tours;
@@ -33,33 +34,41 @@ public class ComparisonService {
         this.plans = plans;
     }
 
+    /**
+     * 투어와 자유여행 양쪽의 비용·시간을 계산하고 방문지나 미확인 요금 차이를 응답에 포함합니다.
+     *
+     * 비용 비교 API에서 투어 ID, 날짜, 여행 인원과 자유여행 경로 변경값을 전달합니다. 투어가 속한 도시 중심을 숙소 기준으로 사용합니다.
+     *
+     * 자유여행은 구간 이동비와 입장료를 합하고, 투어는 날짜별 상품 가격에 집합·종료 이동비와 불포함 비용을 반영합니다.
+     *
+     * 필수 금액이 빠지면 차액을 확정하지 않습니다. 방문지가 서로 다르면 어느 쪽에만 있는지 안내하고 비용 추천을 보류합니다.
+     */
     public Result compare(CompareRequest request) {
         Tour tour = tours.get(request.tourId());
         TourInput detail = tour.details();
-        String base = request.lodgingCity() == null || request.lodgingCity().isBlank()
-                ? detail.destination() : catalog.destination(request.lodgingCity()).id();
-        if (!catalog.destination(base).country().equals(catalog.destination(detail.destination()).country())) {
-            throw new IllegalArgumentException("투어와 숙소는 같은 국가에서 선택해 주세요.");
-        }
+        String base = detail.destination();
         List<Attraction> tourStops = catalog.stops(base, detail.stops());
-        List<Attraction> independentStops = request.stops() == null ? tourStops : catalog.stops(base, request.stops());
+        List<Attraction> independentStops = request.stops() == null
+                ? tourStops : catalog.stops(base, request.stops(), request.places());
         if (independentStops.isEmpty()) throw new IllegalArgumentException("자유여행 관광지를 한 곳 이상 선택해 주세요.");
-        Journey local = journeys.loop(base, independentStops, request.legs(), null, request.party(), request.date());
+        Journey local = request.stops() == null
+                ? journeys.loop(base, independentStops, request.legs(), null, request.party())
+                : journeys.visits(independentStops, journeys.visitLegs(base, independentStops, request.legs()),
+                    null, request.party());
         List<Item> own = new ArrayList<>(local.sections().stream().map(JourneyService.Section::cost).toList());
-        own.addAll(plans.admissions(independentStops, request.party(), request.date()));
+        own.addAll(plans.admissions(independentStops, request.party()));
         if (request.independentExtras() != null) {
             own.add(item("자유여행 필수 추가비", request.independentExtras(), Source.MANUAL, request));
         }
 
         List<Item> guided = new ArrayList<>();
         guided.add(item("투어 상품 가격", TourService.fare(tour, request.date()), tour.source(), request));
-        String tourCity = detail.destination();
-        String centerName = catalog.center(tourCity).name();
+        String centerName = catalog.center(base).name();
         Integer outboundMinutes = access(guided, "숙소 → 집합 장소", request.tourOutbound(), detail.meetingPlace(),
-                centerName, base, tourCity, request);
+                centerName, request);
         Integer returnMinutes = access(guided, "종료 장소 → 숙소", request.tourReturn(), detail.endPlace(),
-                centerName, tourCity, base, request);
-        if (!detail.admissionIncluded()) guided.addAll(plans.admissions(tourStops, request.party(), request.date()));
+                centerName, request);
+        if (!detail.admissionIncluded()) guided.addAll(plans.admissions(tourStops, request.party()));
         if (!detail.transportIncluded()) {
             guided.add(item("투어 불포함 관광지 이동비", detail.excludedTransport(), tour.source(), request));
         }
@@ -70,7 +79,7 @@ public class ComparisonService {
         int duration = (int) Duration.between(detail.departure(), detail.arrival()).toMinutes();
         if (duration < 0) duration += 24 * 60;
         Integer accessMinutes = outboundMinutes != null && returnMinutes != null ? outboundMinutes + returnMinutes : null;
-        Integer tourTravel = tour.id().equals("kyoto-day") && accessMinutes != null ? 120 + accessMinutes : null;
+        Integer tourTravel = tour.id().equals("jeju-day") && accessMinutes != null ? 120 + accessMinutes : null;
         Side tourSide = new Side(List.copyOf(guided), tourCost, tourTravel, duration + (accessMinutes == null ? 0 : accessMinutes),
                 "정해진 집합 시간과 방문 순서" + (detail.guideIncluded() ? " · 가이드 포함" : ""));
         Side soloSide = new Side(List.copyOf(own), soloCost, local.minutes(),
@@ -98,30 +107,25 @@ public class ComparisonService {
                 List.copyOf(notices), recommendation);
     }
 
-    private Integer access(List<Item> costs, String name, Fare override, String place, String center,
-                           String from, String to, CompareRequest request) {
+    /**
+     * 비용 비교에서 숙소와 투어 집합·종료 장소 사이의 이동비를 직접 입력값이나 경로 견적으로 계산합니다.
+     *
+     * 집합·종료 장소의 이름이 도시 중심의 이름과 같으면 기본 비용과 이동 시간을 0으로 봅니다. 직접 입력한 금액이 있으면 그 금액을 우선합니다.
+     *
+     * 그 밖의 장소는 직접 요금을 비용 항목에 추가하고 이동 시간은 확인할 수 없음을 null로 반환합니다.
+     */
+    private Integer access(List<Item> costs, String name, Fare override, String place, String center, CompareRequest request) {
         if (!center.equals(place)) {
             costs.add(item(name, override, Source.MANUAL, request));
             return null;
         }
-        if (from.equals(to)) {
-            costs.add(item(name, override == null ? Pricing.free() : override,
-                    override == null ? Source.SAMPLE : Source.MANUAL, request));
-            return 0;
-        }
-        Journey access = journeys.betweenCities(from, to, request.party(), request.date());
-        if (override != null) {
-            costs.add(item(name, override, Source.MANUAL, request));
-        } else {
-            for (JourneyService.Section section : access.sections()) {
-                Segment chosen = section.chosen();
-                costs.add(item(name + " · " + section.cost().label(), chosen.fare(), chosen.source(), request));
-            }
-        }
-        return access.minutes();
+        costs.add(item(name, override == null ? Pricing.free() : override,
+                override == null ? Source.SAMPLE : Source.MANUAL, request));
+        return 0;
     }
 
+    /** 비교 요청의 인원수를 사용해 한 비용 항목을 Pricing에 전달합니다. */
     private Item item(String label, Fare fare, Source source, CompareRequest request) {
-        return pricing.item(label, fare, source, request.party(), request.date());
+        return pricing.item(label, fare, source, request.party());
     }
 }

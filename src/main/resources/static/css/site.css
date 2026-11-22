@@ -42,12 +42,13 @@ nav a:hover, nav a[aria-current] { color:var(--green); box-shadow:0 2px var(--gr
 .eyebrow-line { width:21px; height:2px; background:currentColor; }
 .hero h1 { margin:15px 0 15px; font-size:clamp(42px, 5.1vw, 74px); font-weight:850; line-height:1.13; letter-spacing:-.085em; word-break:keep-all; }
 .hero h1 em { color:var(--green); font-style:normal; }
-.hero p, .page-title p { font-size:18px; color:var(--muted); line-height:1.65; margin:0; word-break:keep-all; }
-.hero-image { min-height:358px; margin:0; position:relative; overflow:hidden; border-radius:26px; background:
-    linear-gradient(180deg,transparent 45%,#102c2480 100%), url("/images/kyoto.png") center 58% / cover, #2b654e; }
-.hero-image figcaption { position:absolute; right:23px; bottom:53px; padding:7px 11px; display:flex; align-items:center; gap:8px;
-    font-size:14px; font-weight:700; color:#fff; background:#0c2d24cc; border:1px solid #ffffff4a; border-radius:20px; }
-.location-pin { display:inline-block; height:10px; width:10px; border:2px solid #fff; border-radius:50% 50% 50% 0; transform:rotate(-45deg); }
+.hero-text p, .page-title p { font-size:18px; color:var(--muted); line-height:1.65; margin:0; word-break:keep-all; }
+.hero-image { min-height:358px; margin:0; padding:clamp(24px,5vw,60px); display:flex; flex-direction:column;
+    justify-content:center; border-radius:26px; color:#fff; background:linear-gradient(145deg,#153f35,#28634f); }
+.hero-route-label { margin:0 0 12px; color:#d3f0df; font-weight:600; }
+.hero-route { margin:0 0 14px; font-size:clamp(2rem,5vw,3.75rem); font-weight:800; line-height:1.15; }
+.hero-route span { color:#b1e2c5; }
+.hero-route-detail { margin:0; line-height:1.65; }
 .search-wrap { position:relative; margin-top:-28px; }
 .panel { border:1px solid var(--line); border-radius:20px; background:var(--paper); box-shadow:var(--shadow); }
 .search-panel { padding:27px 30px 24px; }
@@ -116,6 +117,12 @@ p { margin:0 0 9px; }
 .leg:last-child, .saved-row:last-child { border-bottom:0; padding-bottom:0; }
 .leg-head, .stop-list li, .saved-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .leg-head label { min-width:160px; }
+.leg-head select { width:100%; max-width:100%; }
+.leg-head label { max-width:100%; }
+.transit-boardings { list-style:decimal inside; }
+.transit-boardings li { display:list-item; }
+.transit-boardings li > div { display:inline-block; vertical-align:top; }
+.transit-boardings li > span { float:right; color:var(--muted); }
 .leg p { margin-bottom:4px; color:var(--muted); }
 details { margin:10px 0; }
 summary { color:var(--green-dark); font-weight:750; cursor:pointer; }
@@ -182,7 +189,6 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
     .hero-text { padding:26px 0 19px; }
     .hero p,.page-title p { font-size:16px; }
     .hero-image { min-height:185px; border-radius:17px; }
-    .hero-image figcaption { right:13px; bottom:13px; }
     .search-wrap { margin-top:12px; }
     .search-panel, .section { padding:16px; border-radius:15px; }
     .search-grid, .search-bottom { grid-template-columns:repeat(2, minmax(0,1fr)); }
@@ -198,3 +204,5 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
     .stop-list li { flex-wrap:wrap; }
     .stop-list .actions { margin-left:0; }
 }
+.leg-map-panel { margin-top:12px; }
+.leg-map { width:100%; height:clamp(240px,45vh,420px); border-radius:12px; overflow:hidden; background:#edf4ef; }

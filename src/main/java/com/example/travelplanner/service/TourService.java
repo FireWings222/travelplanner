@@ -22,6 +22,7 @@ public class TourService {
 
     public record SearchResult(List<Tour> tours, List<String> notices) {}
 
+    /** 카탈로그, 직접 등록 저장소, 투어 제공자와 JSON 변환기를 연결합니다. */
     public TourService(CatalogService catalog, TourRepository repository, List<TravelProviders.Tours> providers,
                        ObjectMapper json) {
         this.catalog = catalog;
@@ -30,6 +31,13 @@ public class TourService {
         this.json = json;
     }
 
+    /**
+     * 제공자 상품과 직접 등록 상품을 모아 날짜·플랫폼 조건으로 필터링하고 조회 실패 안내를 덧붙입니다.
+     *
+     * 일일투어 화면이 보낸 도시를 표준 ID로 바꿔 DB의 직접 등록 상품과 제공자 상품을 모읍니다.
+     *
+     * 플랫폼 또는 날짜가 지정되면 그 조건에 맞는 상품만 남깁니다. 제공자 실패는 notices에 기록해 다른 상품의 조회를 계속합니다.
+     */
     public SearchResult search(String destination, LocalDate date, Platform platform) {
         String city = catalog.destination(destination).id();
         List<Tour> found = new ArrayList<>(repository.findByDestinationOrderByCheckedAtDesc(city)
@@ -48,6 +56,13 @@ public class TourService {
                 .filter(tour -> date == null || fare(tour, date) != null).toList(), List.copyOf(notices));
     }
 
+    /**
+     * 비용 비교나 상세 조회에 사용할 투어 ID를 직접 등록 상품과 제공자 상품에서 찾습니다.
+     *
+     * UUID 형식의 ID는 등록 상품 저장소에서 찾습니다. 샘플처럼 UUID 형식이 아닌 ID는 도시별 검색 결과에서 찾습니다.
+     *
+     * 비용 비교는 이 메서드의 상품으로 방문지와 해당 날짜의 가격을 판단합니다.
+     */
     public Tour get(String id) {
         UUID uuid;
         try {
@@ -63,6 +78,13 @@ public class TourService {
         return repository.findById(uuid).map(this::from).orElseThrow(() -> new NotFound("일일투어를 찾을 수 없습니다."));
     }
 
+    /**
+     * 등록 폼의 링크, 방문지, 가격 정보를 확인한 뒤 사용자 투어를 DB에 저장합니다.
+     *
+     * 직접 등록 폼에서 보낸 방문지·예약 링크·가격을 검증합니다. 날짜 범위를 시작일 순으로 정렬한 뒤 종료일이 앞서거나 기간이 겹치면 저장을 거절합니다.
+     *
+     * 가격 범위마다 성인 1인 요금이 필요합니다. 정리된 입력은 DB에 JSON으로 저장하고 상품 ID와 등록 시각을 반환합니다.
+     */
     public Tour register(TourInput input) {
         String city = catalog.destination(input.destination()).id();
         catalog.stops(city, input.stops());
@@ -93,12 +115,18 @@ public class TourService {
         return from(repository.save(new RegisteredTour(UUID.randomUUID(), city, json.writeValueAsString(normalized), Instant.now())));
     }
 
+    /**
+     * 여행일이 투어 가격 적용 기간에 포함되는지 확인해 해당 날짜의 요금을 반환합니다.
+     *
+     * 가격 범위의 시작일과 종료일을 모두 포함해 비교합니다. 해당 날짜의 가격이 없으면 null을 반환해 검색 필터와 비교 화면이 판단할 수 있게 합니다.
+     */
     public static Fare fare(Tour tour, LocalDate date) {
         return tour.details().prices().stream()
                 .filter(price -> !date.isBefore(price.from()) && !date.isAfter(price.to()))
                 .map(Price::fare).findFirst().orElse(null);
     }
 
+    /** 투어 등록 과정에서 예약·이미지 링크가 유효한 HTTPS 주소인지 확인합니다. */
     private static void checkUrl(String url) {
         if (url == null || url.isBlank()) return;
         URI uri = URI.create(url);
@@ -107,6 +135,7 @@ public class TourService {
         }
     }
 
+    /** DB에 보관한 직접 등록 투어 JSON을 검색·상세 화면에 전달할 상품 객체로 복원합니다. */
     private Tour from(RegisteredTour entity) {
         return new Tour(entity.id().toString(), json.readValue(entity.payload(), TourInput.class),
                 Source.MANUAL, entity.checkedAt());

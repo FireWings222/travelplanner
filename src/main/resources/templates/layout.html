@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f4f8f5">
+    <meta th:if="${!#strings.isEmpty(kakaoMapJavaScriptKey)}" name="kakao-map-key" th:content="${kakaoMapJavaScriptKey}">
     <title th:text="${title + ' | TravelPlanner'}">TravelPlanner</title>
     <link rel="stylesheet" href="/webjars/bootstrap/5.3.8/css/bootstrap.min.css">
     <link rel="stylesheet" href="/css/site.css">
@@ -23,6 +24,6 @@
         <a class="saved-link" href="/itinerary#saved">저장한 여행</a>
     </div>
 </header>
-<footer th:fragment="footer" class="site-footer"><div class="container footer-inner"><a class="brand" href="/">Travel<span>Planner</span></a><span>샘플 운임·입장료·환율은 테스트용 가상 가격입니다.</span></div></footer>
+<footer th:fragment="footer" class="site-footer"><div class="container footer-inner"><a class="brand" href="/">Travel<span>Planner</span></a><span>샘플 운임과 입장료는 테스트용 가상 가격입니다.</span></div></footer>
 </body>
 </html>

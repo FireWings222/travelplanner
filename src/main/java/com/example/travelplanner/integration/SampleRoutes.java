@@ -4,118 +4,120 @@ import com.example.travelplanner.dto.Travel.*;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 @Component
 public class SampleRoutes implements TravelProviders.Routes {
     private static final Instant CHECKED = Instant.parse("2026-11-20T00:00:00Z");
-    private static final Place INCHEON = new Place("icn", "인천국제공항", 37.460, 126.441);
     private static final Place GIMPO = new Place("gmp", "김포국제공항", 37.558, 126.791);
     private static final Place GIMHAE = new Place("pus", "김해국제공항", 35.179, 128.938);
     private static final Place JEJU = new Place("cju", "제주국제공항", 33.510, 126.493);
-    private static final Place KANSAI = new Place("kix", "간사이국제공항", 34.435, 135.244);
-    private static final Place NARITA = new Place("nrt", "나리타국제공항", 35.773, 140.391);
     private final TravelProviders.Catalog catalog;
+    private final OdsayRoutes odsay;
+    private final KakaoRoadRoutes road;
 
-    public SampleRoutes(TravelProviders.Catalog catalog) { this.catalog = catalog; }
+    /** 도시 기준 좌표를 제공하는 카탈로그와 실제 대중교통 조회에 사용할 ODsay를 연결합니다. */
+    public SampleRoutes(TravelProviders.Catalog catalog, OdsayRoutes odsay, KakaoRoadRoutes road) {
+        this.catalog = catalog;
+        this.odsay = odsay;
+        this.road = road;
+    }
 
+    /**
+     * 경로 비교에 사용할 도시 간 교통수단을 구간별로 구성합니다. 제주행은 공항 접근과 항공편으로 나눕니다.
+     *
+     * JourneyService의 도시 간 비교에서 호출합니다. 출발지와 목적지가 같으면 빈 목록을 반환하고, 제주가 포함되면 공항 접근·국내선·공항에서 목적지 순으로 구간을 구성합니다.
+     */
     @Override
-    public List<List<Segment>> options(String origin, String destination, LocalDate date) {
+    public List<List<Segment>> options(String origin, String destination) {
         if (origin.equals(destination)) return List.of();
         Place from = catalog.center(origin);
         Place to = catalog.center(destination);
-        boolean koreanOrigin = country(origin).equals("KR");
-        boolean koreanDestination = country(destination).equals("KR");
-        if (koreanOrigin != koreanDestination || origin.equals("jeju") || destination.equals("jeju")) {
-            boolean domestic = koreanOrigin && koreanDestination;
-            Place departure = airport(origin, domestic);
-            Place arrival = airport(destination, domestic);
-            List<Segment> access = airportAccess(from, departure, country(origin));
-            List<Segment> egress = airportAccess(arrival, to, country(destination));
+        if (origin.equals("jeju") || destination.equals("jeju")) {
+            Place departure = airport(origin);
+            Place arrival = airport(destination);
             int km = kilometers(departure, arrival);
-            Segment flight = perPerson(departure, arrival, Mode.FLIGHT, km,
-                    45 + km / 12, 0, Currency.KRW, domestic ? 58000 : 185000);
-            return List.of(access, List.of(flight), egress);
+            Segment flight = perPerson(departure, arrival, Mode.FLIGHT, km, 45 + km / 12, 0, 58000);
+            return List.of(airportAccess(from, departure), List.of(flight), airportAccess(arrival, to));
         }
         int km = kilometers(from, to);
-        if (!koreanOrigin && km < 60) return List.of(local(from, to, "JP", date));
-
-        Currency currency = koreanOrigin ? Currency.KRW : Currency.JPY;
-        List<Segment> options = new ArrayList<>();
-        options.add(perPerson(from, to, koreanOrigin ? Mode.KTX : Mode.TRAIN,
-                km, 22 + km / 3, 0, currency, koreanOrigin ? 59800 : 14200));
-        if (koreanOrigin) {
-            options.add(perPerson(from, to, Mode.SRT, km, 38 + km / 3, 1, currency, 52000));
-            options.add(perPerson(from, to, Mode.TRAIN, km, 45 + km, 0, currency, 28600));
-            options.add(perPerson(from, to, Mode.INTERCITY_BUS, km, 35 + km, 0, currency, 25800));
-        }
-        options.add(perPerson(from, to, Mode.EXPRESS_BUS, km, 35 + km, 0, currency, koreanOrigin ? 36500 : 4900));
-        options.add(shared(from, to, Mode.CAR, km, 22 + km, currency, koreanOrigin ? 72000 : 12500));
-        return List.of(List.copyOf(options));
+        return List.of(road.enrich(List.of(
+                perPerson(from, to, Mode.KTX, km, 22 + km / 3, 0, 59800),
+                perPerson(from, to, Mode.TRAIN, km, 45 + km, 0, 28600),
+                perPerson(from, to, Mode.INTERCITY_BUS, km, 35 + km, 0, 25800),
+                perPerson(from, to, Mode.EXPRESS_BUS, km, 35 + km, 0, 36500),
+                shared(from, to, Mode.CAR, km, 22 + km, 72000))));
     }
 
+    /**
+     * 관광지 사이의 교통수단 후보를 만들고 조회 가능한 버스·지하철 구간을 ODsay 데이터로 보완합니다.
+     *
+     * 일정과 자유여행 비교에 사용할 지역 이동 후보를 만듭니다. 거리와 제주 여부에 따라 철도·도보 후보를 조정한 뒤 ODsay에서 일치하는 대중교통 결과를 적용합니다.
+     */
     @Override
-    public List<Segment> local(Place from, Place to, String country, LocalDate date) {
+    public List<Segment> local(Place from, Place to) {
         int km = kilometers(from, to);
-        boolean korea = country.equals("KR");
-        Currency currency = korea ? Currency.KRW : Currency.JPY;
         List<Segment> choices = new ArrayList<>();
         if (!isJeju(from, to)) {
             choices.add(perPerson(from, to, km > 20 ? Mode.TRAIN : Mode.SUBWAY, km, 12 + km * 2,
-                    km > 8 ? 1 : 0, currency, korea ? 1450 + km * 30 : 190 + km * 12));
+                    km > 8 ? 1 : 0, 1450 + km * 30));
         }
         choices.add(perPerson(from, to, Mode.CITY_BUS, km, 9 + km * 3, km > 14 ? 1 : 0,
-                currency, korea ? 1500 + km * 20 : 210 + km * 8));
-        choices.add(shared(from, to, Mode.TAXI, km, 6 + km * 2, currency, korea ? 4800 + km * 800 : 650 + km * 330));
-        choices.add(shared(from, to, Mode.RENTAL_CAR, km, 10 + km * 2, currency, korea ? 5000 + km * 400 : 750 + km * 130));
-        if (km <= 8) choices.add(perPerson(from, to, Mode.WALK, km, km * 14, 0, currency, 0));
-        return List.copyOf(choices);
+                1500 + km * 20));
+        choices.add(shared(from, to, Mode.TAXI, km, 6 + km * 2, 4800 + km * 800));
+        choices.add(sampleCar(from, to, km, 10 + km * 2));
+        choices.add(shared(from, to, Mode.RENTAL_CAR, km, 10 + km * 2, 5000 + km * 400));
+        if (km <= 8) choices.add(perPerson(from, to, Mode.WALK, km, km * 14, 0, 0));
+        return road.enrich(odsay.enrich(choices));
     }
 
+    /** 두 지점이 제주 범위에 있는지 판단해 현지·공항 접근 후보에 철도를 넣을지 결정합니다. */
     private static boolean isJeju(Place from, Place to) {
         return from.latitude() < 34 && to.latitude() < 34 && from.longitude() < 127 && to.longitude() < 127;
     }
 
-    private List<Segment> airportAccess(Place from, Place to, String country) {
-        boolean korea = country.equals("KR");
+    /** 공항과 도시 중심 사이의 버스·철도·택시 후보를 만들고 ODsay 조회를 적용합니다. */
+    private List<Segment> airportAccess(Place from, Place to) {
         int km = kilometers(from, to);
-        Currency currency = korea ? Currency.KRW : Currency.JPY;
-        Segment bus = perPerson(from, to, Mode.AIRPORT_BUS, km, 12 + km * 2, 0, currency, korea ? 11000 : 1600);
-        Segment taxi = shared(from, to, Mode.TAXI, km, 10 + km, currency, korea ? 4700 + km * 1100 : 900 + km * 300);
-        if (isJeju(from, to)) return List.of(bus, taxi);
-        Segment rail = perPerson(from, to, Mode.AIRPORT_RAIL, km, 15 + km, 0, currency, korea ? 4900 : 1200);
-        return List.of(rail, bus, taxi);
+        Segment bus = perPerson(from, to, Mode.AIRPORT_BUS, km, 12 + km * 2, 0, 11000);
+        Segment taxi = shared(from, to, Mode.TAXI, km, 10 + km, 4700 + km * 1100);
+        Segment car = sampleCar(from, to, km, 10 + km);
+        if (isJeju(from, to)) return road.enrich(odsay.enrich(List.of(bus, taxi, car)));
+        Segment rail = perPerson(from, to, Mode.AIRPORT_RAIL, km, 15 + km, 0, 4900);
+        return road.enrich(odsay.enrich(List.of(rail, bus, taxi, car)));
     }
 
-    private String country(String id) {
-        return catalog.destinations().stream().filter(city -> city.id().equals(id)).findFirst().orElseThrow().country();
-    }
-
-    private static Place airport(String id, boolean domestic) {
+    /** 제주행 또는 제주발 경로를 만들 때 사용할 국내 공항의 기준 좌표를 도시 ID로 찾습니다. */
+    private static Place airport(String id) {
         return switch (id) {
-            case "seoul" -> domestic ? GIMPO : INCHEON;
+            case "seoul" -> GIMPO;
             case "busan" -> GIMHAE;
             case "jeju" -> JEJU;
-            case "osaka", "kyoto" -> KANSAI;
-            case "tokyo" -> NARITA;
             default -> throw new IllegalArgumentException("공항 정보가 없습니다.");
         };
     }
 
+    /** 버스·철도·항공편처럼 인원수 기준으로 계산할 샘플 이동 구간을 만듭니다. */
     private static Segment perPerson(Place from, Place to, Mode mode, int km, int minutes, int transfers,
-                                     Currency currency, int adult) {
+                                     int adult) {
         return new Segment(from, to, mode, BigDecimal.valueOf(km), minutes, transfers,
-                new Fare(currency, BigDecimal.valueOf(adult), BigDecimal.valueOf(adult * 7L / 10), null),
+                new Fare(BigDecimal.valueOf(adult), BigDecimal.valueOf(adult * 7L / 10), null),
                 Source.SAMPLE, CHECKED);
     }
 
-    private static Segment shared(Place from, Place to, Mode mode, int km, int minutes, Currency currency, int fare) {
+    /** 택시나 자가용처럼 일행이 한 번 부담하는 샘플 이동 구간을 만듭니다. */
+    private static Segment shared(Place from, Place to, Mode mode, int km, int minutes, int fare) {
         return new Segment(from, to, mode, BigDecimal.valueOf(km), minutes, 0,
-                new Fare(currency, null, null, BigDecimal.valueOf(fare)), Source.SAMPLE, CHECKED);
+                new Fare(null, null, BigDecimal.valueOf(fare)), Source.SAMPLE, CHECKED);
     }
 
+    /** 자동차 API를 쓸 수 없을 때 표시할 자가용 시간 견적입니다. 운행비는 입력을 받습니다. */
+    private static Segment sampleCar(Place from, Place to, int km, int minutes) {
+        return new Segment(from, to, Mode.CAR, BigDecimal.valueOf(km), minutes, 0, null, Source.SAMPLE, CHECKED);
+    }
+
+    /** 실제 노선 거리가 없는 샘플 구간의 요금과 시간을 추정할 때 두 지점의 직선거리를 사용합니다. */
     private static int kilometers(Place from, Place to) {
         double latitude = Math.toRadians(to.latitude() - from.latitude());
         double longitude = Math.toRadians(to.longitude() - from.longitude());

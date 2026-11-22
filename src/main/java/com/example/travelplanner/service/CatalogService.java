@@ -6,21 +6,24 @@ import org.springframework.stereotype.Service;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class CatalogService {
-    private static final Set<String> KANSAI = Set.of("osaka", "kyoto");
     private final TravelProviders.Catalog catalog;
 
+    /** 도시와 관광지 검색에 사용할 카탈로그 제공자를 주입받습니다. */
     public CatalogService(TravelProviders.Catalog catalog) { this.catalog = catalog; }
 
+    /** 도시명·ID·키워드를 검색어와 비교해 홈의 후보 도시 목록을 만듭니다. */
     public List<Destination> search(String query) {
         String term = normalize(query);
         return catalog.destinations().stream().filter(city ->
                 normalize(city.name() + " " + city.keywords() + " " + city.id()).contains(term)).toList();
     }
 
+    /** 선택 도시와 검색어에 맞는 관광지를 일정·투어 화면에 제공합니다. */
     public List<Attraction> attractions(String destination, String query) {
         Destination city = destination == null || destination.isBlank() ? null : destination(destination);
         return catalog.attractions().stream()
@@ -29,6 +32,11 @@ public class CatalogService {
                 .toList();
     }
 
+    /**
+     * 도시 ID나 이름을 카탈로그의 한 도시로 확정합니다. 후보가 여러 개면 입력 오류를 반환합니다.
+     *
+     * 먼저 표준 도시 ID와 도시명의 정확한 일치를 찾고, 해당 결과가 없으면 키워드 검색을 사용합니다. 입력이 비었거나 한 도시로 결정할 수 없으면 예외를 반환합니다.
+     */
     public Destination destination(String value) {
         String term = normalize(value);
         List<Destination> exact = catalog.destinations().stream().filter(city ->
@@ -40,17 +48,25 @@ public class CatalogService {
         return matches.get(0);
     }
 
+    /** 관광지 ID를 카탈로그 항목으로 바꿉니다. 일정과 투어의 방문지 검증에 사용합니다. */
     public Attraction attraction(String id) {
         return catalog.attractions().stream().filter(sight -> sight.id().equals(id)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("관광지를 찾을 수 없습니다: " + id));
     }
 
+    /** 경로 계산에서 출발점이나 숙소 기준으로 사용할 도시 중심 좌표를 반환합니다. */
     public Place center(String id) { return catalog.center(id); }
 
+    /** 관광지 데이터를 JourneyService가 사용할 이름과 좌표의 이동 지점으로 변환합니다. */
     public Place place(Attraction attraction) {
         return new Place(attraction.id(), attraction.name(), attraction.latitude(), attraction.longitude());
     }
 
+    /**
+     * 경로와 일정을 계산하기 전에 여행 기간을 검증하고 도시 입력을 표준 ID로 정리합니다.
+     *
+     * 경로 비교와 일정 생성에서 공통으로 사용합니다. 시작일과 종료일을 포함한 기간이 1~30일인지 확인하고 출발지·목적지를 표준 ID로 바꿉니다.
+     */
     public Trip validateTrip(Trip trip) {
         long days = ChronoUnit.DAYS.between(trip.start(), trip.end()) + 1;
         if (days < 1 || days > 30) throw new IllegalArgumentException("여행 기간은 1일 이상 30일 이하여야 합니다.");
@@ -58,19 +74,60 @@ public class CatalogService {
                 trip.start(), trip.end(), trip.party(), trip.budget(), trip.preferredMode(), trip.type());
     }
 
+    /**
+     * 일정·투어의 관광지 ID를 순서대로 조회하고 중복 방문지와 다른 도시의 방문지를 확인합니다.
+     *
+     * 방문지 배열의 순서를 유지해 이동 순서로 사용합니다. 중복 ID, 존재하지 않는 ID, 목적지 외의 관광지는 입력 오류로 연결됩니다.
+     */
     public List<Attraction> stops(String destination, List<String> ids) {
+        return stops(destination, ids, List.of());
+    }
+
+    /** 저장된 카카오맵 장소는 해당 일정의 목적지와 좌표를 확인한 뒤 기존 관광지와 같은 순서로 처리합니다. */
+    public List<Attraction> stops(String destination, List<String> ids, List<SearchedPlace> places) {
         if (ids.stream().distinct().count() != ids.size()) {
             throw new IllegalArgumentException("같은 날에 동일한 관광지를 두 번 추가할 수 없습니다.");
         }
         Destination city = destination(destination);
-        return ids.stream().map(this::attraction).peek(attraction -> {
-            if (!attraction.destinationId().equals(city.id())
-                    && !(KANSAI.contains(city.id()) && KANSAI.contains(attraction.destinationId()))) {
-                throw new IllegalArgumentException("선택한 도시의 샘플 이동 범위를 벗어나는 관광지가 포함되어 있습니다.");
+        Map<String, Attraction> selected = new HashMap<>();
+        if (places != null) {
+            for (SearchedPlace place : places) {
+                if (!ids.contains(place.id()) || !place.id().matches(SearchedPlace.ID_PATTERN)
+                        || !matchesAddress(city, place.address()) || !validCoordinates(place)) {
+                    throw new IllegalArgumentException("검색한 장소의 주소와 좌표가 여행 일정에 맞는지 확인해 주세요.");
+                }
+                Attraction stop = new Attraction(place.id(), city.id(), place.name(), place.address(), 0, null,
+                        place.latitude(), place.longitude());
+                if (selected.putIfAbsent(place.id(), stop) != null) {
+                    throw new IllegalArgumentException("같은 장소가 두 번 등록되었습니다.");
+                }
+            }
+        }
+        return ids.stream().map(id -> selected.containsKey(id) ? selected.get(id) : attraction(id)).peek(attraction -> {
+            if (!attraction.destinationId().equals(city.id())) {
+                throw new IllegalArgumentException("선택한 도시 외의 관광지가 포함되어 있습니다.");
             }
         }).toList();
     }
 
+    /** 카카오 지도에서 사용하는 약칭과 행정구역 정식 명칭을 모두 인식합니다. */
+    public static boolean matchesAddress(Destination city, String address) {
+        String province = switch (city.id()) {
+            case "seoul" -> "서울특별시";
+            case "busan" -> "부산광역시";
+            case "jeju" -> "제주특별자치도";
+            default -> city.name();
+        };
+        return address.startsWith(city.name() + " ") || address.startsWith(province + " ");
+    }
+
+    /** 지도와 교통 API에 보낼 수 있는 국내 경위도인지 검사합니다. */
+    public static boolean validCoordinates(SearchedPlace place) {
+        return place.latitude() >= 32 && place.latitude() <= 39
+                && place.longitude() >= 124 && place.longitude() <= 132;
+    }
+
+    /** 도시·관광지 검색에서 대소문자와 공백 차이를 무시할 수 있도록 검색 문자열을 정리합니다. */
     private static String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
     }
