@@ -23,6 +23,13 @@
   /* 학생 브랜드 초록: 금액, 주 버튼, 현재 단계, 시안 B의 견적서 면에만 씀 */
   --brand: #146748;
   --brand-on: #ffffff;
+  /* 선택 테두리, 선택 바탕, 꼬리표, 예산 막대, 바뀐 곳 강조 배경 */
+  --sel: #15171c;
+  --sel-soft: #ffffff;
+  --mark: #146748;
+  --mark-on: #ffffff;
+  --bar: #146748;
+  --flash: #dcefe3;
   --slab: #0e4131;
   --slab-ink: #ffffff;
   --slab-ink-2: #bddccd;
@@ -74,7 +81,7 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --page: #0e0f12; --ink: #eceef2; --ink-2: #b6bbc5; --ink-3: #8d93a0; --paper: #1a1c21; --field: #101216; --field-2: #282b33; --rule: #383c46; --frame-edge: #3d414b;
-  --brand: #52c591; --brand-on: #06140d;
+  --brand: #52c591; --brand-on: #06140d; --sel: #eceef2; --sel-soft: #1a1c21; --mark: #52c591; --mark-on: #06140d; --bar: #52c591; --flash: #1d3a2b;
   --slab: #0e4131; --slab-ink: #ffffff; --slab-ink-2: #bddccd; --slab-rule: #3f7260; --slab-track: #2a5c4a; --slab-fill: #7ddfae; --slab-over: #ffb37a;
   --warn: #f0a35a; --over: #ff8787;
   --m-rail: #5aa9ee; --m-air: #52c591; --m-bus: #f47c6c; --m-road: #e0b64a;
@@ -86,7 +93,7 @@
   color-scheme: dark; } }
 :root[data-theme="dark"] {
   --page: #0e0f12; --ink: #eceef2; --ink-2: #b6bbc5; --ink-3: #8d93a0; --paper: #1a1c21; --field: #101216; --field-2: #282b33; --rule: #383c46; --frame-edge: #3d414b;
-  --brand: #52c591; --brand-on: #06140d;
+  --brand: #52c591; --brand-on: #06140d; --sel: #eceef2; --sel-soft: #1a1c21; --mark: #52c591; --mark-on: #06140d; --bar: #52c591; --flash: #1d3a2b;
   --slab: #0e4131; --slab-ink: #ffffff; --slab-ink-2: #bddccd; --slab-rule: #3f7260; --slab-track: #2a5c4a; --slab-fill: #7ddfae; --slab-over: #ffb37a;
   --warn: #f0a35a; --over: #ff8787;
   --m-rail: #5aa9ee; --m-air: #52c591; --m-bus: #f47c6c; --m-road: #e0b64a;
@@ -96,6 +103,17 @@
   --a-sea: #16303f; --a-grat: #1f4152; --a-shore: #1d3d4f; --a-seatext: #73a7c8; --a-land: #272b2c; --a-edge: #515a60; --a-mt: #2c3b2d; --a-mt2: #354a31; --a-foreign: #1f2224; --a-maptext: #d3d7dd; --a-border: #777b70;
   --b-sea: #101216; --b-grat: #1e2127; --b-shore: #101216; --b-seatext: #717885; --b-land: #1e2127; --b-edge: #8d93a0; --b-mt: #24272e; --b-mt2: #2b2f37; --b-foreign: #15171b; --b-maptext: #b6bbc5; --b-border: #717885;
   color-scheme: dark; }
+
+/* 색 조합: 조작 막대에서 고르면 문서 루트의 data-palette가 바뀜. 지도 바탕색은 조합과 상관없이 그대로 둠 */
+:root[data-palette="sea"] { --brand: #14407a; --brand-on: #ffffff; --sel: #d9510a; --sel-soft: #ffffff; --mark: #f76707; --mark-on: #15171c; --bar: #cf4f0a; --flash: #ffe6d1; --slab: #10315e; --slab-ink: #ffffff; --slab-ink-2: #c5d5ec; --slab-rule: #4a6d9c; --slab-track: #294b7b; --slab-fill: #ff9f43; --slab-over: #ff8f8f; --over: #c92a2a; --m-rail: #1479d0; --m-air: #c2470a; --m-bus: #1c8f52; --m-road: #5b6675; --d1: #14407a; --d2: #c94f0a; --d3: #0b7f7f; --pin-ink: #ffffff; }
+@media (prefers-color-scheme: dark) { :root[data-palette="sea"]:not([data-theme="light"]) { --brand: #8fb8f5; --brand-on: #0a1626; --sel: #ff9447; --sel-soft: #1a1c21; --mark: #ff9447; --mark-on: #1a1206; --bar: #ff9447; --flash: #4a2d17; --slab: #10315e; --slab-ink: #ffffff; --slab-ink-2: #c5d5ec; --slab-rule: #4a6d9c; --slab-track: #294b7b; --slab-fill: #ff9f43; --slab-over: #ff8f8f; --over: #ff8787; --m-rail: #5aa9ee; --m-air: #ff9447; --m-bus: #4cc082; --m-road: #a3adba; --d1: #8fb8f5; --d2: #ff9447; --d3: #4cc7c7; --pin-ink: #0b0d10; } }
+:root[data-palette="sea"][data-theme="dark"] { --brand: #8fb8f5; --brand-on: #0a1626; --sel: #ff9447; --sel-soft: #1a1c21; --mark: #ff9447; --mark-on: #1a1206; --bar: #ff9447; --flash: #4a2d17; --slab: #10315e; --slab-ink: #ffffff; --slab-ink-2: #c5d5ec; --slab-rule: #4a6d9c; --slab-track: #294b7b; --slab-fill: #ff9f43; --slab-over: #ff8f8f; --over: #ff8787; --m-rail: #5aa9ee; --m-air: #ff9447; --m-bus: #4cc082; --m-road: #a3adba; --d1: #8fb8f5; --d2: #ff9447; --d3: #4cc7c7; --pin-ink: #0b0d10; }
+:root[data-palette="basalt"] { --brand: #23272e; --brand-on: #ffffff; --sel: #15171c; --sel-soft: #fff6cc; --mark: #f5c400; --mark-on: #15171c; --bar: #23272e; --flash: #fff0a8; --slab: #25282e; --slab-ink: #ffffff; --slab-ink-2: #c9ccd3; --slab-rule: #5f646e; --slab-track: #40444c; --slab-fill: #f5c400; --slab-over: #ff8f6b; --over: #c92a2a; --m-rail: #0d6fc4; --m-air: #23272e; --m-bus: #1c8f52; --m-road: #7b8491; --d1: #23272e; --d2: #8a6800; --d3: #1f6fb2; --pin-ink: #ffffff; }
+@media (prefers-color-scheme: dark) { :root[data-palette="basalt"]:not([data-theme="light"]) { --brand: #f5c400; --brand-on: #15171c; --sel: #f5c400; --sel-soft: #2b2a1c; --mark: #f5c400; --mark-on: #15171c; --bar: #f5c400; --flash: #4a4015; --slab: #33373f; --slab-ink: #ffffff; --slab-ink-2: #c9ccd3; --slab-rule: #6b7079; --slab-track: #4b5059; --slab-fill: #f5c400; --slab-over: #ff8f6b; --over: #ff8787; --m-rail: #5aa9ee; --m-air: #e6e8ec; --m-bus: #4cc082; --m-road: #8d95a1; --d1: #e6e8ec; --d2: #f5c400; --d3: #5aa9ee; --pin-ink: #0b0d10; } }
+:root[data-palette="basalt"][data-theme="dark"] { --brand: #f5c400; --brand-on: #15171c; --sel: #f5c400; --sel-soft: #2b2a1c; --mark: #f5c400; --mark-on: #15171c; --bar: #f5c400; --flash: #4a4015; --slab: #33373f; --slab-ink: #ffffff; --slab-ink-2: #c9ccd3; --slab-rule: #6b7079; --slab-track: #4b5059; --slab-fill: #f5c400; --slab-over: #ff8f6b; --over: #ff8787; --m-rail: #5aa9ee; --m-air: #e6e8ec; --m-bus: #4cc082; --m-road: #8d95a1; --d1: #e6e8ec; --d2: #f5c400; --d3: #5aa9ee; --pin-ink: #0b0d10; }
+:root[data-palette="camellia"] { --brand: #b0202e; --brand-on: #ffffff; --sel: #b0202e; --sel-soft: #ffffff; --mark: #b0202e; --mark-on: #ffffff; --bar: #b0202e; --flash: #fde2e2; --slab: #7a1622; --slab-ink: #ffffff; --slab-ink-2: #f2cdd1; --slab-rule: #ad5a63; --slab-track: #5a0e18; --slab-fill: #ffd166; --slab-over: #ffffff; --over: #8a4b00; --m-rail: #0d6fc4; --m-air: #b0202e; --m-bus: #1c8f52; --m-road: #5b6675; --d1: #b0202e; --d2: #1f5f8b; --d3: #8a6800; --pin-ink: #ffffff; }
+@media (prefers-color-scheme: dark) { :root[data-palette="camellia"]:not([data-theme="light"]) { --brand: #f58a8a; --brand-on: #2a0509; --sel: #f58a8a; --sel-soft: #1a1c21; --mark: #f58a8a; --mark-on: #2a0509; --bar: #e5565b; --flash: #4a1c20; --slab: #7a1622; --slab-ink: #ffffff; --slab-ink-2: #f2cdd1; --slab-rule: #ad5a63; --slab-track: #5a0e18; --slab-fill: #ffd166; --slab-over: #ffffff; --over: #f0a35a; --m-rail: #5aa9ee; --m-air: #f58a8a; --m-bus: #4cc082; --m-road: #a3adba; --d1: #f58a8a; --d2: #5aa9ee; --d3: #e0b64a; --pin-ink: #0b0d10; } }
+:root[data-palette="camellia"][data-theme="dark"] { --brand: #f58a8a; --brand-on: #2a0509; --sel: #f58a8a; --sel-soft: #1a1c21; --mark: #f58a8a; --mark-on: #2a0509; --bar: #e5565b; --flash: #4a1c20; --slab: #7a1622; --slab-ink: #ffffff; --slab-ink-2: #f2cdd1; --slab-rule: #ad5a63; --slab-track: #5a0e18; --slab-fill: #ffd166; --slab-over: #ffffff; --over: #f0a35a; --m-rail: #5aa9ee; --m-air: #f58a8a; --m-bus: #4cc082; --m-road: #a3adba; --d1: #f58a8a; --d2: #5aa9ee; --d3: #e0b64a; --pin-ink: #0b0d10; }
 
 /* 시안별 약도 색 연결(값은 모두 위 토큰) */
 .va { --shore: var(--a-shore); --sea: var(--a-sea); --grat: var(--a-grat); --seatext: var(--a-seatext); --land: var(--a-land); --edge: var(--a-edge); --mt: var(--a-mt); --mt2: var(--a-mt2); --foreign: var(--a-foreign); --maptext: var(--a-maptext); --border: var(--a-border); }
@@ -110,13 +128,14 @@ button, select { font: inherit; color: inherit; }
 .intro h1 { font-size: clamp(23px, 3vw, 30px); font-weight: 800; margin: 0 0 8px; line-height: 1.25; text-wrap: balance; }
 .intro p { margin: 0; color: var(--ink-2); max-width: 70ch; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; margin: 20px 0 10px; }
-.controls > div { display: flex; align-items: center; gap: 8px; }
-.pick { display: inline-flex; border: 1px solid var(--ink); border-radius: 8px; overflow: hidden; }
+.controls > div { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; min-width: 0; }
+.pick { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--ink); border-radius: 8px; overflow: hidden; }
 .pick-label { font-size: 14px; color: var(--ink-2); font-weight: 700; }
 .pick button { border: 0; background: var(--paper); padding: 7px 13px; cursor: pointer; font-size: 15px; font-weight: 600; color: var(--ink); }
 .pick button + button { border-left: 1px solid var(--ink); }
 .pick button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-.variant-note { font-size: 15px; color: var(--ink-2); margin: 0 0 14px; min-height: 1.55em; }
+.variant-note { font-size: 15px; color: var(--ink-2); margin: 0 0 6px; min-height: 1.55em; }
+#palette-note { margin-bottom: 14px; }
 .variant-note b { color: var(--ink); }
 .stage { display: flex; justify-content: center; }
 .frame { width: 100%; height: 780px; border: 1px solid var(--frame-edge); border-radius: 12px; overflow: hidden;
@@ -143,26 +162,47 @@ button, select { font: inherit; color: inherit; }
 .step i { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
 .step.done { color: var(--ink-2); }
 .step.done i { color: var(--brand); }
-.step.now { color: var(--ink); font-weight: 800; border-bottom-color: var(--brand); }
+.step.now { color: var(--ink); font-weight: 800; border-bottom-color: var(--mark); }
 .step.now i { color: var(--brand); }
 .mi { flex: none; display: inline-block; vertical-align: -3px; }
 .icons { display: inline-flex; gap: 3px; align-items: center; }
 .tag { display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.3; padding: 2px 6px; border-radius: 4px; background: var(--ink); color: var(--paper); white-space: nowrap; }
-.tag.low { background: var(--brand); color: var(--brand-on); }
+.tag.low { background: var(--mark); color: var(--mark-on); }
 .warntext { color: var(--warn); font-weight: 600; }
 .budgetbar { height: 8px; background: var(--field-2); border-radius: 2px; overflow: hidden; }
-.budgetbar i { display: block; height: 100%; background: var(--brand); transition: width .35s ease; }
+.budgetbar i { display: block; height: 100%; background: var(--bar); }
 .budgetbar.over i { background: var(--over); }
 .toast { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-size: 14.5px; font-weight: 600; z-index: 9; max-width: calc(100% - 32px); box-shadow: var(--float-shadow); }
 .drag { cursor: grab; color: var(--ink-3); display: grid; place-items: center; width: 14px; user-select: none; }
 .drag svg { display: block; }
-.dragging { opacity: .4; }
-.dropline { outline: 2px dashed var(--ink); outline-offset: 3px; }
+.dragging { opacity: .35; }
 .mapslot { position: absolute; inset: 0; background: var(--sea); }
 svg.map { display: block; }
 svg.map text { font-family: var(--font); }
 svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
 .pinsvg { display: block; flex: none; }
+/* 움직임: 바뀐 금액 줄 배경, 옮긴 카드 테두리, 금액 차이 표시, 놓을 자리, 다시 계산 중 */
+@keyframes flashbg { from { background-color: var(--flash); } to { background-color: transparent; } }
+@keyframes flashslab { from { background-color: var(--slab-track); } to { background-color: transparent; } }
+@keyframes movedring { 0%, 35% { box-shadow: 0 0 0 3px var(--sel); background-color: var(--flash); } 100% { box-shadow: 0 0 0 3px transparent; background-color: var(--paper); } }
+@keyframes deltafloat { 0% { opacity: 0; transform: translateY(6px); } 12% { opacity: 1; transform: translateY(0); } 72% { opacity: 1; transform: translateY(-4px); } 100% { opacity: 0; transform: translateY(-12px); } }
+@keyframes slotin { from { opacity: 0; } to { opacity: 1; } }
+@keyframes calcfill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes calcpulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.flash { animation: flashbg 1.2s ease-out both; }
+.receipt .flash, .mobilebar .flash { animation-name: flashslab; }
+.moved { animation: movedring 1.6s ease-out both; position: relative; z-index: 2; }
+.delta { position: absolute; opacity: 0; pointer-events: none; font-size: 14px; font-weight: 800; line-height: 1.3; padding: 2px 8px; border-radius: 4px; background: var(--mark); color: var(--mark-on); white-space: nowrap; font-variant-numeric: tabular-nums; z-index: 2; }
+.delta.show { animation: deltafloat 1.8s ease-out both; }
+.dropslot { border: 2px dashed var(--sel); border-radius: 12px; background: var(--flash); display: grid; place-items: center; font-size: 13.5px; font-weight: 700; color: var(--ink); flex: none; animation: slotin .16s ease-out both; }
+.dropempty { border: 1.5px dashed var(--ink-3); border-radius: 4px; padding: 24px 14px; text-align: center; display: grid; gap: 4px; align-content: center; min-height: 132px; color: var(--ink-2); font-size: 14px; }
+.dropempty b { font-size: 15px; font-weight: 700; color: var(--ink); }
+.dropempty.over { border: 2px solid var(--sel); background: var(--flash); }
+.calc { display: inline-grid; gap: 3px; font-weight: 700; color: var(--ink); animation: calcpulse .9s ease-in-out both; }
+.calc i { display: block; height: 2px; background: var(--field-2); position: relative; overflow: hidden; }
+.calc i::after { content: ""; position: absolute; inset: 0; background: var(--sel); transform-origin: left center; animation: calcfill .9s linear both; }
+.swatches { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: -2px; }
+.swatches i { width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--rule); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 /* ---------- 시안 A: 회색 바닥, 흰 카드, 큰 지도 ---------- */
@@ -176,7 +216,7 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
 .va .sort button[aria-pressed="true"] { background: var(--paper); color: var(--ink); font-weight: 700; box-shadow: var(--lift-shadow); }
 .va .routecard { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 14px; padding: 14px 16px; border: 0; border-radius: 12px; background: var(--paper); cursor: pointer; text-align: left; width: 100%; flex: none; }
 .va .routecard:hover { box-shadow: inset 0 0 0 1px var(--ink-3); }
-.va .routecard[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+.va .routecard[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--sel); background: var(--sel-soft); }
 .va .rc-title { font-size: 16px; font-weight: 600; }
 .va .routecard[aria-pressed="true"] .rc-title { font-weight: 800; }
 .va .rc-price { font-size: 17px; font-weight: 700; color: var(--brand); text-align: right; white-space: nowrap; }
@@ -191,7 +231,9 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
 .va .leg .num { font-weight: 600; }
 .va .mappane { position: relative; min-height: 0; margin: 12px 12px 12px 0; border-radius: 14px; overflow: hidden; background: var(--sea); }
 .va .estimate { position: absolute; right: 14px; bottom: 14px; width: 292px; background: var(--paper); border-radius: 12px; box-shadow: var(--float-shadow); padding: 16px 18px; z-index: 3; }
-.va .est-main { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; align-items: baseline; }
+.va .est-main { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; align-items: baseline; position: relative; }
+.va .delta { right: 0; top: -3px; }
+.va .detail .row { margin-inline: -6px; padding-inline: 6px; border-radius: 4px; }
 .va .est-label { font-size: 14px; font-weight: 700; color: var(--ink-2); }
 .va .est-pct { font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
 .va .est-sum { grid-column: 1 / -1; font-size: 31px; font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; }
@@ -212,10 +254,16 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
 .va .daybtn { border: 0; background: var(--paper); padding: 9px 12px; border-radius: 10px; cursor: pointer; font-size: 13.5px; text-align: left; line-height: 1.35; color: var(--ink-2); }
 .va .daybtn b { display: flex; align-items: center; gap: 6px; font-size: 15.5px; font-weight: 700; color: var(--ink); }
 .va .daybtn b i { width: 10px; height: 10px; border-radius: 50%; }
-.va .daybtn[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+.va .daybtn[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--sel); background: var(--sel-soft); }
 .va .timeline { display: flex; flex-direction: column; padding: 6px 0 20px; flex: none; }
 .va .stop { display: grid; grid-template-columns: 14px 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 13px 14px 13px 10px; background: var(--paper); border-radius: 12px; }
 .va .stop h4 { margin: 0; font-size: 16px; font-weight: 700; }
+.va .stop .arr { display: block; font-size: 13.5px; font-weight: 800; color: var(--ink-2); }
+.va .stop .arr.none { font-weight: 600; color: var(--ink-3); }
+.va .dayfacts { margin: 0; padding: 4px 4px 8px; font-size: 14px; color: var(--ink-2); }
+.va .dayfacts b { color: var(--ink); font-weight: 700; }
+.va .endrow { margin-left: 46px; padding: 9px 0 2px 20px; font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.va .dropslot { margin-block: 6px; }
 .va .stop p { margin: 0; font-size: 14px; color: var(--ink-2); }
 .va .stop .fee { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .va .between { margin-left: 46px; border-left: 2px dotted var(--ink-3); padding: 9px 0 9px 18px; font-size: 14px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -248,6 +296,7 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
   .va .est-main { cursor: pointer; grid-template-columns: auto 1fr auto; align-items: center; }
   .va .est-sum { grid-column: auto; font-size: 23px; text-align: right; }
   .va .est-pct { display: none; }
+  .va .delta { right: auto; left: 76px; top: 3px; }
   .va .est-toggle { display: inline; font-size: 13.5px; font-weight: 700; color: var(--brand); }
   .va .detail { display: none; }
   .va .estimate.open .detail { display: block; }
@@ -288,8 +337,8 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
 .vb .opt:hover { background: var(--field); }
 .vb .opt .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink-3); display: grid; place-items: center; }
 .vb .opt[aria-pressed="true"] { background: var(--field); font-weight: 800; }
-.vb .opt[aria-pressed="true"] .radio { border-color: var(--ink); }
-.vb .opt[aria-pressed="true"] .radio::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+.vb .opt[aria-pressed="true"] .radio { border-color: var(--sel); }
+.vb .opt[aria-pressed="true"] .radio::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--sel); }
 .vb .opt .o-route { display: flex; gap: 8px 10px; align-items: center; flex-wrap: wrap; font-weight: 600; }
 .vb .opt[aria-pressed="true"] .o-route { font-weight: 800; }
 .vb .opt .rec { font-size: 14px; font-weight: 800; color: var(--brand); }
@@ -304,7 +353,11 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
 .vb .receipt .row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: baseline; font-size: 15.5px; padding: 7px 0; }
 .vb .receipt .row .leader { border-bottom: 2px dotted var(--slab-rule); transform: translateY(-4px); }
 .vb .receipt .row span:last-child { font-weight: 700; }
-.vb .receipt .total { border-top: 2px solid var(--slab-ink); margin-top: 12px; padding-top: 14px; }
+.vb .receipt .total { border-top: 2px solid var(--slab-ink); margin-top: 12px; padding-top: 14px; position: relative; }
+.vb .receipt .delta, .vb .mobilebar .delta { background: var(--slab-fill); color: var(--slab); }
+.vb .receipt .delta { right: 0; top: 12px; }
+.vb .mobilebar .delta { left: 16px; top: -14px; }
+.vb .receipt .row { margin-inline: -6px; padding-inline: 6px; border-radius: 3px; }
 .vb .receipt .total span { display: block; font-size: 14.5px; font-weight: 700; color: var(--slab-ink-2); }
 .vb .receipt .total strong { display: block; font-size: 38px; font-weight: 800; line-height: 1.2; letter-spacing: -0.01em; }
 .vb .receipt .budgetbar { background: var(--slab-track); margin: 14px 0 8px; height: 10px; }
@@ -318,19 +371,42 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
 .vb .receipt .per { font-size: 15.5px; font-weight: 600; color: var(--slab-ink-2); margin: 2px 0 0; }
 .vb .receipt :focus-visible { outline-color: var(--slab-ink); }
 /* 일정: 날짜별 열 */
-.vb .daycols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
-.vb .daycol { min-height: 250px; display: flex; flex-direction: column; gap: 8px; border-top: 5px solid var(--dc); padding-top: 10px; }
-.vb .daycol header { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 6px; }
+.vb .daycols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start; }
+.vb .daycol { min-height: 250px; display: flex; flex-direction: column; border-top: 5px solid var(--dc); padding-top: 10px; }
+.vb .daycol header { display: flex; justify-content: space-between; align-items: baseline; }
 .vb .daycol header b { font-size: 20px; font-weight: 800; }
 .vb .daycol header span { font-size: 14px; font-weight: 600; color: var(--ink-2); }
-.vb .pcard { border: 1.5px solid var(--ink); border-radius: 4px; padding: 10px 12px 10px 8px; background: var(--paper); display: grid; grid-template-columns: 14px 22px minmax(0, 1fr); gap: 0 8px; align-items: center; cursor: grab; }
+.vb .dayfacts { margin: 2px 0 8px; font-size: 14px; color: var(--ink-2); }
+.vb .dayfacts b { display: block; font-size: 16px; font-weight: 800; color: var(--ink); }
+/* 하루 띠: 머무는 시간은 날짜 색, 이동 시간은 옅은 회색, 길이는 분에 비례 */
+.vb .daystrip { display: flex; height: 10px; gap: 2px; margin-bottom: 14px; }
+.vb .daystrip i { display: block; background: var(--dc); min-width: 4px; }
+.vb .daystrip i.mv { background: var(--field-2); }
+.vb .daystrip i.un { background: transparent; border: 1.5px dashed var(--ink-3); flex: 0 0 30px; }
+.vb .dayflow { display: flex; flex-direction: column; }
+.vb .frow, .vb .fhop, .vb .fend { display: grid; grid-template-columns: 42px 14px minmax(0, 1fr); column-gap: 8px; }
+.vb .ft { font-size: 14px; font-weight: 800; text-align: right; padding-top: 15px; white-space: nowrap; }
+.vb .ft.none { font-size: 12.5px; font-weight: 600; color: var(--ink-3); white-space: normal; line-height: 1.25; padding-top: 12px; }
+.vb .rail { position: relative; }
+.vb .rail::before { content: ""; position: absolute; left: 5.5px; top: 0; bottom: 0; width: 3px; background: var(--dc); }
+.vb .rail::after { content: ""; position: absolute; left: 0; top: 17px; width: 14px; height: 14px; border-radius: 50%; background: var(--paper); border: 3.5px solid var(--dc); }
+.vb .frow:first-child .rail::before { top: 20px; }
+.vb .fhop .rail::before { background: transparent; width: 0; border-left: 3px dotted var(--ink-3); }
+.vb .fhop .rail::after { display: none; }
+.vb .fend .rail::before { bottom: auto; height: 10px; }
+.vb .fend .rail::after { top: 6px; background: var(--dc); }
+.vb .fend .ft { padding-top: 3px; }
+.vb .fend .endtxt { font-size: 14px; font-weight: 700; color: var(--ink-2); padding: 3px 0 6px; }
+.vb .pcard { border: 1.5px solid var(--ink); border-radius: 4px; margin-block: 4px; padding: 9px 10px 9px 8px; background: var(--paper); display: grid; grid-template-columns: 14px 22px minmax(0, 1fr); gap: 0 8px; align-items: center; cursor: grab; }
 .vb .pcard h4 { margin: 0; font-size: 16px; font-weight: 700; }
 .vb .pcard p { margin: 0; font-size: 14px; color: var(--ink-2); grid-column: 3; }
+.vb .pcard p b { color: var(--ink); font-weight: 700; white-space: nowrap; }
 .vb .pcard .drag, .vb .pcard .pinsvg { grid-row: 1 / span 2; }
-.vb .hop { font-size: 14px; color: var(--ink-2); display: flex; align-items: center; gap: 8px; padding-left: 30px; min-height: 26px; }
-.vb .hop .bar { width: 5px; height: 26px; margin-block: -8px; }
-.vb .daynote { color: var(--ink-2); font-size: 14.5px; margin: 2px 0; }
-.vb .daysum { margin-top: auto; font-size: 14.5px; display: flex; justify-content: space-between; color: var(--ink-2); border-top: 1px solid var(--ink); padding-top: 8px; }
+.vb .hop { font-size: 13.5px; color: var(--ink-2); display: flex; align-items: center; gap: 7px; padding: 7px 0; min-height: 34px; }
+.vb .hop span { min-width: 0; }
+.vb .hop b { color: var(--ink); font-weight: 700; margin-left: auto; white-space: nowrap; }
+.vb .dropslot { margin: 4px 0 4px 64px; border-radius: 4px; }
+.vb .daysum { margin-top: 12px; font-size: 14.5px; display: flex; justify-content: space-between; color: var(--ink-2); border-top: 1px solid var(--ink); padding-top: 8px; }
 .vb .daysum .num { font-weight: 800; color: var(--ink); }
 .vb .jejumap { position: relative; margin-top: 24px; height: 340px; overflow: hidden; border: 1px solid var(--ink); }
 .vb .mobilebar { display: none; }
@@ -351,7 +427,6 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
   .vb .opt .o-price { grid-column: 3; grid-row: 1 / span 2; }
   .vb .daycols { grid-template-columns: 1fr; gap: 26px; }
   .vb .daycol { min-height: 0; }
-  .vb .daysum { margin-top: 6px; }
   .vb .jejumap { height: 230px; }
   .vb .receipt { display: none; }
   .vb.sheet .receipt { display: flex; position: absolute; left: 0; right: 0; bottom: 66px; max-height: calc(100% - 140px); z-index: 6; border-radius: 16px 16px 0 0; padding: 22px 20px 20px; box-shadow: var(--sheet-shadow); }
@@ -372,7 +447,9 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
   .vb .receipt .total strong { font-size: 33px; }
   .vb .linewrap { grid-template-columns: 1fr; gap: 16px; }
   .vb .minimap { min-height: 210px; height: 210px; order: -1; }
-  .vb .daycols { gap: 14px; }
+  .vb .daycols { gap: 16px; }
+  .vb .frow, .vb .fhop, .vb .fend { grid-template-columns: 40px 14px minmax(0, 1fr); column-gap: 5px; }
+  .vb .dropslot { margin-left: 59px; }
 }
 
 /* ---------- 아래 비교 문서 ---------- */
@@ -403,8 +480,10 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
     <div><span class="pick-label">화면</span><span class="pick" id="ctl-screen"><button type="button" data-s="route" aria-pressed="true">이동 경로</button><button type="button" data-s="plan" aria-pressed="false">현지 일정</button></span></div>
     <div><span class="pick-label">기기</span><span class="pick" id="ctl-device"><button type="button" data-d="desktop" aria-pressed="true">데스크톱</button><button type="button" data-d="mobile" aria-pressed="false">모바일</button></span></div>
     <div><span class="pick-label">색</span><span class="pick" id="ctl-theme"><button type="button" data-t="light" aria-pressed="false">라이트</button><button type="button" data-t="dark" aria-pressed="false">다크</button><button type="button" data-t="system" aria-pressed="true">시스템</button></span></div>
+    <div><span class="pick-label">색 조합</span><span class="pick" id="ctl-palette"><button type="button" data-p="sea" aria-pressed="true">바다와 감귤</button><button type="button" data-p="basalt" aria-pressed="false">현무암과 유채</button><button type="button" data-p="camellia" aria-pressed="false">동백</button><button type="button" data-p="student" aria-pressed="false">원본 초록</button></span></div>
   </div>
   <p class="variant-note" id="variant-note"></p>
+  <p class="variant-note" id="palette-note"></p>
   <div class="stage" id="stage" data-device="desktop"><div class="frame" id="frame"></div></div>
 
   <section class="compare" aria-labelledby="cmp-h">
@@ -417,10 +496,10 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
         <tr><td>면과 선</td><td>회색 바닥에 테두리 없는 흰 카드, 선택한 카드만 검은 테두리</td><td>흰 종이에 굵은 검은 괘선과 표, 카드는 끌어서 옮기는 장소에만</td></tr>
         <tr><td>여행 견적</td><td>지도 오른쪽 아래 떠 있는 카드, 모바일은 하단 고정 막대</td><td>오른쪽 초록 견적서 면(항상 보임), 모바일은 하단 합계 막대와 견적서 시트</td></tr>
         <tr><td>경로 선택</td><td>카드를 누르면 구간 내역이 펼쳐지고 지도와 견적이 바로 바뀜</td><td>표에서 행을 고르고, 위쪽 노선도에서 구간별 교통수단도 바꿈</td></tr>
-        <tr><td>일정 편집</td><td>날짜 버튼으로 하루씩, 장소 사이에 이동 수단, 지도에 번호 핀</td><td>3일을 열로 나란히 보고 날짜 사이로도 끌어서 옮김</td></tr>
-        <tr><td>지도 의존도</td><td>높음(키 없으면 좌표로 그린 약도 표시)</td><td>낮음(선으로 그린 작은 약도만)</td></tr>
+        <tr><td>일정 편집</td><td>날짜 버튼으로 하루씩, 장소마다 예상 도착 시각, 지도에 번호 핀</td><td>3일을 시간 흐름 열로 나란히 보고 날짜 사이로도 끌어서 옮김</td></tr>
+        <tr><td>지도 의존도</td><td>높음(카카오맵이 화면 절반)</td><td>낮음(작은 지도만)</td></tr>
         <tr><td>모바일</td><td>위 지도, 아래 끌어 올리는 목록(bottom sheet)</td><td>한 열로 쌓고 하단 합계 막대</td></tr>
-        <tr><td>구현 난이도</td><td>높음(화면 높이 고정 배치, 지도와 목록 연동, 약도 그리기)</td><td>중간(기존 문자열 렌더링 구조와 가까움)</td></tr>
+        <tr><td>구현 난이도</td><td>높음(화면 높이 고정 배치, 카카오맵과 목록 연동)</td><td>중간(기존 문자열 렌더링 구조와 가까움)</td></tr>
         <tr><td>학생이 설명하기</td><td>지도 연동 코드 설명이 필요함</td><td>계산 흐름이 화면에 그대로 보여 설명하기 쉬움</td></tr>
       </tbody>
     </table></div>
@@ -437,7 +516,8 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
         <li>글꼴: 실제 앱은 <code>site.css</code>에 지정된 Pretendard를 씀. 시안은 Pretendard가 없는 기기에서 Inter와 Noto Sans KR로 대신 보여 줌</li>
         <li>추천 경로 적용: 응답의 경로 조합(<code>modes</code>)을 구간 순서대로 선택값에 넣는 방식이라 프론트엔드만으로 가능해 보임. 구현 때 확인 필요</li>
         <li>장소를 옮긴 뒤 금액: 시안은 직선 거리만 보여 주고, 실제 앱은 기존 일정 계산 API로 다시 계산</li>
-        <li>약도: 해안선과 산지는 손으로 잡은 근삿값이라 실제 지형과 다름. 카카오맵 키가 없을 때 쓰는 대체 화면 용도</li>
+        <li>지도: 실제 앱은 카카오맵(JavaScript SDK)으로 구현. 시안의 약도는 자리와 오버레이(경로선, 이름표, 날짜 핀) 모양을 보여 주는 용도라 실제 지형과 다름</li>
+        <li>도착 시각: 매일 09:00 출발로 가정하고 머무는 시간과 이동 시간을 더한 값. 이동 시간을 모르는 구간 뒤는 "시간 미정"으로 표시</li>
         <li>모바일 끌어서 옮기기: 터치 지원 라이브러리 사용 여부를 따로 결정</li>
       </ul></div>
     </div>
@@ -536,7 +616,8 @@ function hop(a, b) {
 }
 
 // ---------- 약도(SVG) ----------
-// 응답 좌표와 손으로 잡은 해안선으로 그린 약도. 실제 지도가 아니라 카카오맵 키가 없을 때 쓰는 대체 화면을 보여 주는 용도.
+// 응답 좌표와 손으로 잡은 해안선으로 그린 시안용 약도. 실제 앱은 카카오맵(JavaScript SDK)을 쓰고,
+// 경로선, 이름표, 날짜 핀은 그 위에 올리는 오버레이로 구현한다.
 // 해안선, 산지, 강의 좌표는 근삿값이다.
 const KOREA = [[126.55,37.77],[126.62,37.62],[126.60,37.47],[126.72,37.32],[126.68,37.15],[126.85,36.97],[126.62,37.03],[126.32,36.98],[126.13,36.78],[126.28,36.58],[126.33,36.38],[126.48,36.62],[126.52,36.32],[126.55,36.10],[126.72,36.00],[126.55,35.86],[126.47,35.68],[126.63,35.58],[126.45,35.45],[126.38,35.28],[126.43,35.10],[126.27,35.05],[126.38,34.82],[126.25,34.68],[126.50,34.55],[126.52,34.31],[126.78,34.52],[126.95,34.43],[127.15,34.72],[127.28,34.47],[127.48,34.60],[127.50,34.87],[127.74,34.63],[127.72,34.92],[128.05,34.95],[128.30,34.92],[128.42,34.83],[128.58,35.15],[128.72,35.08],[128.90,35.06],[129.06,35.06],[129.20,35.16],[129.27,35.30],[129.40,35.48],[129.50,35.80],[129.57,36.08],[129.40,36.06],[129.42,36.42],[129.43,36.98],[129.22,37.42],[129.12,37.56],[128.95,37.78],[128.68,38.08],[128.60,38.20],[128.37,38.61],[128.0,38.33],[127.5,38.30],[127.1,38.28],[126.95,38.10],[126.68,37.95]];
 const DMZ = [[128.37,38.61],[128.0,38.33],[127.5,38.30],[127.1,38.28],[126.95,38.10],[126.68,37.95],[126.55,37.77]];
@@ -717,7 +798,7 @@ function routeMap(w, h) {
         + mapLabel(a[0] - 4, a[1] + 22, '제주공항', 12) + mapLabel(b[0], b[1] + 22, '제주시 중심', 12);
     }, (cju[0] + jeju[0]) / 2, (cju[1] + jeju[1]) / 2, modeName(m2) + ' ' + mins(s2.opts[m2][0]), s2.km + 'km, ' + won(s2.opts[m2][1]));
   }
-  if (!small) out += scaleBar(p, 16, h - 16, 100) + '<text x="16" y="' + (h - 30) + '" font-size="11" font-weight="600" fill="var(--seatext)">좌표로 그린 약도</text>';
+  if (!small) out += scaleBar(p, 16, h - 16, 100) + '<text x="16" y="' + (h - 30) + '" font-size="11" font-weight="600" fill="var(--seatext)">시안용 약도, 실제 앱은 카카오맵</text>';
   return '<svg class="map" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="서울역에서 제주시 중심까지 선택한 경로 약도">' + out + '</svg>';
 }
 const DAYCOL = ['var(--d1)', 'var(--d2)', 'var(--d3)'];
@@ -761,7 +842,7 @@ function jejuMap(w, h, focusDay) {
         + mapLabel(x, up ? y - 43 : y + 17, SIGHTS[k].name, small ? 12 : 13);
     });
   });
-  out += lines + dim + pins + (small ? '' : scaleBar(p, 16, h - 16, 10));
+  out += lines + dim + pins + (small ? '' : scaleBar(p, 16, h - 16, 10) + '<text x="16" y="' + (h - 30) + '" font-size="11" font-weight="600" fill="var(--seatext)">시안용 약도, 실제 앱은 카카오맵</text>');
   return '<svg class="map" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="제주 일정 장소 약도">' + out + '</svg>';
 }
 function fillMaps() {
@@ -805,18 +886,120 @@ const recs = r => (BADGES[r.id] || []).filter(b => b !== '현재 선택');
 const sortTabs = () => '<div class="sort" role="group" aria-label="정렬">' + [['rec', '추천순'], ['price', '최저가'], ['time', '최단 시간']]
   .map(([k, l]) => '<button type="button" data-sort="' + k + '" aria-pressed="' + (state.sort === k) + '">' + l + '</button>').join('') + '</div>';
 
+// ---------- 일정 시각 ----------
+// 매일 09:00에 첫 장소에 도착한다고 가정하고, 머무는 시간과 이동 시간을 더해 도착 시각을 계산한다.
+// 이동 시간을 모르는 구간(순서를 바꿔 서버 계산이 없는 구간) 뒤는 시각을 비워 둔다.
+const START_MIN = 9 * 60;
+const clock = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+function schedule(d) {
+  let t = START_MIN, known = true, stay = 0, move = 0, unknown = 0, fee = 0, fare = 0;
+  const rows = d.stops.map((k, i) => {
+    const s = SIGHTS[k], arr = known ? t : null;
+    stay += s.stay; fee += s.fee;
+    if (known) t += s.stay;
+    const dep = known ? t : null;
+    let h = null;
+    if (i < d.stops.length - 1) {
+      h = hop(k, d.stops[i + 1]);
+      h.calc = !!state.recalc?.has(k + '>' + d.stops[i + 1]);
+      if (h.calc || h.min == null) { known = false; unknown++; } else { move += h.min; fare += h.fare; if (known) t += h.min; }
+    }
+    return {k, s, arr, dep, h};
+  });
+  return {rows, stay, move, unknown, fee, fare, end: rows.length ? rows[rows.length - 1].dep : null};
+}
+const moveText = sc => sc.unknown ? (sc.move ? '이동 ' + mins(sc.move) + ' + 미정 ' + sc.unknown + '구간' : '이동 시간 미정') : '이동 ' + (sc.move ? mins(sc.move) : '없음');
+const CALC = '<span class="calc">다시 계산 중<i></i></span>';
+
+// ---------- 움직임 ----------
+// 화면은 그릴 때마다 통째로 바뀌므로, 값과 시작 시각을 따로 기억해 두고 다시 그린 뒤에 이어서 움직인다.
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const ROLL_MS = 620;
+const anim = {vals: {}, rolls: {}, flashes: {}, delta: null, raf: 0};
+const FMT = {
+  won: v => won(Math.round(v)),
+  pct: v => '예산의 ' + Math.round(v) + '%',
+  left: v => v >= 0 ? won(Math.round(v)) + ' 남음' : won(Math.round(-v)) + ' 초과',
+  per: v => '1인 ' + won(Math.round(v)),
+  bar: v => ''
+};
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+// 숫자가 굴러가며 바뀌는 칸
+const roll = (key, val, fmt = 'won', tag = 'span', cls = 'num') => '<' + tag + ' class="' + cls + '" data-roll="' + key + '" data-val="' + val + '" data-fmt="' + fmt + '">' + FMT[fmt](val) + '</' + tag + '>';
+const rollOr = (key, val, text) => val == null ? '<span class="num" data-swap="' + key + '">' + text + '</span>' : roll(key, val);
+const barHtml = e => '<div class="budgetbar' + (e.left < 0 ? ' over' : '') + '"><i data-roll="bar" data-val="' + (e.ratio * 100).toFixed(2) + '" data-fmt="bar" style="width:' + (e.ratio * 100).toFixed(2) + '%"></i></div>';
+function rollNow(key, now) {
+  const r = anim.rolls[key]; if (!r) return null;
+  const t = Math.min(1, (now - r.t0) / ROLL_MS);
+  return r.from + (r.to - r.from) * easeOut(t);
+}
+function syncMotion() {
+  const now = performance.now(), seen = new Set();
+  frame.querySelectorAll('[data-roll]').forEach(el => {
+    const key = el.dataset.roll, val = +el.dataset.val;
+    if (seen.has(key)) return; seen.add(key);
+    const prev = anim.vals[key];
+    if (prev !== undefined && prev !== val) {
+      if (!RM.matches) { anim.rolls[key] = {from: rollNow(key, now) ?? prev, to: val, t0: now}; anim.flashes[key] = now; }
+      if (key === 'sum') anim.delta = {diff: val - prev, t0: now};
+    }
+    anim.vals[key] = val;
+  });
+  // 값이 없어진 칸(일일투어 빼기 등)은 0으로 기억해 두어, 다시 생길 때 0에서 올라가게 함
+  frame.querySelectorAll('[data-swap]').forEach(el => { const key = el.dataset.swap; if (anim.vals[key]) anim.flashes[key] = now; anim.vals[key] = 0; });
+  if (RM.matches) return;
+  frame.querySelectorAll('[data-flash]').forEach(el => {
+    const t0 = anim.flashes[el.dataset.flash];
+    if (t0 !== undefined && now - t0 < 1200) { el.classList.add('flash'); el.style.animationDelay = Math.round(t0 - now) + 'ms'; }
+  });
+  if (anim.delta && now - anim.delta.t0 < 1800) frame.querySelectorAll('.delta').forEach(el => {
+    el.textContent = (anim.delta.diff > 0 ? '+' : '-') + won(Math.abs(anim.delta.diff));
+    el.classList.add('show'); el.style.animationDelay = Math.round(anim.delta.t0 - now) + 'ms';
+  });
+  if (state.moved && now - state.moved.t0 < 1600) {
+    const el = frame.querySelector('[data-stop="' + state.moved.k + '"]');
+    if (el) { el.classList.add('moved'); el.style.animationDelay = Math.round(state.moved.t0 - now) + 'ms'; }
+  }
+  tick();
+}
+function tick() {
+  cancelAnimationFrame(anim.raf);
+  const now = performance.now(); let active = false;
+  frame.querySelectorAll('[data-roll]').forEach(el => {
+    const v = rollNow(el.dataset.roll, now); if (v == null) return;
+    if (el.dataset.fmt === 'bar') el.style.width = v.toFixed(2) + '%'; else el.textContent = FMT[el.dataset.fmt](v);
+    active = true;
+  });
+  for (const k in anim.rolls) if (now - anim.rolls[k].t0 >= ROLL_MS) delete anim.rolls[k];
+  if (active) anim.raf = requestAnimationFrame(tick);
+}
+// 끌어서 옮긴 뒤: 다시 그리기 전 위치에서 새 위치로 미끄러지게 함(FLIP)
+let pendingFlip = null;
+const rowOf = c => c.closest('.frow') || c;
+function snapshot() { const m = {}; frame.querySelectorAll('[data-stop]').forEach(el => m[el.dataset.stop] = rowOf(el).getBoundingClientRect()); return m; }
+function playFlip(first) {
+  if (RM.matches) return;
+  frame.querySelectorAll('[data-stop]').forEach(el => {
+    const a = first[el.dataset.stop]; if (!a) return;
+    const row = rowOf(el), b = row.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+    if (Math.abs(dx) + Math.abs(dy) < 1) return;
+    row.style.position = 'relative'; row.style.zIndex = el.dataset.stop === state.moved?.k ? 3 : 1;
+    row.animate([{transform: 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px)'}, {transform: 'translate(0,0)'}], {duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)'});
+  });
+  frame.querySelectorAll('.between, .fhop, .fend, .endrow').forEach(el => el.animate([{opacity: 0}, {opacity: 0, offset: .45}, {opacity: 1}], {duration: 420, easing: 'ease-out'}));
+}
+
 // ---------- 시안 A ----------
 function renderA() {
   const e = estimate();
-  const pct = Math.round(e.sum / TRIP.budget * 100);
   const est = '<aside class="estimate' + (state.sheetOpen ? ' open' : '') + '" aria-label="여행 견적">'
-    + '<div class="est-main" data-act="sheet"><span class="est-label">여행 견적</span><span class="est-pct num">예산의 ' + pct + '%</span>'
-    + '<strong class="est-sum num">' + won(e.sum) + '</strong><span class="est-toggle">' + (state.sheetOpen ? '접기' : '내역') + '</span>'
-    + '<div class="budgetbar' + (e.left < 0 ? ' over' : '') + '"><i style="width:' + (e.ratio * 100).toFixed(1) + '%"></i></div>'
-    + '<p class="est-left num' + (e.left < 0 ? ' over' : '') + '">예산 ' + won(TRIP.budget) + ' 중 <b>' + (e.left >= 0 ? won(e.left) + ' 남음' : won(-e.left) + ' 초과') + '</b></p></div>'
-    + '<div class="detail"><div class="row"><span>왕복 교통 (편도 × 2 추정)</span><span class="num">' + (e.transport == null ? '일부 미확인' : won(e.transport)) + '</span></div>'
-    + '<div class="row"><span>현지 일정 3일 (입장료, 이동비)</span><span class="num">' + won(e.local) + '</span></div>'
-    + '<div class="row"><span>일일투어</span><span class="num">' + (e.tour ? won(e.tour) : '선택 안 함') + '</span></div>'
+    + '<div class="est-main" data-act="sheet"><span class="est-label">여행 견적</span>' + roll('pct', e.sum / TRIP.budget * 100, 'pct', 'span', 'est-pct num')
+    + roll('sum', e.sum, 'won', 'strong', 'est-sum num') + '<span class="est-toggle">' + (state.sheetOpen ? '접기' : '내역') + '</span><span class="delta" aria-hidden="true"></span>'
+    + barHtml(e)
+    + '<p class="est-left num' + (e.left < 0 ? ' over' : '') + '">예산 ' + won(TRIP.budget) + ' 중 ' + roll('left', e.left, 'left', 'b', '') + '</p></div>'
+    + '<div class="detail"><div class="row" data-flash="transport"><span>왕복 교통 (편도 × 2 추정)</span>' + rollOr('transport', e.transport, '일부 미확인') + '</div>'
+    + '<div class="row" data-flash="local"><span>현지 일정 3일 (입장료, 이동비)</span>' + roll('local', e.local) + '</div>'
+    + '<div class="row" data-flash="tour"><span>일일투어</span>' + rollOr('tour', e.tour || null, '선택 안 함') + '</div>'
     + '<button type="button" class="addtour" data-act="tour">' + (state.tour ? '일일투어 빼기' : '일일투어 더해 보기 <span class="num">(' + won(TOUR.total) + ')</span>') + '</button>'
     + '<small class="fine">숙박비와 식비는 포함하지 않음</small></div></aside>';
   let list = '', slot = '';
@@ -837,17 +1020,16 @@ function renderA() {
       }).join('');
     slot = '<div class="mapslot" data-map="route"></div>';
   } else {
-    const d = state.days[state.day];
-    list = '<div class="sheethandle"></div><div class="listhead"><h2>제주 현지 일정</h2><p style="margin-bottom:0">장소 왼쪽 손잡이를 끌어서 순서를 바꿔.</p></div>'
+    const d = state.days[state.day], sc = schedule(d);
+    list = '<div class="sheethandle"></div><div class="listhead"><h2>제주 현지 일정</h2><p style="margin-bottom:0">장소 왼쪽 손잡이를 끌어서 순서를 바꿔. 도착 시각은 09:00 출발로 가정한 값이야.</p></div>'
       + '<div class="days" role="group" aria-label="날짜">' + state.days.map((x, i) => '<button type="button" class="daybtn" data-day="' + i + '" aria-pressed="' + (i === state.day) + '"><b><i style="background:' + DAYCOL[i] + '"></i>' + x.label + '</b>' + x.date + '</button>').join('') + '</div>'
-      + '<div class="timeline" data-dropday="' + state.day + '">' + (d.stops.length ? d.stops.map((k, i) => {
-        const s = SIGHTS[k];
-        const h = i < d.stops.length - 1 ? hop(k, d.stops[i + 1]) : null;
-        return '<div class="stop" draggable="true" data-stop="' + k + '" data-from="' + state.day + '">' + GRIP + pinBadge(i + 1, DAYCOL[state.day])
-          + '<div><h4>' + s.name + '</h4><p>' + s.note + ', ' + mins(s.stay) + ' 머무름</p></div><span class="fee num">' + (s.fee ? won(s.fee) : '무료') + '</span></div>'
-          + (h ? '<div class="between">' + micon(h.mode, 18) + '<select aria-label="이동 수단" id="hop-' + k + '"><option>시내버스</option><option>택시</option><option>자가용</option></select>'
-            + (h.min ? '<span>' + mins(h.min) + ', ' + h.km + 'km</span><span class="num">' + won(h.fare) + '</span>' : '<span>직선 ' + h.km + 'km, 저장하면 요금 다시 계산</span>') + '</div>' : '');
-      }).join('') : '<p class="emptyday">' + (d.note || '') + '. 아직 장소가 없어. 공항 가기 전에 들를 곳을 더해 봐.</p>')
+      + '<div class="timeline" data-dropday="' + state.day + '">' + (d.stops.length ? '<p class="dayfacts num"><b>' + clock(START_MIN) + ' ~ ' + (sc.end == null ? '미정' : clock(sc.end)) + '</b>, 머무름 ' + mins(sc.stay) + ', ' + moveText(sc) + '</p>'
+        + sc.rows.map(({k, s, arr, h}, i) => '<div class="stop" draggable="true" data-stop="' + k + '" data-from="' + state.day + '">' + GRIP + pinBadge(i + 1, DAYCOL[state.day])
+          + '<div><span class="arr num' + (arr == null ? ' none' : '') + '">' + (arr == null ? '도착 시간 미정' : clock(arr) + ' 도착') + '</span><h4>' + s.name + '</h4><p>' + s.note + ', ' + mins(s.stay) + ' 머무름</p></div><span class="fee num">' + (s.fee ? won(s.fee) : '무료') + '</span></div>'
+          + (h ? '<div class="between">' + micon(h.mode, 18) + (h.calc ? CALC : '<select aria-label="이동 수단" id="hop-' + k + '"><option>시내버스</option><option>택시</option><option>자가용</option></select>'
+            + (h.min ? '<span>' + mins(h.min) + ', ' + h.km + 'km</span><span class="num">' + won(h.fare) + '</span>' : '<span>직선 ' + h.km + 'km, 시간과 요금은 저장하면 계산</span>')) + '</div>' : '')).join('')
+        + '<div class="endrow num">' + (sc.end == null ? '끝나는 시간 미정' : clock(sc.end) + ' 일정 끝') + '</div>'
+        : '<p class="emptyday">' + (d.note || '') + '. 아직 장소가 없어. 공항 가기 전에 들를 곳을 더해 봐.</p>')
       + '<button type="button" class="addplace"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>장소 검색해서 추가</button></div>';
     slot = '<div class="mapslot" data-map="jeju" data-day="' + state.day + '"></div>';
   }
@@ -860,13 +1042,33 @@ function renderA() {
 // ---------- 시안 B ----------
 function receipt(e) {
   return '<aside class="receipt" aria-label="여행 견적서"><h3>여행 견적서</h3><p class="meta">서울에서 제주, 3월 10일부터 2박 3일, 성인 2명</p>'
-    + [['왕복 교통', e.transport == null ? '일부 미확인' : won(e.transport)], ['현지 일정 3일', won(e.local)], ['일일투어', e.tour ? won(e.tour) : '선택 안 함']]
-      .map(([k, v]) => '<div class="row"><span>' + k + '</span><span class="leader"></span><span class="num">' + v + '</span></div>').join('')
-    + '<div class="total"><span>합계</span><strong class="num">' + won(e.sum) + '</strong></div><p class="per num">1인 ' + won(e.sum / TRIP.adults) + '</p>'
-    + '<div class="budgetbar' + (e.left < 0 ? ' over' : '') + '"><i style="width:' + (e.ratio * 100).toFixed(1) + '%"></i></div>'
-    + '<p class="left num">예산 ' + won(TRIP.budget) + ' 중 <b>' + (e.left >= 0 ? won(e.left) + ' 남음' : won(-e.left) + ' 초과') + '</b></p>'
+    + [['transport', '왕복 교통', e.transport, '일부 미확인'], ['local', '현지 일정 3일', e.local, ''], ['tour', '일일투어', e.tour || null, '선택 안 함']]
+      .map(([key, k, v, alt]) => '<div class="row" data-flash="' + key + '"><span>' + k + '</span><span class="leader"></span>' + rollOr(key, v, alt) + '</div>').join('')
+    + '<div class="total"><span>합계</span>' + roll('sum', e.sum, 'won', 'strong', 'num') + '<span class="delta" aria-hidden="true"></span></div>' + roll('per', e.sum / TRIP.adults, 'per', 'p', 'per num')
+    + barHtml(e)
+    + '<p class="left num">예산 ' + won(TRIP.budget) + ' 중 ' + roll('left', e.left, 'left', 'b', '') + '</p>'
     + '<button type="button" class="addtour" data-act="tour">' + (state.tour ? '일일투어 빼기' : TOUR.name + ' 더해 보기<small class="num">' + TOUR.platform + ', ' + won(TOUR.total) + '</small>') + '</button>'
     + '<small class="fine">왕복은 편도 요금 두 배로 추정. 숙박비와 식비는 포함하지 않음</small></aside>';
+}
+function dayColumn(d, di) {
+  const sc = schedule(d);
+  let flow;
+  if (sc.rows.length) {
+    flow = sc.rows.map(({k, s, arr, h}, i) => '<div class="frow"><span class="ft num' + (arr == null ? ' none' : '') + '">' + (arr == null ? '시간 미정' : clock(arr)) + '</span><span class="rail"></span>'
+        + '<div class="pcard" draggable="true" data-stop="' + k + '" data-from="' + di + '">' + GRIP + pinBadge(i + 1, DAYCOL[di], 22) + '<h4>' + s.name + '</h4><p class="num">' + mins(s.stay) + ' 머무름, <b>' + (s.fee ? won(s.fee) : '무료') + '</b></p></div></div>'
+      + (h ? '<div class="fhop"><span class="ft"></span><span class="rail"></span><div class="hop num">' + micon(h.mode, 17)
+        + (h.calc ? CALC : h.min ? '<span>시내버스 ' + mins(h.min) + '</span><b>' + won(h.fare) + '</b>' : '<span>직선 ' + h.km + 'km, 시간과 요금은 저장하면 계산</span>') + '</div></div>' : '')).join('')
+      + '<div class="fend"><span class="ft num' + (sc.end == null ? ' none' : '') + '">' + (sc.end == null ? '미정' : clock(sc.end)) + '</span><span class="rail"></span><span class="endtxt">일정 끝</span></div>';
+  } else {
+    flow = '<div class="dropempty"><b>공항 가는 길에 들를 곳을 여기로 끌어 놓기</b><span>놓으면 그날 일정과 도착 시각에 바로 들어가</span></div>';
+  }
+  // 하루 띠: 머무는 시간과 이동 시간을 분에 비례한 길이로 보여 줌
+  const strip = sc.rows.map(({s, h}) => '<i style="flex:' + s.stay + ' 1 0"></i>' + (h ? (h.calc || h.min == null ? '<i class="un"></i>' : '<i class="mv" style="flex:' + h.min + ' 1 0"></i>') : '')).join('');
+  return '<section class="daycol" style="--dc:' + DAYCOL[di] + '" data-dropday="' + di + '"><header><b>' + d.label + '</b><span>' + d.date + '</span></header>'
+    + (sc.rows.length ? '<p class="dayfacts num"><b>' + clock(START_MIN) + ' ~ ' + (sc.end == null ? '미정' : clock(sc.end)) + '</b>머무름 ' + mins(sc.stay) + ', ' + moveText(sc) + '</p><div class="daystrip" aria-hidden="true">' + strip + '</div>'
+      : '<p class="dayfacts"><b>일정 없음</b>' + (d.note || '') + '</p>')
+    + '<div class="dayflow">' + flow + '</div>'
+    + '<div class="daysum" data-flash="day' + di + '"><span>입장료와 이동비</span>' + roll('day' + di, sc.fee + sc.fare) + '</div></section>';
 }
 function renderB() {
   const e = estimate();
@@ -880,10 +1082,10 @@ function renderB() {
         ? '<select data-leg="' + s.key + '" id="leg-' + i + '" aria-label="' + PLACES[s.from].name + ' 구간 교통수단">' + Object.keys(s.opts).map(k => '<option value="' + k + '"' + (k === m ? ' selected' : '') + '>' + modeName(k) + '</option>').join('') + '</select>'
         : '<b>' + modeName(m) + '</b>';
       return (i === 0 ? '<div class="station"><span class="dot"></span><b>' + PLACES[s.from].name + '</b><small>출발</small></div>' : '')
-        + '<div class="hopseg"><span class="bar" style="background:' + modeVar(m) + '"></span><span class="what">' + micon(m, 20) + sel + '<span>' + mins(mn) + ', ' + s.km + 'km</span></span><span class="amt num">' + won(fare) + '</span></div>'
+        + '<div class="hopseg"><span class="bar" style="background:' + modeVar(m) + '"></span><span class="what">' + micon(m, 20) + sel + '<span>' + mins(mn) + ', ' + s.km + 'km</span></span>' + (fare == null ? '<span class="amt num">' + won(fare) + '</span>' : roll('leg' + i, fare, 'won', 'span', 'amt num')) + '</div>'
         + '<div class="station"><span class="dot"></span><b>' + PLACES[s.to].name + '</b><small>' + (i === SECTIONS.length - 1 ? '도착' : '환승') + '</small></div>';
     }).join('');
-    main = '<h2>서울에서 제주까지</h2><p class="sumline num">편도 <b>' + mins(r.minutes) + '</b>, 일행 <b>' + (r.missing ? '일부 미확인' : won(r.total)) + '</b></p>'
+    main = '<h2>서울에서 제주까지</h2><p class="sumline num">편도 <b>' + mins(r.minutes) + '</b>, 일행 ' + (r.missing ? '<b>일부 미확인</b>' : roll('rtotal', r.total, 'won', 'b', '')) + '</p>'
       + '<p class="lead">구간마다 교통수단을 바꾸면 견적서가 함께 바뀌어.</p>'
       + '<div class="linewrap"><div class="line">' + line + '</div><div class="minimap"><div class="mapslot" data-map="route"></div></div></div>'
       + '<div class="sortbar"><h3>다른 방법 ' + ROUTES.length + '가지</h3>' + sortTabs() + '</div>'
@@ -895,37 +1097,38 @@ function renderB() {
       }).join('')
       + '</div><p class="more">나머지 ' + (ROUTES.length - 6) + '가지는 자가용이 들어간 조합이야.</p>';
   } else {
-    main = '<h2>제주 현지 일정</h2><p class="lead">장소 카드를 끌어서 순서를 바꾸거나 다른 날로 옮길 수 있어.</p>'
-      + '<div class="daycols">' + state.days.map((d, di) => {
-        let fee = 0, move = 0;
-        const body = d.stops.map((k, i) => {
-          const s = SIGHTS[k]; fee += s.fee;
-          const h = i < d.stops.length - 1 ? hop(k, d.stops[i + 1]) : null;
-          if (h?.fare) move += h.fare;
-          return '<div class="pcard" draggable="true" data-stop="' + k + '" data-from="' + di + '">' + GRIP + pinBadge(i + 1, DAYCOL[di], 22) + '<h4>' + s.name + '</h4><p class="num">' + mins(s.stay) + ', ' + (s.fee ? '입장료 ' + won(s.fee) : '무료') + '</p></div>'
-            + (h ? '<div class="hop"><span class="bar" style="background:' + modeVar(h.mode) + '"></span><span class="num">' + (h.min ? '시내버스 ' + mins(h.min) + ', ' + won(h.fare) : '직선 ' + h.km + 'km, 다시 계산 필요') + '</span></div>' : '');
-        }).join('');
-        return '<section class="daycol" style="--dc:' + DAYCOL[di] + '" data-dropday="' + di + '"><header><b>' + d.label + '</b><span>' + d.date + '</span></header>'
-          + (body || '<p class="daynote">' + (d.note || '') + '. 장소를 여기로 끌어 놓아 봐.</p>')
-          + '<div class="daysum"><span>입장료와 이동비</span><span class="num">' + won(fee + move) + '</span></div></section>';
-      }).join('') + '</div>'
+    main = '<h2>제주 현지 일정</h2><p class="lead">장소 카드를 끌어서 순서를 바꾸거나 다른 날로 옮길 수 있어. 왼쪽 시각은 매일 09:00 출발로 가정한 도착 시각이고, 날짜 아래 띠는 머무는 시간(진한 칸)과 이동 시간(옅은 칸)의 비율이야.</p>'
+      + '<div class="daycols">' + state.days.map(dayColumn).join('') + '</div>'
       + '<div class="jejumap"><div class="mapslot" data-map="jeju" data-day=""></div></div>';
   }
   return '<div class="app vb' + (state.sheetOpen ? ' sheet' : '') + '">' + topbar(state.screen === 'route' ? 1 : 2)
     + '<div class="body"><main class="main">' + main + '</main>' + receipt(e) + '</div>'
-    + '<div class="mobilebar"><div><small class="num">여행 견적 (예산 ' + won(TRIP.budget) + ')</small><strong class="num">' + won(e.sum) + '</strong></div><button type="button" data-act="sheet">' + (state.sheetOpen ? '견적서 닫기' : '견적서 보기') + '</button></div>'
+    + '<div class="mobilebar"><div><small class="num">여행 견적 (예산 ' + won(TRIP.budget) + ')</small>' + roll('sum', e.sum, 'won', 'strong', 'num') + '</div><span class="delta" aria-hidden="true"></span><button type="button" data-act="sheet">' + (state.sheetOpen ? '견적서 닫기' : '견적서 보기') + '</button></div>'
     + (state.toast ? '<div class="toast" role="status">' + state.toast + '</div>' : '') + '</div>';
 }
 
 // ---------- 그리기와 이벤트 ----------
 const NOTES = {
   a: '<b>시안 A 지도 분할.</b> Rome2Rio처럼 왼쪽 목록과 오른쪽 큰 지도를 나란히 두고, 여행 견적은 지도 위에 떠 있어. 모바일은 위 지도, 아래 끌어 올리는 목록이야.',
-  b: '<b>시안 B 노선도 견적서.</b> 선택한 경로를 지하철 노선도처럼 세로로 보여 주고, 오른쪽 초록 면에 견적서를 계속 띄워 둬. 일정은 3일을 열로 나란히 놓고 끌어서 옮겨.'
+  b: '<b>시안 B 노선도 견적서.</b> 선택한 경로를 지하철 노선도처럼 세로로 보여 주고, 오른쪽 견적서 면에 합계를 계속 띄워 둬. 일정은 3일을 시간 흐름 열로 나란히 놓고 끌어서 옮겨.'
 };
+// 색 조합: 이름과 근거. 색 값은 스타일의 data-palette 블록에 있음
+const PALETTE_NOTES = {
+  sea: ['바다 남색과 감귤 주황', '제주 바다의 짙은 남색을 금액과 견적서 면에, 감귤 주황을 선택 표시와 지도 경로선에 써.'],
+  basalt: ['현무암 회색과 유채 노랑', '돌담과 해안 현무암의 먹색을 금액과 견적서 면에, 봄 유채밭 노랑을 꼬리표와 바뀐 곳 강조에 써.'],
+  camellia: ['동백 빨강과 꽃술 노랑', '제주 동백꽃의 붉은색을 금액과 견적서 면, 경로선에, 꽃술 노랑을 견적서 예산 막대에 써.'],
+  student: ['학생 원본 초록', '학생이 site.css에 지정한 브랜드 초록(#146748)을 그대로 쓴 조합이야. 비교용으로 남겼어.']
+};
+function setPalette(p) {
+  if (p === 'student') delete document.documentElement.dataset.palette; else document.documentElement.dataset.palette = p;
+  document.querySelectorAll('#ctl-palette button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.p === p)));
+  document.getElementById('palette-note').innerHTML = '<b>색 조합: ' + PALETTE_NOTES[p][0] + '.</b> ' + PALETTE_NOTES[p][1]
+    + '<span class="swatches" aria-hidden="true"><i style="background:var(--brand)"></i><i style="background:var(--mark)"></i><i style="background:var(--slab)"></i><i style="background:var(--slab-fill)"></i></span>';
+}
 const frame = document.getElementById('frame');
 const NARROW = 860; // 스타일의 container query 기준 폭과 같은 값
 const SCROLLERS = '.listpane, .vb .main, .vb .body';
-let toastTimer;
+let toastTimer, recalcTimer;
 function render() {
   const tops = [...frame.querySelectorAll(SCROLLERS)].map(el => el.scrollTop);
   document.getElementById('stage').dataset.device = state.device;
@@ -936,6 +1139,8 @@ function render() {
     document.querySelectorAll('#' + id + ' button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset[k] === v))));
   fillMaps();
   [...frame.querySelectorAll(SCROLLERS)].forEach((el, i) => { if (tops[i]) el.scrollTop = tops[i]; });
+  syncMotion();
+  if (pendingFlip) { playFlip(pendingFlip); pendingFlip = null; }
   bindDrag();
 }
 function toast(msg) {
@@ -950,8 +1155,11 @@ document.getElementById('ctl-theme').addEventListener('click', ev => {
   else document.documentElement.dataset.theme = b.dataset.t;
   document.querySelectorAll('#ctl-theme button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
 });
+document.getElementById('ctl-palette').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-p]'); if (b) setPalette(b.dataset.p);
+});
 document.querySelector('.controls').addEventListener('click', ev => {
-  const b = ev.target.closest('button'); if (!b || b.dataset.t) return;
+  const b = ev.target.closest('button'); if (!b || b.dataset.t || b.dataset.p) return;
   const before = state.variant + state.screen + state.device;
   if (b.dataset.v) state.variant = b.dataset.v;
   if (b.dataset.s) state.screen = b.dataset.s;
@@ -976,32 +1184,81 @@ frame.addEventListener('change', ev => {
   const s = ev.target.closest('select[data-leg]'); if (!s) return;
   state.choice[s.dataset.leg] = s.value; render();
 });
-// 장소 끌어서 옮기기: 같은 날 순서 변경(A, B), 다른 날로 이동(B)
-let dragged = null;
+// 장소 끌어서 옮기기: 같은 날 순서 변경(A, B), 다른 날로 이동(B).
+// 끄는 동안 놓일 자리를 벌려 보여 주고, 놓으면 카드들이 새 자리로 미끄러진다.
+let dragged = null, slotEl = null, slotZone = null, slotAt = -1, slotMoved = 0;
+const allPairs = () => { const s = new Set(); state.days.forEach(d => d.stops.forEach((k, i) => { if (i) s.add(d.stops[i - 1] + '>' + k); })); return s; };
+function flipRows(mutate) {
+  const els = [...frame.querySelectorAll('.dayflow > *, .timeline > *, .daysum')].filter(e => e !== slotEl);
+  const first = els.map(e => e.getBoundingClientRect().top);
+  mutate();
+  if (RM.matches) return;
+  els.forEach((e, i) => { if (!e.isConnected) return; const dy = first[i] - e.getBoundingClientRect().top;
+    if (Math.abs(dy) > 1) e.animate([{transform: 'translateY(' + dy.toFixed(1) + 'px)'}, {transform: 'translateY(0)'}], {duration: 180, easing: 'ease-out'}); });
+}
+function clearSlot() {
+  if (slotEl) slotEl.remove();
+  slotEl = null; slotZone = null; slotAt = -1;
+  frame.querySelectorAll('.dropempty.over').forEach(e => e.classList.remove('over'));
+}
+// 놓을 위치: 그 날 장소 목록에서 몇 번째 앞인지. 제자리(옮겨도 순서가 같은 위치)면 noop
+function dropIndex(zone, y) {
+  const cards = [...zone.querySelectorAll('[data-stop]')];
+  let at = cards.length;
+  for (let i = 0; i < cards.length; i++) { const r = cards[i].getBoundingClientRect(); if (y < r.top + r.height / 2) { at = i; break; } }
+  const si = +zone.dataset.dropday === dragged.from ? cards.findIndex(c => c.dataset.stop === dragged.k) : -1;
+  return {cards, at, si, noop: si >= 0 && (at === si || at === si + 1)};
+}
+function placeSlot(zone, y) {
+  if (performance.now() - slotMoved < 190) return;
+  const {cards, at, noop} = dropIndex(zone, y);
+  if (slotZone === zone && slotAt === at) return;
+  flipRows(() => {
+    clearSlot();
+    slotZone = zone; slotAt = at;
+    const empty = zone.querySelector('.dropempty');
+    if (empty) { empty.classList.add('over'); return; }
+    if (noop) return;
+    slotEl = document.createElement('div'); slotEl.className = 'dropslot'; slotEl.style.height = dragged.h + 'px'; slotEl.textContent = '여기에 놓기';
+    const ref = cards[at] ? rowOf(cards[at]) : zone.querySelector('.fend, .endrow');
+    ref.parentNode.insertBefore(slotEl, ref);
+  });
+  slotMoved = performance.now();
+}
 function bindDrag() {
   frame.querySelectorAll('[draggable="true"]').forEach(el => {
-    el.addEventListener('dragstart', e => { dragged = {k: el.dataset.stop, from: +el.dataset.from}; el.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', el.dataset.stop); });
-    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('dragstart', e => {
+      dragged = {k: el.dataset.stop, from: +el.dataset.from, h: el.offsetHeight};
+      e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', el.dataset.stop);
+      requestAnimationFrame(() => el.classList.add('dragging'));
+    });
+    el.addEventListener('dragend', () => { el.classList.remove('dragging'); if (dragged) { flipRows(clearSlot); dragged = null; } });
   });
   frame.querySelectorAll('[data-dropday]').forEach(zone => {
-    zone.addEventListener('dragover', e => { if (!dragged) return; e.preventDefault(); zone.classList.add('dropline'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('dropline'));
+    zone.addEventListener('dragover', e => { if (!dragged) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; placeSlot(zone, e.clientY); });
+    zone.addEventListener('dragleave', e => { if (dragged && slotZone === zone && !zone.contains(e.relatedTarget)) { flipRows(clearSlot); slotMoved = 0; } });
     zone.addEventListener('drop', e => {
-      e.preventDefault(); zone.classList.remove('dropline'); if (!dragged) return;
+      e.preventDefault(); if (!dragged) return;
       const to = +zone.dataset.dropday;
-      const target = e.target.closest('[data-stop]');
-      const src = state.days[dragged.from].stops;
-      src.splice(src.indexOf(dragged.k), 1);
-      const dst = state.days[to].stops;
-      let at = dst.length;
-      if (target && target.dataset.stop !== dragged.k) {
-        const r = target.getBoundingClientRect();
-        at = dst.indexOf(target.dataset.stop) + ((e.clientY - r.top) > r.height / 2 ? 1 : 0);
-      }
-      dst.splice(at, 0, dragged.k);
-      state.changedPairs = new Set();
-      state.days.forEach((d, di) => d.stops.forEach((k, i) => { if (i && DAYS0[di].stops[i - 1] !== d.stops[i - 1]) state.changedPairs.add(d.stops[i - 1] + '>' + k); }));
+      const fresh = dropIndex(zone, e.clientY);
+      const at = slotZone === zone ? slotAt : fresh.at;
+      const noop = fresh.si >= 0 && (at === fresh.si || at === fresh.si + 1);
+      const first = snapshot();
+      if (slotEl) first[dragged.k] = slotEl.getBoundingClientRect();
+      const k = dragged.k, from = dragged.from;
       dragged = null;
+      if (noop) { flipRows(clearSlot); frame.querySelectorAll('.dragging').forEach(x => x.classList.remove('dragging')); return; }
+      clearSlot();
+      const before = allPairs();
+      const src = state.days[from].stops, si = src.indexOf(k);
+      src.splice(si, 1);
+      state.days[to].stops.splice(from === to && si < at ? at - 1 : at, 0, k);
+      // 이번에 새로 생긴 이동 구간만 잠깐 "다시 계산 중"으로 보여 줌
+      state.recalc = new Set([...allPairs()].filter(x => !before.has(x)));
+      state.moved = {k, t0: performance.now()};
+      pendingFlip = first;
+      clearTimeout(recalcTimer);
+      recalcTimer = setTimeout(() => { state.recalc = null; render(); }, RM.matches ? 0 : 950);
       toast('순서를 바꿨어. 실제 앱에서는 이동비를 서버에서 다시 계산해.');
     });
   });
@@ -1009,8 +1266,8 @@ function bindDrag() {
 // 틀 크기가 바뀌면 약도를 그 크기에 맞춰 다시 그림
 let mapTimer;
 new ResizeObserver(() => { clearTimeout(mapTimer); mapTimer = setTimeout(() => (frame.clientWidth <= NARROW) !== state.narrow ? render() : fillMaps(), 80); }).observe(frame);
+setPalette('sea');
 render();
-if (document.fonts?.ready) document.fonts.ready.then(() => { frame.querySelectorAll('.mapslot').forEach(el => el.dataset.size = ''); fillMaps(); });
 </script>
 </body>
 </html>

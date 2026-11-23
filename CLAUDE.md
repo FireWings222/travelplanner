@@ -23,6 +23,8 @@
 ## 실행과 테스트
 
 - 실행: `.\gradlew.bat bootRun` 후 http://localhost:8080 (JDK 17). 앱 실행은 사용자에게 먼저 묻는다.
+- 카카오맵: 사용자가 PowerShell 창에서 `$env:KAKAO_MAP_JS_KEY`를 넣고 같은 창에서 `bootRun`을 실행해야 키가 앱에 들어간다. 키 값은 묻거나 출력하거나 파일에 쓰지 않는다. 키가 들어갔는지는 화면 HTML의 `kakao-map-key` 메타 태그 유무와 길이로만 확인한다. 학생 카카오 앱에 `http://localhost:8080`이 JavaScript SDK 도메인으로 등록돼 있다(2026-11-23 확인).
+- 8080 포트를 다른 프로세스가 쓰고 있으면 사용자의 `bootRun`이 실패한다. 직접 띄운 앱은 작업이 끝나면 끈다.
 - 테스트: `.\gradlew.bat test`
 - OS 전역에 프로그램이나 패키지를 설치하지 않는다(`npm -g`, `pip install`(가상환경 밖), winget 등 금지). 도구가 필요하면 프로젝트 폴더 안(커밋하지 않는 폴더)에 설치하고, 설치 전에 사용자에게 묻는다.
 
