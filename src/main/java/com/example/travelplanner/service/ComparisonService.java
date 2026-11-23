@@ -19,7 +19,7 @@ public class ComparisonService {
     private final Pricing pricing;
     private final PlanService plans;
 
-    public record Side(List<Item> items, Total cost, Integer travelMinutes, int scheduledMinutes, String convenience) {}
+    public record Side(List<Item> items, Total cost, Integer travelMinutes, Integer scheduledMinutes, String convenience) {}
     public record Result(Tour tour, List<Attraction> tourStops, List<Attraction> independentStops, Side guided,
                          Side independent, Journey journey, BigDecimal tourMinusIndependentKrw,
                          List<String> notices, String recommendation) {}
@@ -46,12 +46,13 @@ public class ComparisonService {
     public Result compare(CompareRequest request) {
         Tour tour = tours.get(request.tourId());
         TourInput detail = tour.details();
+        TourReference reference = tour.reference();
         String base = detail.destination();
         List<Attraction> tourStops = catalog.stops(base, detail.stops());
         List<Attraction> independentStops = request.stops() == null
                 ? tourStops : catalog.stops(base, request.stops(), request.places());
         if (independentStops.isEmpty()) throw new IllegalArgumentException("자유여행 관광지를 한 곳 이상 선택해 주세요.");
-        Journey local = request.stops() == null
+        Journey local = request.stops() == null && reference == null
                 ? journeys.loop(base, independentStops, request.legs(), null, request.party())
                 : journeys.visits(independentStops, journeys.visitLegs(base, independentStops, request.legs()),
                     null, request.party());
@@ -62,13 +63,19 @@ public class ComparisonService {
         }
 
         List<Item> guided = new ArrayList<>();
-        guided.add(item("투어 상품 가격", TourService.fare(tour, request.date()), tour.source(), request));
+        String priceLabel = reference == null ? "투어 상품 가격"
+                : reference.estimate() == null ? "공개 투어 요금" : "인원별 투어 예상 요금";
+        guided.add(item(priceLabel, TourService.fare(tour, request.date(), request.party()), tour.source(), request));
         String centerName = catalog.center(base).name();
         Integer outboundMinutes = access(guided, "숙소 → 집합 장소", request.tourOutbound(), detail.meetingPlace(),
                 centerName, request);
         Integer returnMinutes = access(guided, "종료 장소 → 숙소", request.tourReturn(), detail.endPlace(),
                 centerName, request);
-        if (!detail.admissionIncluded()) guided.addAll(plans.admissions(tourStops, request.party()));
+        if (!detail.admissionIncluded()) {
+            List<Attraction> extraAdmission = reference == null ? tourStops : tourStops.stream()
+                    .filter(stop -> !reference.coveredAdmissionStops().contains(stop.id())).toList();
+            guided.addAll(plans.admissions(extraAdmission, request.party()));
+        }
         if (!detail.transportIncluded()) {
             guided.add(item("투어 불포함 관광지 이동비", detail.excludedTransport(), tour.source(), request));
         }
@@ -76,16 +83,31 @@ public class ComparisonService {
 
         Total tourCost = pricing.total(guided, request.party());
         Total soloCost = pricing.total(own, request.party());
-        int duration = (int) Duration.between(detail.departure(), detail.arrival()).toMinutes();
-        if (duration < 0) duration += 24 * 60;
+        Integer duration = reference == null
+                ? Integer.valueOf(Math.floorMod((int) Duration.between(detail.departure(), detail.arrival()).toMinutes(), 24 * 60))
+                : reference.durationMinutes();
         Integer accessMinutes = outboundMinutes != null && returnMinutes != null ? outboundMinutes + returnMinutes : null;
         Integer tourTravel = tour.id().equals("jeju-day") && accessMinutes != null ? 120 + accessMinutes : null;
-        Side tourSide = new Side(List.copyOf(guided), tourCost, tourTravel, duration + (accessMinutes == null ? 0 : accessMinutes),
-                "정해진 집합 시간과 방문 순서" + (detail.guideIncluded() ? " · 가이드 포함" : ""));
+        Integer scheduledMinutes = duration == null ? null : duration + (accessMinutes == null ? 0 : accessMinutes);
+        String itinerary = reference == null ? "정해진 집합 시간과 방문 순서" : "카탈로그에 등록된 방문 순서";
+        Side tourSide = new Side(List.copyOf(guided), tourCost, tourTravel, scheduledMinutes,
+                itinerary + (detail.guideIncluded() ? " · 가이드 포함" : ""));
         Side soloSide = new Side(List.copyOf(own), soloCost, local.minutes(),
                 local.minutes() + independentStops.stream().mapToInt(Attraction::visitMinutes).sum(),
                 "방문 순서와 체류 시간을 직접 조정");
         List<String> notices = new ArrayList<>();
+        if (reference != null) {
+            notices.add("카탈로그 방문지는 참고 좌표입니다. 실제 승하차 위치와 집합·종료 정보를 확인하세요.");
+            notices.add("자유여행 교통비는 첫 방문지부터 마지막 방문지까지의 이동을 기준으로 합니다.");
+            if (reference.estimate() == null) {
+                notices.add("공개 요금은 확인일 기준입니다. 선택한 날짜의 운행과 최종 요금은 운영사에서 확인하세요.");
+            } else if (reference.estimate().supports(request.party().size())) {
+                notices.add("6~20인 단체 예상가입니다. 성인과 아동에게 같은 1인 예상가를 적용했습니다.");
+            } else {
+                notices.add("이 투어의 예상가를 계산하려면 성인과 아동을 합해 6~20명으로 입력하세요.");
+            }
+            if (reference.notes() != null) notices.add(reference.notes());
+        }
         List<String> tourOnly = tourStops.stream().filter(stop -> !independentStops.contains(stop)).map(Attraction::name).toList();
         List<String> soloOnly = independentStops.stream().filter(stop -> !tourStops.contains(stop)).map(Attraction::name).toList();
         if (!tourOnly.isEmpty()) notices.add("투어만 방문: " + String.join(", ", tourOnly));

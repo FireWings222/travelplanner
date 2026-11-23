@@ -22,8 +22,8 @@ public final class Travel {
     }
 
     public enum TripType { SOLO, COUPLE, FAMILY, FRIENDS, OTHER }
-    public enum Platform { KLOOK, MYREALTRIP, NOL, OTHER }
-    public enum Source { SAMPLE, MANUAL, PROVIDER, ODSAY, KAKAO_MOBILITY, KAKAO_MAP }
+    public enum Platform { KLOOK, MYREALTRIP, NOL, KKDAY, OTHER }
+    public enum Source { SAMPLE, MANUAL, PROVIDER, ODSAY, KAKAO_MOBILITY, KAKAO_MAP, PUBLISHED, ESTIMATED }
 
     public record Destination(String id, String name, String keywords) {}
     public record Attraction(String id, String destinationId, String name, String description,
@@ -116,7 +116,39 @@ public final class Travel {
                             @Valid Fare requiredExtras,
                             @Valid Fare excludedTransport) {}
 
-    public record Tour(String id, TourInput details, Source source, Instant checkedAt) {}
+    public record GroupEstimate(int fixedKrw, int perPersonKrw) {
+        public static final int MIN_PEOPLE = 6;
+        public static final int MAX_PEOPLE = 20;
+        public static final int DEFAULT_PEOPLE = 10;
+
+        public boolean supports(int people) { return people >= MIN_PEOPLE && people <= MAX_PEOPLE; }
+
+        @JsonProperty(value = "minimumPartyPrice", access = JsonProperty.Access.READ_ONLY)
+        public BigDecimal minimumPartyPrice() { return perPerson(MIN_PEOPLE); }
+
+        @JsonProperty(value = "maximumPartyPrice", access = JsonProperty.Access.READ_ONLY)
+        public BigDecimal maximumPartyPrice() { return perPerson(MAX_PEOPLE); }
+
+        public BigDecimal perPerson(int people) {
+            if (!supports(people)) throw new IllegalArgumentException("예상 투어는 6~20인 기준입니다.");
+            long unit = people * 1_000L;
+            long total = fixedKrw + (long) perPersonKrw * people;
+            long rounded = ((total + unit - 1) / unit) * 1_000;
+            return BigDecimal.valueOf(Math.max(30_000, Math.min(120_000, rounded)));
+        }
+    }
+
+    public record GroupDiscount(int minimumPeople, int adultKrw) {}
+
+    public record TourReference(String sourceUrl, String priceUrl, String notes, boolean fromPrice,
+                                Integer durationMinutes, GroupEstimate estimate, GroupDiscount discount,
+                                List<String> coveredAdmissionStops) {}
+
+    public record Tour(String id, TourInput details, Source source, Instant checkedAt, TourReference reference) {
+        public Tour(String id, TourInput details, Source source, Instant checkedAt) {
+            this(id, details, source, checkedAt, null);
+        }
+    }
 
     @JsonIgnoreProperties("lodgingCity")
     public record CompareRequest(@NotBlank String tourId, @NotNull LocalDate date,

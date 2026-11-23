@@ -50,7 +50,7 @@ public class PlanService {
      */
     public PlanQuote generate(Trip rawTrip) {
         Trip trip = catalog.validateTrip(rawTrip);
-        List<String> sights = catalog.attractions(trip.destination(), "").stream().map(Attraction::id).toList();
+        List<String> sights = catalog.suggestedStops(trip.destination());
         List<LocalDate> dates = dates(trip);
         List<Day> days = new ArrayList<>();
         int perDay = Math.max(1, (sights.size() + dates.size() - 1) / dates.size());

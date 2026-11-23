@@ -11,14 +11,15 @@ export const modes = {
     FLIGHT: '항공편', AIRPORT_BUS: '공항버스', AIRPORT_RAIL: '공항철도', RENTAL_CAR: '렌터카',
     BUS_SUBWAY: '버스 + 지하철'
 };
-export const platforms = {KLOOK: '클룩', MYREALTRIP: '마이리얼트립', NOL: 'NOL / 야놀자', OTHER: '기타'};
+export const platforms = {KLOOK: '클룩', MYREALTRIP: '마이리얼트립', NOL: 'NOL / 야놀자', KKDAY: 'KKday', OTHER: '기타'};
 export const inclusions = {transportIncluded: '관광지 간 이동', admissionIncluded: '입장료', mealIncluded: '식사', guideIncluded: '가이드'};
 // 투어 목록과 비용 비교 카드에 교통·입장료·식사·가이드 포함 여부를 표시합니다.
 export const inclusionTags = detail => '<div class="tags">' + Object.entries(inclusions).map(([key, label]) =>
     '<span class="tag ' + (detail[key] ? 'included' : '') + '">' + label + (detail[key] ? ' 포함' : ' 불포함') + '</span>').join('') + '</div>';
 export const sources = {SAMPLE: '테스트용 가상 가격', MANUAL: '사용자 입력 요금',
     PROVIDER: '제공업체 가격', ODSAY: 'ODsay 예상 요금·시간',
-    KAKAO_MOBILITY: '카카오모빌리티 예상 정보', KAKAO_MAP: '카카오맵 검색 장소'};
+    KAKAO_MOBILITY: '카카오모빌리티 예상 정보', KAKAO_MAP: '카카오맵 검색 장소',
+    PUBLISHED: '공개 요금', ESTIMATED: '단체 추정가'};
 // 비용과 거리를 한국어 숫자 형식으로 표시합니다.
 export const number = value => new Intl.NumberFormat('ko-KR', {maximumFractionDigits: 2}).format(value);
 // 합계·요금에 원 단위를 붙이고 데이터가 없으면 미확인으로 표시합니다.
@@ -114,6 +115,9 @@ export function showTrip(trip, cities) {
 // 구간이나 투어에 요금 출처 배지와 확인 시각을 표시합니다.
 export const priceType = (source, checkedAt) => '<span class="tag ' + (source === 'SAMPLE' ? 'sample' : '') + '">'
     + e(sources[source]) + '</span>' + (checkedAt ? '<span class="meta">확인 ' + e(checked(checkedAt)) + ' KST</span>' : '');
+export const tourReferenceLinks = reference => [[reference?.sourceUrl, '출처 보기'], [reference?.priceUrl, '공개 요금 보기']]
+    .map(([url, label]) => [safeUrl(url), label]).filter(([url]) => url)
+    .map(([url, label]) => '<a class="soft" href="' + e(url) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>').join('');
 // 서버가 합계에서 제외한 미확인 비용 항목을 목록으로 안내합니다.
 export function missing(cost) {
     return cost.missing.length ? '<p class="notice">합산에서 제외된 항목 · ' + e(cost.missing.join(', ')) + '</p>' : '';

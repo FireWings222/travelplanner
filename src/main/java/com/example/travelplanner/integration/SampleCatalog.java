@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 @Component
 public class SampleCatalog implements TravelProviders.Catalog {
@@ -58,10 +59,17 @@ public class SampleCatalog implements TravelProviders.Catalog {
             kr("dongmun", "jeju", "동문시장", "제주시 전통시장", 60, 0, 33.5117, 126.5263),
             kr("gimnyeong", "jeju", "김녕해수욕장", "제주 동북쪽의 해변 산책로", 60, 0, 33.5570, 126.7590));
 
+    private final List<Attraction> allSights;
+
+    public SampleCatalog(DomesticTours domesticTours) {
+        allSights = Stream.concat(sights.stream(), domesticTours.attractions().stream()).toList();
+    }
+
     /** CatalogService의 도시 검색에 사용되는 국내 샘플 도시 목록을 반환합니다. */
     public List<Destination> destinations() { return places; }
     /** 일정과 투어에서 고를 수 있는 국내 샘플 관광지 목록을 반환합니다. */
-    public List<Attraction> attractions() { return sights; }
+    public List<Attraction> attractions() { return allSights; }
+    @Override public List<Attraction> suggestedAttractions() { return sights; }
     /** JourneyService와 SampleRoutes에서 사용할 도시 중심 위치를 도시 ID로 찾습니다. */
     public Place center(String destination) { return centers.get(destination); }
 

@@ -8,6 +8,7 @@ import com.example.travelplanner.pricing.Pricing;
 import com.example.travelplanner.repository.TourRepository;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -44,7 +45,7 @@ public class TourService {
                 .stream().map(this::from).toList());
         List<String> notices = new ArrayList<>();
         for (TravelProviders.Tours provider : providers) {
-            if (platform != null && provider.platform() != platform) continue;
+            if (platform != null && !provider.supports(platform)) continue;
             try {
                 found.addAll(provider.search(city));
             } catch (TravelProviders.Unavailable error) {
@@ -121,9 +122,28 @@ public class TourService {
      * 가격 범위의 시작일과 종료일을 모두 포함해 비교합니다. 해당 날짜의 가격이 없으면 null을 반환해 검색 필터와 비교 화면이 판단할 수 있게 합니다.
      */
     public static Fare fare(Tour tour, LocalDate date) {
+        if (tour.reference() != null) return tour.details().prices().get(0).fare();
         return tour.details().prices().stream()
                 .filter(price -> !date.isBefore(price.from()) && !date.isAfter(price.to()))
                 .map(Price::fare).findFirst().orElse(null);
+    }
+
+    public static Fare fare(Tour tour, LocalDate date, Party party) {
+        Fare base = fare(tour, date);
+        TourReference reference = tour.reference();
+        if (reference == null) return base;
+        int people = party.size();
+        GroupEstimate estimate = reference.estimate();
+        if (estimate != null) {
+            if (!estimate.supports(people)) return null;
+            BigDecimal amount = estimate.perPerson(people);
+            return new Fare(amount, amount, null);
+        }
+        GroupDiscount discount = reference.discount();
+        if (discount != null && people >= discount.minimumPeople()) {
+            return new Fare(BigDecimal.valueOf(discount.adultKrw()), base.child(), null);
+        }
+        return base;
     }
 
     /** 투어 등록 과정에서 예약·이미지 링크가 유효한 HTTPS 주소인지 확인합니다. */

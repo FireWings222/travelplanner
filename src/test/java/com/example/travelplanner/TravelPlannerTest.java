@@ -42,6 +42,44 @@ class TravelPlannerTest {
     @Autowired MockMvc http;
     @MockitoBean KakaoPlaceSearch placeSearch;
 
+    @Test
+    void loadsRegionalToursAndResolvesTheirStopsThroughTheExistingCatalog() throws Exception {
+        List<Tour> domestic = catalog.search("").stream().flatMap(region -> {
+            List<Tour> regional = tours.search(region.id(), DATE, null).tours().stream()
+                    .filter(tour -> tour.reference() != null).toList();
+            assertEquals(3, regional.size(), region.id());
+            for (Tour tour : regional) {
+                assertEquals(tour.details().stops().size(), catalog.stops(region.id(), tour.details().stops()).size());
+            }
+            return regional.stream();
+        }).toList();
+        assertEquals(51, domestic.stream().map(Tour::id).distinct().count());
+        assertEquals(30, domestic.stream().filter(tour -> tour.source() == Source.PUBLISHED).count());
+        assertEquals(List.of("domestic-jeju-b"), tours.search("jeju", DATE, Platform.KKDAY).tours().stream()
+                .map(Tour::id).toList());
+        http.perform(get("/api/tours/domestic-gangwon-a"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reference.estimate.minimumPartyPrice").value(95000))
+                .andExpect(jsonPath("$.reference.estimate.maximumPartyPrice").value(32000));
+    }
+
+    @Test
+    void usesActualPartySizeForEstimatedAndPublishedGroupRates() {
+        var estimate = tours.get("domestic-gangwon-a");
+        amount("95000", TourService.fare(estimate, DATE, new Party(6, 0)).adult());
+        amount("50000", TourService.fare(estimate, DATE, new Party(10, 2)).child());
+        amount("32000", TourService.fare(estimate, DATE, new Party(20, 0)).adult());
+        assertNull(TourService.fare(estimate, DATE, new Party(5, 0)));
+        assertNull(TourService.fare(estimate, DATE, new Party(21, 0)));
+        var incheon = tours.get("domestic-incheon-a");
+        amount("9000", TourService.fare(incheon, DATE, new Party(9, 0)).adult());
+        amount("7000", TourService.fare(incheon, DATE, new Party(10, 0)).adult());
+        var result = comparison.compare(new CompareRequest(estimate.id(), DATE, new Party(10, 2),
+                null, Map.of(), null, null, null));
+        amount("600000", result.guided().items().get(0).totalKrw());
+        assertNull(result.guided().scheduledMinutes());
+    }
+
     /** Pricing이 성인과 아동 요금을 각 인원수에 맞게 합산하는지 검증합니다. */
     @Test
     void multipliesAdultAndChildFaresByHeadcount() {

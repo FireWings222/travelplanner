@@ -32,6 +32,11 @@ public class CatalogService {
                 .toList();
     }
 
+    public List<String> suggestedStops(String destination) {
+        return catalog.suggestedAttractions().stream().filter(sight -> sight.destinationId().equals(destination))
+                .map(Attraction::id).toList();
+    }
+
     /**
      * 도시 ID나 이름을 카탈로그의 한 도시로 확정합니다. 후보가 여러 개면 입력 오류를 반환합니다.
      *

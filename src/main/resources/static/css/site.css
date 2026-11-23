@@ -162,6 +162,7 @@ summary { color:var(--green-dark); font-weight:750; cursor:pointer; }
 .filter-bar { align-items:end; }
 .tour-list { margin-top:17px; display:grid; gap:14px; }
 .tour-card { display:grid; grid-template-columns:minmax(190px, .38fr) 1fr; overflow:hidden; }
+.tour-card.catalog-tour { grid-template-columns:1fr; }
 .tour-image { min-height:215px; background:linear-gradient(145deg,#cce7d5,#6a9a80); }
 .tour-image img { height:100%; width:100%; object-fit:cover; }
 .tour-body { padding:21px; }

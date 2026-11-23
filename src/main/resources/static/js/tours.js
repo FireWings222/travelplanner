@@ -1,5 +1,6 @@
 import {$, $$, api, read, write, e, panel, empty, cityOptions, modeOptions, modes, platforms, inclusions, inclusionTags,
-    won, priceType, status, showError, showTrip, safeUrl, fareFields, readFare, dateAfter, busy} from './common.js';
+    won, priceType, status, showError, showTrip, safeUrl, fareFields, readFare, dateAfter, busy, minutes,
+    tourReferenceLinks} from './common.js';
 
 // 투어 출발·도착 시각을 카드에 표시할 시·분 형식으로 바꿉니다.
 const time = value => e(value?.slice(0, 5));
@@ -78,7 +79,7 @@ export async function init(cities) {
     // 투어 ID와 날짜를 세션의 comparison에 저장해 compare.js가 비교 API 요청을 만들 수 있게 합니다.
     function compareTour(tour) {
         write('comparison', {tourId: tour.id, date: tour.date,
-            party: trip?.party ?? {adults: 1, children: 0}});
+            party: trip?.party ?? {adults: tour.estimated ? 10 : 1, children: 0}});
         location.assign('/compare?tour=' + encodeURIComponent(tour.id));
     }
 
@@ -104,6 +105,8 @@ export async function init(cities) {
     // 검색 결과 상품에 날짜별 요금, 방문 장소, 포함 항목, 비교 버튼을 표시합니다.
     function tourCard(tour, date) {
         const detail = tour.details;
+        const reference = tour.reference;
+        if (reference) return catalogCard(tour, date || trip?.start || dateAfter(0));
         const applied = date ? detail.prices.find(price => price.from <= date && date <= price.to) : detail.prices[0];
         const chosenDate = date || (trip?.start >= applied?.from && trip?.start <= applied?.to ? trip.start : applied?.from);
         const image = safeUrl(detail.imageUrl);
@@ -128,6 +131,30 @@ export async function init(cities) {
             + '</div></div></article>';
     }
 
+    function catalogCard(tour, date) {
+        const {details, reference} = tour;
+        const {estimate, discount} = reference;
+        const amount = details.prices[0].fare.adult;
+        const label = estimate ? '10인 기준 · 1인' : '성인 1인';
+        const groupPrices = estimate ? '<p class="muted">6인 기준 1인 ' + won(estimate.minimumPartyPrice)
+            + ' · 20인 기준 1인 ' + won(estimate.maximumPartyPrice) + '</p>' : '';
+        const transport = details.mode === 'WALK' ? '도보' : '투어버스';
+        const schedule = reference.durationMinutes == null ? transport : transport + ' · 약 ' + minutes(reference.durationMinutes);
+        return '<article class="panel tour-card catalog-tour"><div class="tour-body"><div class="tour-top"><div>'
+            + (details.platform === 'OTHER' ? '' : '<span class="eyebrow">' + e(platforms[details.platform]) + '</span>')
+            + '<h2>' + e(details.name) + '</h2></div><div class="tour-price"><small>' + label + '</small><strong>'
+            + (amount === 0 ? '무료' : won(amount)) + (reference.fromPrice ? '부터' : '') + '</strong></div></div>'
+            + '<p class="muted">' + e(schedule) + '</p><p>' + details.stops.map(id => e(nameOf(id))).join(' → ') + '</p>'
+            + groupPrices + (discount ? '<p class="muted">' + e(discount.minimumPeople) + '인 이상 성인 1인 '
+                + won(discount.adultKrw) + '</p>' : '')
+            + (reference.notes ? '<p>' + e(reference.notes) + '</p>' : '')
+            + '<div>' + priceType(tour.source, tour.checkedAt) + '</div><div class="actions">'
+            + tourReferenceLinks(reference)
+            + '<button type="button" class="soft" data-pin="' + e(tour.id) + '" data-date="' + e(date) + '">비교 목록에 추가</button>'
+            + '<button type="button" class="primary" data-tour="' + e(tour.id) + '" data-date="' + e(date) + '">비용 비교</button>'
+            + '</div></div></article>';
+    }
+
     // 도시·날짜·플랫폼으로 투어 API를 조회하고 결과 카드와 비교 동작을 연결합니다.
     // 검색 폼의 필수 도시와 선택 날짜·플랫폼을 쿼리로 전달합니다. 서버가 보내는 notices도 화면에 표시해 일부 제공자 실패를 알립니다.
     async function find() {
@@ -144,14 +171,16 @@ export async function init(cities) {
             : empty('조건에 맞는 투어가 없습니다. 날짜 필터를 지우거나 상품을 직접 등록할 수 있습니다.');
         // 검색 카드에서 선택한 상품과 날짜를 비용 비교 화면으로 넘깁니다.
         $$('[data-tour]').forEach(button => button.onclick = () => {
-            compareTour({id: button.dataset.tour, date: button.dataset.date || dateAfter(0)});
+            const id = button.dataset.tour;
+            compareTour({id, date: button.dataset.date || dateAfter(0),
+                estimated: !!result.tours.find(tour => tour.id === id)?.reference?.estimate});
         });
         // 검색 카드의 상품과 날짜를 비교 목록에 추가합니다.
         $$('[data-pin]').forEach(button => button.onclick = () => {
             const id = button.dataset.pin;
             const tour = result.tours.find(tour => tour.id === id);
             shortlist = [...shortlist.filter(item => item.id !== id), {
-                id, name: tour.details.name, date: button.dataset.date || dateAfter(0)
+                id, name: tour.details.name, date: button.dataset.date || dateAfter(0), estimated: !!tour.reference?.estimate
             }];
             write('tourShortlist', shortlist);
             renderShortlist();
