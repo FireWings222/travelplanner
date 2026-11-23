@@ -355,7 +355,7 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
     72% { opacity: 1; transform: translateY(-4px); } 100% { opacity: 0; transform: translateY(-12px); } }
 @keyframes rd-calc { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .redesign .flash { animation: rd-flash 1200ms ease-out both; }
-.redesign .delta { position: absolute; right: 0; top: -3px; opacity: 0; pointer-events: none; font-size: 14px; font-weight: 800; line-height: 1.3;
+.redesign .delta { position: absolute; right: 0; top: 26px; opacity: 0; pointer-events: none; font-size: 14px; font-weight: 800; line-height: 1.3;
     padding: 2px 8px; border-radius: 4px; background: var(--brand); color: var(--brand-on); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .redesign .delta.show { animation: rd-delta 1800ms ease-out both; }
 .redesign .calcbar { display: block; height: 2px; background: var(--field-2); overflow: hidden; border-radius: 0 0 12px 12px; margin-top: -2px; }
@@ -389,3 +389,78 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
 .redesign .list-foot .fine { flex: 1 0 100%; }
 .redesign .emptynote { background: var(--paper); border-radius: 12px; padding: 16px; display: grid; gap: 6px; justify-items: start; }
 .redesign .emptynote p { margin: 0; color: var(--ink-2); }
+.redesign .textbtn.danger { color: var(--over); }
+
+/* 여행 일정: 날짜 버튼, 장소 카드, 이동 구간 줄 */
+.redesign .days { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; flex: none; }
+.redesign .daybtn { border: 0; background: var(--paper); padding: 9px 12px; border-radius: 10px; cursor: pointer; font-size: 13.5px;
+    text-align: left; line-height: 1.35; color: var(--ink-2); }
+.redesign .daybtn b { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; color: var(--ink); }
+.redesign .daybtn b i { width: 10px; height: 10px; border-radius: 50%; }
+.redesign .daybtn[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--sel); }
+.redesign .timeline { display: flex; flex-direction: column; padding: 6px 0 4px; }
+.redesign .dayfacts { margin: 0; padding: 4px 4px 8px; font-size: 14px; color: var(--ink-2); }
+.redesign .dayfacts b { color: var(--ink); font-weight: 700; }
+.redesign .stop-row.lifted .stop { box-shadow: var(--float-shadow); }
+.redesign .stop { display: grid; grid-template-columns: 24px 26px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    padding: 13px 14px 13px 6px; background: var(--paper); border-radius: 12px; }
+.redesign .drag { border: 0; background: transparent; padding: 0; width: 24px; height: 40px; display: grid; place-items: center;
+    color: var(--ink-3); cursor: grab; touch-action: none; border-radius: 4px; }
+.redesign .drag:active { cursor: grabbing; }
+.redesign .pinsvg { display: block; flex: none; }
+.redesign .stop-body { min-width: 0; }
+.redesign .stop .arr { display: block; font-size: 13.5px; font-weight: 800; color: var(--ink-2); }
+.redesign .stop .arr.none { font-weight: 600; color: var(--ink-3); }
+.redesign .stop h2 { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.45; letter-spacing: 0; }
+.redesign .stop p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.redesign .stop-side { display: grid; justify-items: end; gap: 4px; }
+.redesign .stop .fee { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.redesign .stop-side .textbtn { font-size: 13px; }
+.redesign .between { margin-left: 42px; border-left: 2px dotted var(--ink-3); padding: 9px 0 9px 18px; font-size: 14px; color: var(--ink-2);
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.redesign .between select { width: auto; min-height: 0; font-size: 14px; font-weight: 600; border: 1px solid var(--ink-3); border-radius: 8px;
+    padding: 3px 26px 3px 6px; background-color: var(--paper); color: var(--ink); }
+.redesign .between .amt { font-weight: 700; color: var(--ink); }
+.redesign .hop-extra { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13.5px; }
+.redesign .hop-extra details { margin: 0; width: 100%; }
+.redesign .hop-extra summary { color: var(--brand); font-size: 13.5px; font-weight: 700; }
+.redesign .hop-extra .fare-fields { margin: 8px 0; }
+.redesign .hop-extra form p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); }
+.redesign .between .boardings { flex: 1 0 100%; grid-column: auto; margin: 0; }
+.redesign .endrow { margin-left: 42px; padding: 9px 0 2px 20px; font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.redesign .emptyday { padding: 18px 4px; color: var(--ink-2); font-size: 15px; margin: 0; }
+.redesign .dropslot { margin-block: 6px; border: 2px dashed var(--sel); border-radius: 12px; background: var(--flash); display: grid;
+    place-items: center; font-size: 13.5px; font-weight: 700; color: var(--ink); animation: rd-fade 160ms ease-out both; }
+.redesign .addplace { width: 100%; margin-top: 10px; border: 0; background: var(--field-2); border-radius: 10px; padding: 12px 14px;
+    color: var(--ink-2); cursor: pointer; font-size: 15px; font-weight: 600; text-align: left; display: flex; gap: 8px; align-items: center; }
+.redesign .addform { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 8px; align-items: end; margin-top: 8px; }
+.redesign .addform[hidden] { display: none; }
+.redesign #place-status:not(:empty) { margin-top: 8px; }
+.redesign .place-results { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 6px; }
+.redesign .place-results li { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--paper);
+    border-radius: 10px; padding: 10px 12px; }
+.redesign .place-results b { display: block; font-size: 15px; }
+.redesign .place-results small { display: block; font-size: 13px; color: var(--ink-2); }
+.redesign .saved { margin: 8px 0 0; background: var(--paper); border-radius: 12px; padding: 12px 16px; flex: none; scroll-margin-top: 12px; }
+.redesign .saved summary { color: var(--ink); font-weight: 700; font-size: 15px; }
+.redesign .saved-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 0;
+    border-top: 1px solid var(--rule); }
+.redesign .saved-item:first-child { margin-top: 10px; }
+.redesign .saved-item small { display: block; font-size: 13.5px; color: var(--ink-2); }
+.redesign #saved-plans > .fine { margin-top: 10px; }
+.redesign .kdim { width: 13px; height: 13px; border-radius: 50%; background: var(--paper); border: 2.5px solid var(--ink-2); }
+.redesign .kpin text { font-family: var(--font); }
+.redesign .kpinlabel { margin-top: 3px; font: 800 13px/1.2 var(--font); color: var(--ink); white-space: nowrap;
+    text-shadow: 0 0 2px var(--paper), 0 0 2px var(--paper), 0 0 3px var(--paper), 0 0 3px var(--paper); }
+/* 움직임: 옮긴 카드 테두리, 놓을 자리, 다시 계산 중 */
+@keyframes rd-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rd-moved { 0%, 35% { box-shadow: 0 0 0 3px var(--sel); background-color: var(--flash); } 100% { box-shadow: 0 0 0 3px transparent; background-color: var(--paper); } }
+@keyframes rd-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.redesign .stop.moved { animation: rd-moved 1600ms ease-out both; }
+.redesign .calc { display: inline-grid; gap: 3px; font-weight: 700; color: var(--ink); animation: rd-pulse 900ms ease-in-out both; }
+.redesign .calc i { display: block; width: 110px; height: 2px; background: var(--field-2); position: relative; overflow: hidden; }
+.redesign .calc i::after { content: ""; position: absolute; inset: 0; background: var(--sel); transform-origin: left center; animation: rd-calc 900ms linear both; }
+@media (max-width: 860px) {
+    .redesign .addform { grid-template-columns: 1fr; }
+    .redesign .saved { margin-bottom: 8px; }
+}

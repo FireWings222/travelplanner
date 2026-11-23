@@ -55,7 +55,7 @@ export async function init(cities) {
         ? createMap(mapSlot).catch(error => mapFail(error.message))
         : Promise.resolve(mapFail('카카오맵 JavaScript 키가 없어 지도를 표시할 수 없습니다. 저장소 README의 카카오맵 설정을 확인하세요.'));
     // 지도 오른쪽 아래를 가리는 견적 카드만큼 지도 범위를 비웁니다. 모바일에서는 카드가 지도 밖에 있어서 비우지 않습니다.
-    const rightPad = () => !estimate.hidden && innerWidth > 860 ? estimate.offsetWidth + 30 : 0;
+    const rightPad = () => !estimate.hidden && innerWidth > 860 ? estimate.offsetWidth + 50 : 0;
 
     // 현재 탭에서 만든 일정이 같은 여행이면 /api/itineraries/quote로 현지 일정 합계를 받아 견적에 더합니다.
     const plan = read('plan');

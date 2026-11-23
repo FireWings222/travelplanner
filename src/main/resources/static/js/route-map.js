@@ -228,3 +228,59 @@ export async function drawJourney(view, sections, rightPad = () => 0) {
     };
     return {fit, focuses};
 }
+
+// 날짜 색 물방울 핀 안에 흰 번호를 넣은 SVG입니다. 장소 카드와 지도 핀이 같은 모양을 씁니다.
+export function dayPin(number, color, size = 26) {
+    return '<svg class="pinsvg" width="' + size + '" height="' + Math.round(size * 1.3) + '" viewBox="0 0 26 34" aria-hidden="true">'
+        + '<path d="M13 33.5C13 33.5 2.5 20.6 2.5 12.5a10.5 10.5 0 0 1 21 0c0 8.1-10.5 21-10.5 21z" fill="' + color + '" stroke="#ffffff" stroke-width="1.5"/>'
+        + '<text x="13" y="16.8" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">' + number + '</text></svg>';
+}
+// 일정 날짜 순서(0부터)에 맞는 날짜 색 변수 이름입니다. DESIGN.md의 day-1부터 day-3을 차례로 씁니다.
+export const dayColor = index => '--d' + (index % 3 + 1);
+
+// 여행 일정 화면의 지도: 고른 날짜(focus)는 날짜 색 동선과 번호 핀, 다른 날짜는 흐린 회색 점선과 점으로 그립니다.
+// days는 /api/itineraries/quote 응답의 days입니다. 노선 코드(mapObject)가 있는 구간은 ODsay 노선 좌표로, 나머지는 장소 사이 직선으로 잇습니다.
+// 반환하는 fit()은 고른 날짜의 장소(없으면 모든 날짜의 장소)로 지도 범위를 맞춥니다.
+export async function drawDays(view, days, focus, rightPad = () => 0) {
+    const token = ++drawing;
+    const {maps} = view;
+    const position = point => new maps.LatLng(point.latitude, point.longitude);
+    const shapes = await Promise.all(days.map(day => Promise.all(day.journey.sections.map(async section => {
+        const segment = section.chosen;
+        if (segment.mapObject) {
+            try {
+                const lines = await api('/routes/geometry?mapObject=' + encodeURIComponent(segment.mapObject));
+                if (lines.length) return lines;
+            } catch { /* 노선 좌표를 못 받으면 장소 사이 직선으로 그립니다. */ }
+        }
+        return [[segment.from, segment.to]];
+    }))));
+    if (token !== drawing) return null;
+    clear(view);
+    const ink2 = cssValue(view.container, '--ink-2');
+    days.forEach((day, i) => {
+        const on = i === focus;
+        const color = cssValue(view.container, dayColor(i));
+        shapes[i].flat().forEach(line => {
+            const path = line.map(position);
+            if (on) casedLine(view, path, color, 4, 20);
+            else view.items.push(new maps.Polyline({map: view.map, path, strokeWeight: 2.5, strokeColor: ink2, strokeOpacity: 0.8, strokeStyle: 'shortdash', zIndex: 5}));
+        });
+        day.stops.forEach((stop, n) => {
+            const at = position(stop);
+            if (!on) { put(view, at, overlayNode('kdim', ''), 'c', 20); return; }
+            put(view, at, overlayNode('kpin', dayPin(n + 1, color, 28)), 'pin', 35 + n);
+            put(view, at, overlayNode('kpinlabel', e(stop.name)), 'b', 34);
+        });
+    });
+    const fit = () => {
+        const points = (days[focus]?.stops.length ? days[focus].stops : days.flatMap(day => day.stops));
+        if (!points.length) return;
+        const bounds = new maps.LatLngBounds();
+        points.forEach(point => bounds.extend(position(point)));
+        const pad = view.container.clientWidth < 430 ? 36 : 80;
+        view.map.setBounds(bounds, pad, Math.max(pad, rightPad()), pad, pad);
+        if (view.map.getLevel() < 6) view.map.setLevel(6);
+    };
+    return {fit};
+}

@@ -42,7 +42,7 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 화면�
 | 화면 | 파일 | 상태 |
 |---|---|---|
 | 경로 비교 | `search.html`, `routes.js` | 적용(2026-11-23) |
-| 여행 일정 | `itinerary.html`, `plan.js` | 남음 |
+| 여행 일정 | `itinerary.html`, `plan.js` | 적용(2026-11-23) |
 | 공통 머리글 | `layout.html` | 남음 |
 | 홈 | `index.html`, `app.js` | 남음 |
 | 일일투어 | `tours.html`, `tours.js` | 남음(시안 먼저) |
@@ -53,7 +53,7 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 화면�
 | 순서 | 할 일 | 참고 |
 |---|---|---|
 | 1 | ~~경로 비교 화면을 DESIGN.md대로 구현~~ 완료(2026-11-23). 공통 조각 `estimateCard`, `animateValues`, `modeIcon`(`common.js`)과 `createMap`, `drawJourney`(`route-map.js`)를 만듦 | 시안 A 이동 경로 화면, 진단 1~4번 |
-| 2 | 여행 일정 화면 구현(`itinerary.html`, `plan.js`, `route-map.js`). 경로 비교 화면과 같은 `split` 배치와 견적 카드를 쓰고, 일정 합계가 바뀌면 경로 비교 화면의 견적에도 반영되는지 확인 | 시안 A 현지 일정 화면, 진단 5번 |
+| 2 | ~~여행 일정 화면 구현~~ 완료(2026-11-23). 지도 함수 `drawDays`, `dayPin`, `dayColor`(`route-map.js`) 추가. 장소 검색 추가는 서버에 카카오 REST API 키가 없어 확인하지 못함 | 시안 A 현지 일정 화면, 진단 5번 |
 | 3 | 공통 머리글과 단계 탭, 여행 조건 묶음(`layout.html`). 머리글을 옮긴 뒤 다크 테마 적용(0010) | 진단 1, 2번 |
 | 4 | 구현하면서 DESIGN.md와 실제 코드가 다른 곳을 고치고, 결정 0007, 0008, 0009의 후속 확인 항목 처리 | 각 결정 기록 |
 | 5 | 일일투어, 비용 비교 화면 시안 만들기 | 0007 영향 |

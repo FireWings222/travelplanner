@@ -1,15 +1,70 @@
-import {$, $$, api, read, write, e, panel, busy, options, status, showError, showTrip, needsTrip,
-    metrics, metric, won, minutes, missing, legCards, connectLegs, itemRow} from './common.js';
+import {$, $$, api, read, write, e, busy, status, showError, modes, won, minutes, number, fareFields, readFare,
+    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues} from './common.js';
+import {createMap, drawDays, dayPin, dayColor} from './route-map.js';
 
-// 일정 화면에서 현재 여행 조건·저장 일정 목록을 불러오고 편집과 저장을 연결합니다.
-// 여행 계획과 저장 ID는 현재 탭의 세션에서 읽습니다. 목록은 서버에서 조회하며 현재 여행 조건이 있으면 편집할 계획도 함께 로드합니다.
+const START = 9 * 60;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const GRIP = '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="2.5" cy="3" r="1.5"/>'
+    + '<circle cx="7.5" cy="3" r="1.5"/><circle cx="2.5" cy="8" r="1.5"/><circle cx="7.5" cy="8" r="1.5"/><circle cx="2.5" cy="13" r="1.5"/>'
+    + '<circle cx="7.5" cy="13" r="1.5"/></svg>';
+// 분 단위 시각을 "09:00" 형식으로 씁니다.
+const clock = value => String(Math.floor(value / 60)).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0');
+// 카카오맵 검색으로 추가한 장소는 머무는 시간과 입장료를 모릅니다.
+const searched = stop => stop.id.startsWith('kakao-');
+// 요금 근거가 없는 0원은 "미확인", 일부만 있으면 "(부분 합계)"로 씁니다.
+const fare = cost => !cost.missing.length ? won(cost.totalKrw)
+    : Number(cost.totalKrw) === 0 ? '미확인' : won(cost.totalKrw) + ' (부분 합계)';
+
+// 하루 일정의 예상 도착 시각을 계산합니다. 첫 장소에 09:00에 도착한다고 가정하고 머무는 시간과 이동 시간을 더합니다.
+// 머무는 시간을 모르는 장소(카카오맵 검색 장소) 뒤로는 시각을 비웁니다.
+function schedule(summary) {
+    let time = START;
+    let known = true;
+    let stay = 0;
+    const arrivals = summary.stops.map((stop, index) => {
+        const arrival = known ? time : null;
+        if (searched(stop)) known = false;
+        else { stay += stop.visitMinutes; time += stop.visitMinutes; }
+        const section = summary.journey.sections[index];
+        if (section) time += section.chosen.minutes;
+        return arrival;
+    });
+    const last = summary.stops.at(-1);
+    const end = summary.stops.length && known ? time : null;
+    return {arrivals, stay, end: last ? end : null};
+}
+
+// 여행 일정 화면(시안 A 지도 분할): 왼쪽 날짜 버튼과 장소 타임라인, 오른쪽 카카오맵, 지도 위 여행 견적 카드를 그립니다.
+// 여행 계획과 저장 ID는 현재 탭의 세션에서 읽습니다. 저장한 여행 목록은 서버에서 조회하고, 여행 조건이 있으면 일정 견적을 불러옵니다.
 export async function init(cities) {
-    const root = $('#plan-days');
+    const list = $('#plan-day');
     const save = $('#save-plan');
+    const estimate = $('#estimate');
+    const mapSlot = $('#plan-map');
     let plan = read('plan');
     let id = read('planId');
     let date;
     let quote;
+    let transport;
+    let pending = false;
+    let moved = null;
+    let drawn = null;
+    let drawnKey = '';
+    // 도시 ID를 화면에 보여 줄 이름으로 바꿉니다.
+    const city = cityId => cities.find(item => item.id === cityId)?.name ?? cityId;
+
+    // 지도: 키가 없거나 SDK를 못 불러오면 지도 칸에 이유를 보여 주고 일정 편집은 그대로 씁니다.
+    const mapFail = message => { mapSlot.innerHTML = '<p class="mapfail">' + e(message) + '</p>'; return null; };
+    // 지도는 처음 그릴 일정이 생길 때 만듭니다(여행 조건 없이 들어오면 안내만 보여 줌).
+    let mapReady;
+    const getMap = () => mapReady ??= $('meta[name="kakao-map-key"]')
+        ? (mapSlot.replaceChildren(), createMap(mapSlot).catch(error => mapFail(error.message)))
+        : Promise.resolve(mapFail('카카오맵 JavaScript 키가 없어 지도를 표시할 수 없습니다. 저장소 README의 카카오맵 설정을 확인하세요.'));
+    const rightPad = () => !estimate.hidden && innerWidth > 860 ? estimate.offsetWidth + 50 : 0;
+
+    // 머리글의 "저장한 여행" 링크(#saved)로 들어오면 저장한 여행 구역을 펼칩니다.
+    const openSaved = () => { if (location.hash === '#saved') { $('#saved').open = true; $('#saved').scrollIntoView({block: 'nearest'}); } };
+    addEventListener('hashchange', openSaved);
 
     // 저장 목록에서 받은 계획을 현재 작업 상태로 열고 해당 일정 견적을 불러옵니다.
     // 저장 API가 반환한 계획과 ID를 편집 대상으로 삼고 시작일을 선택합니다. 이전 여행의 경로 선택과 투어 비교 상태는 초기화합니다.
@@ -20,26 +75,28 @@ export async function init(cities) {
         write('trip', plan.trip);
         write('legs', null);
         write('comparison', null);
+        transport = undefined;
         await load(plan.trip);
     }
 
-    // 일정 목록 API를 호출해 저장한 여행을 표시하고 열기·삭제 버튼을 연결합니다.
+    // 일정 목록 API를 호출해 저장한 여행을 표시하고 열기, 삭제 버튼을 연결합니다.
     async function listSaved() {
         const records = await api('/travel-plans');
-        $('#saved-plans').innerHTML = records.length ? records.map(record => {
-            const city = cities.find(item => item.id === record.trip.destination);
-            const supported = city && cities.some(item => item.id === record.trip.origin);
-            return '<div class="saved-row"><div><strong>' + e(city?.name ?? record.trip.destination) + '</strong><p class="muted">' + e(record.trip.start) + ' – '
-                + e(record.trip.end) + '</p></div><div class="actions"><button type="button" class="soft" data-open="' + e(record.id)
-                + '"' + (supported ? '>열기' : ' disabled>지원 종료') + '</button><button type="button" class="danger" data-delete="' + e(record.id) + '">삭제</button></div></div>';
-        }).join('') : '<p class="empty">저장한 여행이 없습니다.</p>';
+        const root = $('#saved-plans');
+        root.innerHTML = records.length ? records.map(record => {
+            const supported = cities.some(item => item.id === record.trip.destination) && cities.some(item => item.id === record.trip.origin);
+            return '<div class="saved-item"><div><b>' + e(city(record.trip.destination)) + '</b><small class="num">' + e(record.trip.start) + ' ~ '
+                + e(record.trip.end) + '</small></div><button type="button" class="outline" data-open="' + e(record.id) + '"'
+                + (supported ? '>열기' : ' disabled>지원 종료') + '</button><button type="button" class="textbtn danger" data-delete="'
+                + e(record.id) + '">삭제</button></div>';
+        }).join('') : '<p class="fine">저장한 여행이 없습니다.</p>';
         // 저장한 계획 상세를 조회하고 현재 일정으로 엽니다.
-        $$('[data-open]').forEach(button => button.onclick = () => busy($('#saved-plans'), async () =>
+        $$('[data-open]', root).forEach(button => button.onclick = () => busy(root, async () =>
             open(await api('/travel-plans/' + button.dataset.open))).catch(showError));
         // 삭제 확인 뒤 저장 일정 API와 화면의 저장 목록을 갱신합니다.
-        $$('[data-delete]').forEach(button => button.onclick = () => {
+        $$('[data-delete]', root).forEach(button => button.onclick = () => {
             if (!window.confirm('저장한 여행을 삭제할까요?')) return;
-            busy($('#saved-plans'), async () => {
+            busy(root, async () => {
                 await api('/travel-plans/' + button.dataset.delete, undefined, 'DELETE');
                 if (id === button.dataset.delete) {
                     id = null;
@@ -58,139 +115,372 @@ export async function init(cities) {
         status('일정을 계산하는 중입니다.');
         const result = plan ? await api('/itineraries/quote', plan) : await api('/itineraries/generate', trip);
         accept(result);
+        loadTransport(plan.trip);
     }
 
-    // 서버가 확인한 최신 일정을 세션에 저장하고 요약과 날짜별 화면을 다시 그립니다.
-    // result.plan은 수정 후 사용할 계획이고 result.days는 날짜별 이동과 입장료 계산 결과입니다. 날짜별 상세 화면은 renderDay에서 읽습니다.
+    // 견적 카드의 왕복 교통 금액을 경로 비교 화면에서 고른 경로(세션의 legs)로 계산합니다. 실패하면 "미확인"으로 둡니다.
+    async function loadTransport(trip) {
+        try {
+            let result;
+            try { result = await api('/routes/compare', {trip, legs: read('legs') ?? {}}); }
+            catch { result = await api('/routes/compare', {trip}); }
+            const unknown = result.selected.cost.missing.length > 0;
+            transport = {value: unknown && Number(result.roundTripKrw) === 0 ? null : result.roundTripKrw, partial: unknown};
+        } catch {
+            transport = null;
+        }
+        renderEstimate();
+    }
+
+    // 서버가 확인한 최신 일정을 세션에 저장하고 화면을 다시 그립니다.
     function accept(result) {
         quote = result;
         plan = result.plan;
-        date ??= plan.trip.start;
+        if (!plan.days.some(day => day.date === date)) date = plan.trip.start;
         write('plan', plan);
         write('planId', id);
-        showTrip(plan.trip, cities);
         save.hidden = false;
         save.textContent = id ? '저장한 일정 갱신' : '일정 저장';
-        const travel = result.days.reduce((sum, day) => sum + day.journey.minutes, 0);
-        $('#plan-summary').innerHTML = panel('<h2>현지 일정 예상 합계</h2>'
-            + metrics(metric('일차', plan.days.length + '일'), metric('현지 이동 시간', minutes(travel)),
-                metric('전체 입장료 + 이동비', won(result.total.totalKrw)))
-            + '<p class="muted">각 날짜의 첫 장소에서 마지막 장소까지의 이동을 계산합니다. 목적지 왕복, 숙박과 식비는 별도입니다.</p>' + missing(result.total));
         status('');
-        renderDay();
+        render();
     }
 
-    // 한 날짜의 변경 내용을 전체 계획에 반영해 서버에 비용 재계산을 요청합니다.
-    // 수정한 날짜 객체만 전체 계획에 교체해 서버에 전달합니다. 서버가 계산한 결과를 받으면 accept가 화면과 편집 상태를 함께 갱신합니다.
+    // 한 날짜의 변경 내용을 전체 계획에 반영해 서버에 다시 계산을 요청합니다.
     async function change(day) {
-        await busy(root, async () => {
-            status('일정을 다시 계산하는 중입니다.');
+        if (pending) return;
+        pending = true;
+        status('일정을 다시 계산하는 중입니다.');
+        try {
             const next = {...plan, days: plan.days.map(item => item.date === day.date ? day : item)};
             accept(await api('/itineraries/quote', next));
-        }).catch(showError);
+        } catch (error) {
+            render();
+            showError(error);
+        } finally {
+            pending = false;
+        }
     }
 
-    // 선택한 날짜의 방문지 순서, 예상 비용과 이동 구간을 그리고 편집 이벤트를 연결합니다.
-    // 선택한 날짜의 입력용 Day와 서버 계산 결과를 각각 찾습니다. Day에는 관광지 ID와 구간 선택이, 견적에는 비용과 소요 시간이 들어 있습니다.
-    function renderDay() {
-        const day = plan.days.find(item => item.date === date);
-        const summary = quote.days.find(item => item.date === date);
-        const hasUnscheduledStop = summary.stops.some(sight => sight.id.startsWith('kakao-'));
-        root.innerHTML = panel('<div class="panel-heading"><div><h2>방문 일정</h2><p>첫 장소가 출발지입니다. 숙소에서 출발하려면 숙소를 첫 번째로 옮기세요.</p></div>'
-            + '<label>일자<select id="pick-day">' + options(plan.days.map((item, index) => [item.date,
-                (index + 1) + '일차 · ' + item.date]), date) + '</select></label></div>'
-            + metrics(metric('관광지 체류', hasUnscheduledStop
-                ? (summary.visitMinutes ? minutes(summary.visitMinutes) + ' (확인된 장소)' : '미확인')
-                : minutes(summary.visitMinutes)), metric('이동 시간', minutes(summary.journey.minutes)),
-                metric('일행 예상 지출', won(summary.total.totalKrw))) + missing(summary.total)
-            + (summary.stops.length ? '<ol class="stop-list">' + summary.stops.map((sight, index) => {
-                const cost = summary.admissions[index];
-                const searched = sight.id.startsWith('kakao-');
-                return '<li><div><strong>' + e(sight.name) + '</strong>'
-                    + (index === 0 ? ' <span class="tag">출발지</span>' : '')
-                    + '<p class="muted">' + e(sight.description)
-                    + (searched ? ' · 카카오맵 · 체류 시간 및 입장료 미확인'
-                        : ' · 체류 ' + minutes(sight.visitMinutes) + ' · 입장료 일행 ' + won(cost.totalKrw))
-                    + '</p></div>'
-                    + '<div class="actions"><button class="soft" type="button" aria-label="' + e(sight.name) + ' 위로" data-index="' + index
-                    + '" data-move="-1"' + (index === 0 ? ' disabled' : '') + '>↑</button>'
-                    + '<button class="soft" type="button" aria-label="' + e(sight.name) + ' 아래로" data-index="' + index
-                    + '" data-move="1"' + (index + 1 === summary.stops.length ? ' disabled' : '') + '>↓</button>'
-                    + '<button class="danger" type="button" data-index="' + index + '" data-remove>삭제</button></div></li>';
-            }).join('') + '</ol>' : '<p class="empty">추가된 관광지가 없습니다.</p>')
-            + (day.stops.length < 15 ? '<form id="add-stop" class="actions">'
-                + '<label>검색 방법<select name="searchType"><option value="name">장소명</option>'
-                + '<option value="address">주소</option></select></label>'
-                + '<label>카카오맵 검색<input name="query" type="search" maxlength="80" required placeholder="관광지 또는 숙소 이름"></label>'
-                + '<button type="submit" class="primary">검색</button></form>'
-                + '<p id="place-status" class="muted" role="status"></p><ul id="place-results" class="cost-list"></ul>'
-                : '<p class="muted">하루에 최대 15곳까지 추가할 수 있습니다.</p>')
-            + '<details><summary>입장료 내역</summary><ul class="cost-list">' + summary.admissions.map(itemRow).join('') + '</ul></details>')
-            + panel('<h2>관광지 간 이동</h2>' + legCards(summary.journey.sections, day.legs, date));
-        // 날짜 선택에 따라 해당 일차의 상세 내용만 다시 표시합니다.
-        $('#pick-day').onchange = event => { date = event.target.value; renderDay(); };
-        // 방문 순서가 바뀌면 사라진 구간의 요금·교통수단 설정을 제거한 뒤 하루 일정을 갱신합니다.
-        // 첫 장소부터 마지막 장소까지 인접한 두 곳이 한 구간입니다. 새 순서에도 남는 구간만 기존 선택을 재사용합니다.
-        function changeStops(stops, places = day.places ?? []) {
-            const valid = stops.slice(1).map((next, index) => stops[index] + '~' + next);
-            const legs = Object.fromEntries(Object.entries(day.legs ?? {}).filter(([key]) => valid.includes(key)));
-            change({...day, stops, legs, places: places.filter(place => stops.includes(place.id))});
-        }
-        const add = $('#add-stop');
-        if (add) {
-            add.elements.searchType.onchange = () => {
-                const address = add.elements.searchType.value === 'address';
-                add.elements.query.maxLength = address ? 160 : 80;
-                add.elements.query.placeholder = address ? '도로명 주소 또는 지번 주소' : '관광지 또는 숙소 이름';
-                $('#place-results', root).replaceChildren();
-                $('#place-status', root).textContent = '';
-            };
-            // 카카오맵 검색 결과 중 한 장소를 선택하면 현재 날짜의 방문 순서 끝에 추가합니다.
-            add.onsubmit = async event => {
-                event.preventDefault();
-                const results = $('#place-results', root);
-                const message = $('#place-status', root);
-                const address = add.elements.searchType.value === 'address';
-                const params = new URLSearchParams({destination: plan.trip.destination,
-                    q: add.elements.query.value.trim(), address});
-                results.replaceChildren();
-                message.textContent = '카카오맵에서 장소를 검색하는 중입니다.';
-                try {
-                    const places = await busy(root, () => api('/itineraries/places?' + params));
-                    if (!add.isConnected) return;
-                    message.textContent = places.length ? '카카오맵 검색 결과' : address
-                        ? '주소를 찾지 못했습니다. 건물 번호나 지번까지 입력해 주세요.'
-                        : '장소를 찾지 못했습니다. 숙소가 검색되지 않으면 주소로 검색해 보세요.';
-                    results.innerHTML = places.map((place, index) => {
-                        const selected = day.stops.includes(place.id);
-                        return '<li><div><strong>' + e(place.name) + '</strong><small>' + e(place.address)
-                            + '</small></div><button type="button" class="soft" data-place="' + index + '"'
-                            + (selected ? ' disabled>추가됨' : '>추가') + '</button></li>';
-                    }).join('');
-                    $$('[data-place]', results).forEach(button => button.onclick = () => {
-                        const place = places[Number(button.dataset.place)];
-                        changeStops([...day.stops, place.id], [...(day.places ?? []), place]);
-                    });
-                } catch (error) {
-                    message.textContent = error.message;
-                }
-            };
-        }
-        // 위·아래 버튼으로 변경한 방문 순서를 일정 재계산에 전달합니다.
-        $$('[data-move]', root).forEach(button => button.onclick = () => {
-            const index = +button.dataset.index;
-            const target = index + +button.dataset.move;
-            const stops = [...day.stops];
-            [stops[index], stops[target]] = [stops[target], stops[index]];
-            changeStops(stops);
+    // 방문 순서가 바뀌면 사라진 구간의 요금, 교통수단 설정을 지운 뒤 하루 일정을 다시 계산합니다.
+    // 첫 장소부터 마지막 장소까지 인접한 두 곳이 한 구간입니다. 새 순서에도 남는 구간만 기존 선택을 다시 씁니다.
+    function changeStops(day, stops, places = day.places ?? []) {
+        const valid = stops.slice(1).map((next, index) => stops[index] + '~' + next);
+        const legs = Object.fromEntries(Object.entries(day.legs ?? {}).filter(([key]) => valid.includes(key)));
+        return change({...day, stops, legs, places: places.filter(place => stops.includes(place.id))});
+    }
+
+    // 여행 견적 카드: 왕복 교통, 현지 일정, 일일투어를 더하고 예산과 비교합니다.
+    function renderEstimate() {
+        if (!quote) return;
+        const local = quote.total;
+        const localUnknown = local.missing.length > 0;
+        estimate.hidden = false;
+        estimate.innerHTML = estimateCard({
+            budget: plan.trip.budget,
+            open: estimate.classList.contains('open'),
+            rows: [
+                {key: 'transport', label: '왕복 교통 (편도의 2배)', value: transport?.value ?? null, partial: Boolean(transport?.partial),
+                    text: transport === undefined ? '계산 중' : '미확인'},
+                {key: 'local', label: '현지 일정 ' + plan.days.length + '일', partial: localUnknown,
+                    value: localUnknown && Number(local.totalKrw) === 0 ? null : local.totalKrw},
+                {key: 'tour', label: '일일투어', value: null, text: '선택 안 함'}
+            ],
+            action: '<a class="outline" href="/tours">일일투어 더해 보기</a>'
         });
-        // 선택한 방문지를 해당 날짜 일정에서 제거합니다.
-        $$('[data-remove]', root).forEach(button => button.onclick = () =>
-            changeStops(day.stops.filter((_, index) => index !== +button.dataset.index)));
-        connectLegs(root, (key, leg) => change({...day, legs: {...day.legs, [key]: leg}}));
+        connectEstimate(estimate);
+        animateValues(estimate);
     }
 
-    // 현재 일정이 신규인지 확인해 등록 또는 수정 API를 호출합니다.
+    // 날짜 버튼: 날짜 색 점과 "1일차", 아래 작은 글씨로 날짜
+    function renderDays() {
+        $('#plan-days').innerHTML = plan.days.map((day, index) => '<button type="button" class="daybtn" data-date="' + e(day.date)
+            + '" aria-pressed="' + (day.date === date) + '"><b><i style="background:var(' + dayColor(index) + ')"></i>' + (index + 1)
+            + '일차</b><span class="num">' + e(day.date.slice(5).replace('-', '.')) + '</span></button>').join('');
+    }
+
+    // 장소 사이 이동 구간 줄: 교통수단 아이콘과 선택 상자, 시간과 거리, 요금, 길찾기, 요금 직접 입력, 탑승 순서
+    function hop(section, day) {
+        const chosen = section.chosen;
+        const selection = day.legs?.[section.key];
+        const override = selection?.mode === chosen.mode ? selection.override : null;
+        const link = kakaoDirectionsUrl(chosen);
+        return '<div class="between">' + modeIcon(chosen.mode, 18)
+            + '<select class="hop-mode" data-key="' + e(section.key) + '" aria-label="' + e(chosen.from.name) + '에서 ' + e(chosen.to.name) + ' 이동 수단">'
+            + section.options.map(option => '<option value="' + e(option.mode) + '"' + (option.mode === chosen.mode ? ' selected' : '') + '>'
+                + e(modes[option.mode] ?? option.mode) + '</option>').join('') + '</select>'
+            + '<span class="num">' + minutes(chosen.minutes) + ', ' + number(chosen.kilometers) + 'km</span>'
+            + '<span class="num amt">' + (section.cost.missing.length && Number(section.cost.totalKrw) === 0
+                ? '<span class="warntext">미확인</span>' : e(fare(section.cost))) + '</span>'
+            + (chosen.boardings?.length ? '<ol class="boardings">' + chosen.boardings.map(boarding => '<li>' + e(modes[boarding.mode] ?? boarding.mode)
+                + (boarding.lines.length ? ' ' + e(boarding.lines.join(', ')) : '')
+                + (boarding.start || boarding.end ? ', ' + e(boarding.start ?? '미확인') + '에서 ' + e(boarding.end ?? '미확인') : '') + '</li>').join('') + '</ol>' : '')
+            + '<div class="hop-extra">'
+            + (link ? '<a class="textbtn" href="' + e(link) + '" target="_blank" rel="noopener noreferrer">카카오맵에서 길찾기</a>' : '')
+            + '<details' + (override || section.cost.missing.length ? ' open' : '') + '><summary>요금 직접 입력</summary>'
+            + '<form class="hop-fare" data-key="' + e(section.key) + '" data-mode="' + e(chosen.mode) + '">' + fareFields(override, 'leg-')
+            + '<button type="submit" class="outline">요금 적용</button>'
+            + '<p>성인, 아동 1인 요금이나 일행 공동 요금을 입력하세요. 값을 비우고 적용하면 기본 요금으로 돌아갑니다.</p></form></details>'
+            + '</div></div>';
+    }
+
+    // 고른 날짜의 타임라인: 하루 요약, 장소 카드와 이동 구간 줄, 일정 끝 시각, 장소 검색 추가
+    function renderDay() {
+        const index = plan.days.findIndex(item => item.date === date);
+        const day = plan.days[index];
+        const summary = quote.days[index];
+        const color = 'var(' + dayColor(index) + ')';
+        const times = schedule(summary);
+        const travel = summary.journey.minutes;
+        const facts = summary.stops.length ? '<p class="dayfacts num"><b>' + clock(START) + ' ~ ' + (times.end == null ? '미정' : clock(times.end))
+            + '</b>, 머무름 ' + (times.stay ? minutes(times.stay) : '없음') + (summary.stops.some(searched) ? '(확인된 장소)' : '')
+            + ', 이동 ' + (travel ? minutes(travel) : '없음') + ', 일행 ' + e(fare(summary.total)) + '</p>' : '';
+        const rows = summary.stops.map((stop, n) => {
+            const admission = summary.admissions[n];
+            const fee = searched(stop) || (admission.missing.length && Number(admission.totalKrw) === 0) ? '미확인'
+                : Number(admission.totalKrw) === 0 ? '무료' : won(admission.totalKrw);
+            const arrival = times.arrivals[n];
+            const section = summary.journey.sections[n];
+            return '<div class="stop-row" data-index="' + n + '"><div class="stop" data-stop="' + e(stop.id) + '">'
+                + '<button type="button" class="drag" aria-label="' + e(stop.name) + ' 순서 바꾸기, 위아래 화살표 키로 옮기기">' + GRIP + '</button>'
+                + dayPin(n + 1, color)
+                + '<div class="stop-body"><span class="arr num' + (arrival == null ? ' none' : '') + '">' + (arrival == null ? '도착 시간 미정' : clock(arrival) + ' 도착')
+                + '</span><h2>' + e(stop.name) + '</h2><p>' + e(stop.description)
+                + (searched(stop) ? ', 머무는 시간 미확인' : ', ' + minutes(stop.visitMinutes) + ' 머무름') + '</p></div>'
+                + '<div class="stop-side"><span class="fee num">' + fee + '</span><button type="button" class="textbtn danger" data-remove="' + n
+                + '" aria-label="' + e(stop.name) + ' 삭제">삭제</button></div></div>'
+                + (section ? hop(section, day) : '') + '</div>';
+        }).join('');
+        list.innerHTML = '<div class="timeline">' + facts + (summary.stops.length ? rows
+                + '<div class="endrow num">' + (times.end == null ? '끝나는 시간 미정' : clock(times.end) + ' 일정 끝') + '</div>'
+            : '<p class="emptyday">아직 장소가 없습니다. 아래에서 장소를 검색해 추가하세요.</p>') + '</div>'
+            + (day.stops.length < 15
+                ? '<button type="button" class="addplace" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>장소 검색해서 추가</button>'
+                    + '<form id="add-stop" class="addform" hidden><label>검색 방법<select name="searchType"><option value="name">장소명</option>'
+                    + '<option value="address">주소</option></select></label><label>카카오맵 검색<input name="query" type="search" maxlength="80" required placeholder="관광지 또는 숙소 이름"></label>'
+                    + '<button type="submit" class="outline">검색</button></form><p id="place-status" class="fine" role="status"></p><ul id="place-results" class="place-results"></ul>'
+                : '<p class="fine">하루에 최대 15곳까지 추가할 수 있습니다.</p>');
+        connectDay(day);
+        if (moved) {
+            const card = $('[data-stop="' + CSS.escape(moved) + '"]', list);
+            if (card && !reduceMotion.matches) card.classList.add('moved');
+            moved = null;
+        }
+    }
+
+    // 화면 전체를 그립니다: 제목, 날짜 버튼, 타임라인, 안내, 견적, 지도
+    function render() {
+        $('#trip-line').textContent = city(plan.trip.origin) + '에서 ' + city(plan.trip.destination) + ', ' + plan.trip.start + ' ~ ' + plan.trip.end
+            + ', 성인 ' + plan.trip.party.adults + '명' + (plan.trip.party.children ? ', 아동 ' + plan.trip.party.children + '명' : '');
+        $('#plan-title').textContent = city(plan.trip.destination) + ' 현지 일정';
+        const sample = quote.days.some(day => day.admissions.some(item => item.source === 'SAMPLE'));
+        $('#plan-note').textContent = '입장료와 이동 요금은 일행 전체 금액입니다.' + (sample ? ' 샘플 운임과 입장료는 테스트용 가상 가격입니다.' : '');
+        renderDays();
+        renderDay();
+        renderEstimate();
+        renderMap().catch(error => mapFail(error.message));
+    }
+
+    // 일정이나 고른 날짜가 바뀌면 지도를 다시 그리고 범위를 맞춥니다.
+    async function renderMap() {
+        const view = await getMap();
+        if (!view) return;
+        const focus = plan.days.findIndex(item => item.date === date);
+        const key = JSON.stringify([focus, quote.days.map(day => day.stops.map(stop => stop.id)), quote.days.map(day => day.journey.sections.map(s => s.chosen.mode))]);
+        if (key === drawnKey) return;
+        drawnKey = key;
+        const next = await drawDays(view, quote.days, focus, rightPad);
+        if (!next) return;
+        drawn = next;
+        view.onResize = () => drawn.fit();
+        drawn.fit();
+    }
+
+    // 타임라인의 버튼, 선택 상자, 검색 폼, 끌기를 연결합니다.
+    function connectDay(day) {
+        // 장소 삭제
+        $$('[data-remove]', list).forEach(button => button.onclick = () =>
+            changeStops(day, day.stops.filter((_, index) => index !== +button.dataset.remove)));
+        // 구간 교통수단 변경: 이전 수단의 직접 입력 요금은 지웁니다.
+        $$('.hop-mode', list).forEach(select => select.onchange = () => {
+            showCalc(select.closest('.between'));
+            change({...day, legs: {...day.legs, [select.dataset.key]: {mode: select.value, override: null}}});
+        });
+        // 구간 요금 직접 입력
+        $$('.hop-fare', list).forEach(form => form.onsubmit = event => {
+            event.preventDefault();
+            change({...day, legs: {...day.legs, [form.dataset.key]: {mode: form.dataset.mode, override: readFare(form, 'leg-')}}});
+        });
+        connectSearch(day);
+        connectDrag(day);
+    }
+
+    // "장소 검색해서 추가"를 누르면 카카오맵 검색 폼을 열고, 고른 장소를 그날 마지막에 더합니다.
+    function connectSearch(day) {
+        const toggle = $('.addplace', list);
+        const add = $('#add-stop', list);
+        if (!add) return;
+        toggle.onclick = () => {
+            add.hidden = !add.hidden;
+            toggle.setAttribute('aria-expanded', String(!add.hidden));
+            if (!add.hidden) add.elements.query.focus();
+        };
+        add.elements.searchType.onchange = () => {
+            const address = add.elements.searchType.value === 'address';
+            add.elements.query.maxLength = address ? 160 : 80;
+            add.elements.query.placeholder = address ? '도로명 주소 또는 지번 주소' : '관광지 또는 숙소 이름';
+            $('#place-results', list).replaceChildren();
+            $('#place-status', list).textContent = '';
+        };
+        // 카카오맵 검색 결과 중 한 장소를 고르면 현재 날짜의 방문 순서 끝에 추가합니다.
+        add.onsubmit = async event => {
+            event.preventDefault();
+            const results = $('#place-results', list);
+            const message = $('#place-status', list);
+            const address = add.elements.searchType.value === 'address';
+            const params = new URLSearchParams({destination: plan.trip.destination, q: add.elements.query.value.trim(), address});
+            results.replaceChildren();
+            message.textContent = '카카오맵에서 장소를 검색하는 중입니다.';
+            try {
+                const places = await busy(add, () => api('/itineraries/places?' + params));
+                if (!add.isConnected) return;
+                message.textContent = places.length ? '카카오맵 검색 결과' : address
+                    ? '주소를 찾지 못했습니다. 건물 번호나 지번까지 입력하세요.'
+                    : '장소를 찾지 못했습니다. 숙소가 검색되지 않으면 주소로 검색하세요.';
+                results.innerHTML = places.map((place, index) => '<li><div><b>' + e(place.name) + '</b><small>' + e(place.address)
+                    + '</small></div><button type="button" class="outline" data-place="' + index + '"'
+                    + (day.stops.includes(place.id) ? ' disabled>추가됨' : '>추가') + '</button></li>').join('');
+                $$('[data-place]', results).forEach(button => button.onclick = () => {
+                    const place = places[Number(button.dataset.place)];
+                    moved = place.id;
+                    changeStops(day, [...day.stops, place.id], [...(day.places ?? []), place]);
+                });
+            } catch (error) {
+                message.textContent = error.message;
+            }
+        };
+    }
+
+    // 이동 구간 줄에 "다시 계산 중"과 진행 선을 보여 줍니다(DESIGN.md recalculating).
+    function showCalc(between) {
+        if (!between) return;
+        between.replaceChildren();
+        between.insertAdjacentHTML('beforeend', '<span class="calc">다시 계산 중<i></i></span>');
+    }
+
+    // 장소 카드 끌어서 옮기기(마우스와 터치 공통, Pointer Events).
+    // 손잡이를 누른 채 움직이면 카드가 손가락이나 마우스를 따라오고, 놓일 자리에 "여기에 놓기" 점선 칸이 생깁니다.
+    // 다른 카드는 점선 칸이 옮겨질 때 새 자리로 미끄러집니다. 놓으면 새 순서로 다시 계산하고, 그동안 이동 구간 줄에 "다시 계산 중"을 보여 줍니다.
+    // 손잡이에서 위아래 화살표 키를 누르면 한 칸씩 옮깁니다.
+    function connectDrag(day) {
+        const timeline = $('.timeline', list);
+        if (!timeline) return;
+        const pane = list.closest('.listpane');
+        $$('.drag', timeline).forEach(handle => {
+            const row = handle.closest('.stop-row');
+            const from = Number(row.dataset.index);
+            handle.addEventListener('keydown', event => {
+                const step = {ArrowUp: -1, ArrowDown: 1}[event.key];
+                const to = from + (step ?? 0);
+                if (!step || to < 0 || to >= day.stops.length || pending) return;
+                event.preventDefault();
+                const stops = [...day.stops];
+                [stops[from], stops[to]] = [stops[to], stops[from]];
+                const stopId = day.stops[from];
+                moved = stopId;
+                // 다시 그린 뒤에도 옮긴 장소의 손잡이에 초점을 두어 화살표 키로 계속 옮길 수 있게 합니다.
+                changeStops(day, stops).then(() => $('[data-stop="' + CSS.escape(stopId) + '"] .drag', list)?.focus());
+            });
+            handle.addEventListener('pointerdown', down => {
+                if (pending || down.button !== 0) return;
+                down.preventDefault();
+                handle.setPointerCapture(down.pointerId);
+                let drag = null;
+                let slot = null;
+                // 끌기를 시작합니다: 카드를 띄우고 원래 자리에 점선 칸을 둡니다.
+                const begin = () => {
+                    const rect = row.getBoundingClientRect();
+                    const card = $('.stop', row);
+                    slot = document.createElement('div');
+                    slot.className = 'dropslot';
+                    slot.style.height = card.offsetHeight + 'px';
+                    slot.textContent = '여기에 놓기';
+                    row.before(slot);
+                    $('.between', row)?.setAttribute('hidden', '');
+                    Object.assign(row.style, {position: 'fixed', left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', zIndex: 50, pointerEvents: 'none'});
+                    row.classList.add('lifted');
+                    drag = {top: rect.top};
+                };
+                // 점선 칸을 옮기고 나머지 카드는 새 자리로 미끄러지게 합니다.
+                const moveSlot = y => {
+                    const rows = $$('.stop-row', timeline).filter(item => item !== row);
+                    const target = rows.find(item => { const box = $('.stop', item).getBoundingClientRect(); return y < box.top + box.height / 2; });
+                    const ref = target ?? $('.endrow', timeline);
+                    if (slot.nextElementSibling === ref) return;
+                    const before = new Map(rows.map(item => [item, item.getBoundingClientRect().top]));
+                    ref.before(slot);
+                    if (reduceMotion.matches) return;
+                    rows.forEach(item => {
+                        const dy = before.get(item) - item.getBoundingClientRect().top;
+                        if (Math.abs(dy) >= 1) item.animate([{transform: 'translateY(' + dy + 'px)'}, {transform: 'none'}], {duration: 160, easing: 'ease-out'});
+                    });
+                };
+                const onMove = event => {
+                    const dy = event.clientY - down.clientY;
+                    if (!drag && Math.abs(dy) < 4) return;
+                    if (!drag) begin();
+                    row.style.top = drag.top + dy + 'px';
+                    const box = pane.getBoundingClientRect();
+                    if (event.clientY < box.top + 40) pane.scrollTop -= 8;
+                    else if (event.clientY > box.bottom - 40) pane.scrollTop += 8;
+                    moveSlot(event.clientY);
+                };
+                // 놓으면 카드가 점선 칸 자리로 들어가고, 순서가 바뀌었으면 다시 계산합니다.
+                const finish = commit => {
+                    handle.removeEventListener('pointermove', onMove);
+                    handle.removeEventListener('pointerup', onUp);
+                    handle.removeEventListener('pointercancel', onCancel);
+                    if (!drag) return;
+                    const floating = row.getBoundingClientRect().top;
+                    const order = $$('.stop-row, .dropslot', timeline).filter(item => item !== row);
+                    const at = order.indexOf(slot);
+                    slot.replaceWith(row);
+                    row.removeAttribute('style');
+                    row.classList.remove('lifted');
+                    if (!reduceMotion.matches) {
+                        const dy = floating - row.getBoundingClientRect().top;
+                        row.animate([{transform: 'translateY(' + dy + 'px)'}, {transform: 'none'}], {duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)'});
+                    }
+                    const stops = day.stops.filter((_, index) => index !== from);
+                    stops.splice(at, 0, day.stops[from]);
+                    if (!commit || stops.every((stop, index) => stop === day.stops[index])) {
+                        $('.between', row)?.removeAttribute('hidden');
+                        return;
+                    }
+                    $$('.between', timeline).forEach(showCalc);
+                    $$('.between[hidden]', timeline).forEach(item => item.removeAttribute('hidden'));
+                    moved = day.stops[from];
+                    changeStops(day, stops);
+                };
+                const onUp = () => finish(true);
+                const onCancel = () => finish(false);
+                handle.addEventListener('pointermove', onMove);
+                handle.addEventListener('pointerup', onUp);
+                handle.addEventListener('pointercancel', onCancel);
+            });
+        });
+    }
+
+    // 날짜 버튼을 누르면 그날 타임라인과 지도만 바꿉니다.
+    $('#plan-days').addEventListener('click', event => {
+        const button = event.target.closest('[data-date]');
+        if (!button || button.dataset.date === date) return;
+        date = button.dataset.date;
+        renderDays();
+        renderDay();
+        renderMap().catch(error => mapFail(error.message));
+    });
+
+    // 현재 일정이 새 일정인지 확인해 등록 또는 수정 API를 호출합니다.
     save.onclick = async () => {
         save.disabled = true;
         try {
@@ -205,7 +495,13 @@ export async function init(cities) {
     };
 
     const trip = read('trip');
-    if (!trip) needsTrip('#plan-summary');
-    const outcomes = await Promise.allSettled([listSaved(), ...(trip ? [load(trip)] : [])]);
+    if (!trip) {
+        list.innerHTML = '<div class="emptynote"><b>여행 조건을 먼저 선택하세요</b><p>출발지, 목적지와 여행 날짜가 필요합니다. 저장한 여행을 열어도 됩니다.</p>'
+            + '<a class="primary" href="/">여행 검색</a></div>';
+        $('#saved').open = true;
+        mapFail('여행 조건을 고르면 일정이 지도에 표시됩니다.');
+    }
+    date = plan?.trip.start ?? trip?.start;
+    const outcomes = await Promise.allSettled([listSaved().then(openSaved), ...(trip ? [load(trip)] : [])]);
     outcomes.filter(outcome => outcome.status === 'rejected').forEach(outcome => showError(outcome.reason));
 }
