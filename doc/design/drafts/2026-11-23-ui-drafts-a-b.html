@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TravelPlanner 시안 A, B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Gothic+A1:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* 레이아웃: 위쪽 조작 막대(시안, 화면, 기기) 아래에 앱 시안을 고정 높이 틀(frame) 안에 그림. 틀은 container query로 데스크톱과 모바일 배치를 바꿈 */
+:root {
+  --page: #eceff1;
+  --page-ink: #1b2328;
+  --page-muted: #5b666d;
+  --page-line: #d5dbdf;
+  --page-accent: #146748;
+  --page-chip: #ffffff;
+  /* 교통수단 색: 노선도와 지도 선에 씀 */
+  --m-rail: #2563a8;
+  --m-air: #146748;
+  --m-bus: #1f8a70;
+  --m-road: #b7791f;
+  --font-a: "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --font-b: "Gothic A1", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", "IBM Plex Sans KR", "Malgun Gothic", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #111517; --page-ink: #e3e8eb; --page-muted: #98a4ab; --page-line: #2a3236; --page-accent: #63c79b; --page-chip: #1a2023;
+  --m-rail: #6ea6e8; --m-air: #63c79b; --m-bus: #5cc6a6; --m-road: #e0ab55; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --page: #111517; --page-ink: #e3e8eb; --page-muted: #98a4ab; --page-line: #2a3236; --page-accent: #63c79b; --page-chip: #1a2023;
+  --m-rail: #6ea6e8; --m-air: #63c79b; --m-bus: #5cc6a6; --m-road: #e0ab55; color-scheme: dark; }
+
+/* 시안 A 색: 흰 바탕과 옅은 회색 구역, 강조색은 학생 브랜드 초록 하나 */
+.va {
+  --bg: #f2f4f3; --surface: #ffffff; --ink: #17211c; --muted: #5f6c65; --line: #e2e7e4; --soft: #eef3f0;
+  --brand: #146748; --brand-ink: #ffffff; --brand-soft: #e3f1e8; --warn: #9a5b00; --warn-soft: #fdf0d9;
+  --land: #e7ece8; --sea: #dde8ee; --pin-ink: #ffffff; --shadow: 0 1px 2px rgb(20 40 30 / 8%), 0 8px 24px rgb(20 40 30 / 8%);
+  font-family: var(--font-a);
+}
+/* 시안 B 색: 차가운 흰 종이와 남색 글자, 합계와 강조만 초록 */
+.vb {
+  --bg: #e9edf2; --surface: #ffffff; --ink: #172033; --muted: #5a6478; --line: #dde2ea; --soft: #f3f5f9;
+  --brand: #146748; --brand-ink: #ffffff; --brand-soft: #e3f1e8; --warn: #9a5b00; --warn-soft: #fdf0d9;
+  --land: #edf0f4; --sea: #e1e8f0; --pin-ink: #ffffff; --shadow: 0 1px 0 rgb(23 32 51 / 6%);
+  font-family: var(--font-b);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .va {
+  --bg: #101513; --surface: #182019; --ink: #e2e9e5; --muted: #9aa9a1; --line: #29332d; --soft: #1e2822;
+  --brand: #4fbf8a; --brand-ink: #08130d; --brand-soft: #1d3428; --warn: #f0b860; --warn-soft: #3a2c14;
+  --land: #1f2924; --sea: #141c1f; --pin-ink: #08130d; --shadow: 0 1px 2px rgb(0 0 0 / 40%); }
+  :root:not([data-theme="light"]) .vb {
+  --bg: #0f131b; --surface: #171d28; --ink: #e2e7f0; --muted: #9aa4b6; --line: #283041; --soft: #1c2331;
+  --brand: #4fbf8a; --brand-ink: #08130d; --brand-soft: #1b3127; --warn: #f0b860; --warn-soft: #3a2c14;
+  --land: #1d2430; --sea: #131925; --pin-ink: #08130d; --shadow: 0 1px 0 rgb(0 0 0 / 40%); } }
+:root[data-theme="dark"] .va {
+  --bg: #101513; --surface: #182019; --ink: #e2e9e5; --muted: #9aa9a1; --line: #29332d; --soft: #1e2822;
+  --brand: #4fbf8a; --brand-ink: #08130d; --brand-soft: #1d3428; --warn: #f0b860; --warn-soft: #3a2c14;
+  --land: #1f2924; --sea: #141c1f; --pin-ink: #08130d; --shadow: 0 1px 2px rgb(0 0 0 / 40%); }
+:root[data-theme="dark"] .vb {
+  --bg: #0f131b; --surface: #171d28; --ink: #e2e7f0; --muted: #9aa4b6; --line: #283041; --soft: #1c2331;
+  --brand: #4fbf8a; --brand-ink: #08130d; --brand-soft: #1b3127; --warn: #f0b860; --warn-soft: #3a2c14;
+  --land: #1d2430; --sea: #131925; --pin-ink: #08130d; --shadow: 0 1px 0 rgb(0 0 0 / 40%); }
+
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--page-ink); font-family: var(--font-a); font-size: 15px; line-height: 1.6; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--page-accent); outline-offset: 2px; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.intro h1 { font-size: clamp(22px, 3vw, 28px); margin: 0 0 6px; letter-spacing: -0.01em; text-wrap: balance; }
+.intro p { margin: 0; color: var(--page-muted); max-width: 72ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; margin: 18px 0 10px; }
+.seg { display: inline-flex; border: 1px solid var(--page-line); border-radius: 9px; background: var(--page-chip); padding: 3px; gap: 2px; }
+.seg-label { font-size: 12.5px; color: var(--page-muted); font-weight: 600; margin-right: 6px; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--page-muted); }
+.seg button[aria-pressed="true"] { background: var(--page-ink); color: var(--page); }
+.variant-note { font-size: 14px; color: var(--page-muted); margin: 0 0 14px; min-height: 1.6em; }
+.variant-note b { color: var(--page-ink); }
+.stage { display: flex; justify-content: center; }
+.frame { width: 100%; height: 780px; border: 1px solid var(--page-line); border-radius: 14px; overflow: hidden;
+  container-type: inline-size; background: var(--bg); color: var(--ink); position: relative; }
+.stage[data-device="mobile"] .frame { width: 390px; max-width: 100%; height: 800px; border-radius: 28px; border-width: 6px; border-color: var(--page-ink); }
+
+/* 공통 앱 부품 */
+.app { height: 100%; display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; gap: 14px; padding: 10px 18px; background: var(--surface); border-bottom: 1px solid var(--line); flex: none; }
+.logo { font-weight: 800; font-size: 17px; letter-spacing: -0.02em; white-space: nowrap; }
+.logo span { color: var(--brand); }
+.tripchip { display: inline-flex; gap: 8px; align-items: center; background: var(--soft); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tripchip b { font-weight: 700; }
+.tripchip .edit { color: var(--brand); font-weight: 700; }
+.steps { display: flex; gap: 4px; margin-left: auto; flex: none; }
+.step { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); padding: 5px 9px; border-radius: 8px; white-space: nowrap; }
+.step i { font-style: normal; width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; border: 1.5px solid var(--line); }
+.step.done i { background: var(--brand-soft); border-color: transparent; color: var(--brand); }
+.step.now { color: var(--ink); font-weight: 700; background: var(--soft); }
+.step.now i { background: var(--brand); color: var(--brand-ink); border-color: transparent; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 1px 7px; border-radius: 5px; background: var(--brand-soft); color: var(--brand); white-space: nowrap; }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--muted); }
+.tab[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); background: var(--soft); }
+.btn { border: 0; border-radius: 9px; padding: 9px 14px; font-weight: 700; font-size: 14px; cursor: pointer; background: var(--brand); color: var(--brand-ink); white-space: nowrap; }
+.btn.ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+.modechain { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.mdot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.legsep { color: var(--line); }
+.estimate .row { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; padding: 5px 0; }
+.estimate .row span:first-child { color: var(--muted); min-width: 0; }
+.estimate .total { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 9px; }
+.estimate .total strong { font-size: 22px; }
+.budgetbar { height: 7px; background: var(--soft); border-radius: 99px; overflow: hidden; margin: 9px 0 5px; border: 1px solid var(--line); }
+.budgetbar i { display: block; height: 100%; background: var(--brand); border-radius: 99px; transition: width .35s ease; }
+.budgetbar.over i { background: var(--warn); }
+.estimate small { color: var(--muted); font-size: 12px; display: block; }
+.addtour { width: 100%; margin-top: 8px; text-align: left; border: 1px dashed var(--line); background: transparent; border-radius: 8px; padding: 7px 10px; font-size: 13px; cursor: pointer; color: var(--muted); }
+.addtour b { color: var(--brand); }
+.toast { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 9px 14px; border-radius: 10px; font-size: 13px; z-index: 5; max-width: calc(100% - 32px); }
+.drag { cursor: grab; color: var(--muted); font-size: 15px; line-height: 1; padding: 4px 2px; user-select: none; letter-spacing: -2px; }
+.dragging { opacity: .45; }
+.dropline { outline: 2px dashed var(--brand); outline-offset: 2px; }
+svg.map { display: block; width: 100%; height: 100%; }
+svg.map text { font-family: var(--font-a); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- 시안 A: 지도와 목록 나란히 ---------- */
+.va .body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(360px, 430px) 1fr; }
+.va .listpane { min-height: 0; overflow: auto; background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+.va .listhead { padding: 18px 20px 10px; }
+.va .listhead h2 { font-size: 19px; margin: 0 0 3px; letter-spacing: -0.02em; }
+.va .listhead p { margin: 0 0 12px; color: var(--muted); font-size: 13.5px; }
+.va .routecard { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 13px 20px; border-top: 1px solid var(--line); cursor: pointer; background: transparent; border-left: 3px solid transparent; text-align: left; width: 100%; border-right: 0; border-bottom: 0; }
+.va .routecard:hover { background: var(--soft); }
+.va .routecard[aria-pressed="true"] { background: var(--brand-soft); border-left-color: var(--brand); }
+.va .routecard .t { font-weight: 700; font-size: 14.5px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.va .routecard .price { text-align: right; font-weight: 600; color: var(--brand); font-size: 15px; }
+.va .routecard .sub { font-size: 12.5px; color: var(--muted); text-align: right; }
+.va .mappane { position: relative; min-height: 0; background: var(--sea); }
+.va .mapfloat { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between; gap: 10px; pointer-events: none; }
+.va .mapfloat > * { pointer-events: auto; }
+.va .card { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); padding: 14px 16px; }
+.va .legcard { width: min(340px, 100%); }
+.va .legcard h3 { margin: 0 0 8px; font-size: 14px; }
+.va .legrow { display: grid; grid-template-columns: 12px 1fr auto; gap: 2px 10px; font-size: 13px; padding: 4px 0; align-items: start; }
+.va .legrow .mdot { margin-top: 5px; }
+.va .legrow .w { color: var(--muted); font-size: 12px; grid-column: 2; }
+.va .estimate { position: absolute; right: 14px; bottom: 14px; width: 300px; }
+.va .estimate h3 { margin: 0 0 4px; font-size: 14px; display: flex; justify-content: space-between; }
+/* 일정 */
+.va .days { display: flex; gap: 6px; padding: 0 20px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.va .daybtn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 9px; cursor: pointer; font-size: 13px; text-align: left; line-height: 1.3; }
+.va .daybtn b { display: block; font-size: 13.5px; }
+.va .daybtn[aria-pressed="true"] { border-color: var(--ink); background: var(--soft); }
+.va .timeline { padding: 6px 20px 120px; }
+.va .stop { display: grid; grid-template-columns: 18px 28px 1fr auto; gap: 10px; align-items: center; padding: 11px 0; }
+.va .pinno { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 700; color: var(--pin-ink); }
+.va .stop h4 { margin: 0; font-size: 14.5px; }
+.va .stop p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.va .between { margin-left: 41px; border-left: 2px dotted var(--line); padding: 3px 0 3px 18px; font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.va .between select { font: inherit; font-size: 12.5px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; background: var(--surface); color: var(--ink); }
+.va .addplace { margin: 10px 0 0 46px; border: 1px dashed var(--line); background: transparent; border-radius: 9px; padding: 8px 12px; color: var(--muted); cursor: pointer; font-size: 13px; width: calc(100% - 46px); text-align: left; }
+.va .emptyday { padding: 16px 0; color: var(--muted); font-size: 13.5px; }
+.va .sheethandle { display: none; }
+
+@container (max-width: 760px) {
+  .va .topbar, .vb .topbar { flex-wrap: wrap; gap: 8px 10px; padding: 10px 14px; }
+  .va .steps, .vb .steps { margin-left: 0; width: 100%; overflow-x: auto; }
+  .va .step span, .vb .step span { display: none; }
+  .va .step.now span, .vb .step.now span { display: inline; }
+  .va .body { display: flex; flex-direction: column; position: relative; }
+  .va .mappane { flex: none; height: 230px; order: -1; }
+  .va .mapfloat .legcard { display: none; }
+  .va .listpane { flex: 1; border-right: 0; border-radius: 18px 18px 0 0; margin-top: -18px; position: relative; z-index: 2; box-shadow: 0 -4px 16px rgb(0 0 0 / 8%); }
+  .va .sheethandle { display: block; width: 38px; height: 4px; border-radius: 9px; background: var(--line); margin: 8px auto 0; }
+  .va .estimate { position: sticky; bottom: 0; right: auto; width: 100%; border-radius: 0; box-shadow: 0 -1px 0 var(--line); margin-top: auto; z-index: 3; }
+  .va .estimate .detail { display: none; }
+  .va .estimate.open .detail { display: block; }
+  .va .estimate h3 { cursor: pointer; }
+}
+
+/* ---------- 시안 B: 노선도와 견적서 ---------- */
+.vb .body { flex: 1; min-height: 0; overflow: auto; }
+.vb .cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; max-width: 1080px; margin: 0 auto; padding: 22px 24px 40px; align-items: start; }
+.vb h2 { font-size: 22px; letter-spacing: -0.03em; margin: 0 0 4px; font-weight: 800; }
+.vb .lead { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+.vb .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+.vb .linecard { padding: 18px 20px; display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 18px; }
+.vb .line { position: relative; }
+.vb .station { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; min-height: 30px; }
+.vb .station .dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--ink); background: var(--surface); justify-self: center; z-index: 1; }
+.vb .station b { font-size: 14.5px; }
+.vb .station small { color: var(--muted); font-size: 12.5px; }
+.vb .seg { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; min-height: 46px; }
+.vb .seg .bar { width: 5px; height: 100%; min-height: 46px; justify-self: center; border-radius: 3px; }
+.vb .seg .what { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.vb .seg .what b { color: var(--ink); font-size: 13.5px; }
+.vb .seg select { font: inherit; font-size: 12.5px; border: 1px solid var(--line); border-radius: 5px; padding: 2px 4px; background: var(--surface); color: var(--ink); }
+.vb .seg .amt { font-size: 13.5px; }
+.vb .minimap { border-radius: 6px; overflow: hidden; background: var(--sea); height: 100%; min-height: 220px; border: 1px solid var(--line); }
+.vb .sortbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 22px 0 10px; flex-wrap: wrap; }
+.vb .sortbar h3 { margin: 0; font-size: 16px; }
+.vb .options { display: grid; gap: 8px; }
+.vb .opt { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 12px 16px; text-align: left; cursor: pointer; width: 100%; }
+.vb .opt[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 4px 0 0 var(--brand); }
+.vb .opt .t { font-weight: 700; font-size: 14px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.vb .opt .time { color: var(--muted); font-size: 13px; text-align: right; white-space: nowrap; }
+.vb .opt .price { font-weight: 600; font-size: 15px; text-align: right; white-space: nowrap; }
+.vb .receipt { position: sticky; top: 16px; padding: 18px 18px 16px; }
+.vb .receipt h3 { margin: 0; font-size: 15px; }
+.vb .receipt .meta { color: var(--muted); font-size: 12px; margin: 2px 0 10px; }
+.vb .receipt .row { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: baseline; font-size: 13.5px; padding: 4px 0; }
+.vb .receipt .row .leader { border-bottom: 1px dotted var(--muted); opacity: .5; transform: translateY(-3px); }
+.vb .receipt .total { border-top: 2px solid var(--ink); margin-top: 8px; padding-top: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+.vb .receipt .total strong { font-size: 24px; }
+/* 일정: 날짜별 열 */
+.vb .daycols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.vb .daycol { padding: 12px; min-height: 260px; display: flex; flex-direction: column; gap: 6px; }
+.vb .daycol header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--ink); padding-bottom: 6px; margin-bottom: 4px; }
+.vb .daycol header b { font-size: 14.5px; }
+.vb .daycol header span { font-size: 12px; color: var(--muted); }
+.vb .pcard { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--surface); display: grid; grid-template-columns: auto 1fr; gap: 0 8px; }
+.vb .pcard h4 { margin: 0; font-size: 13.5px; }
+.vb .pcard p { margin: 0; font-size: 12px; color: var(--muted); grid-column: 2; }
+.vb .hop { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; padding-left: 4px; }
+.vb .hop .bar { width: 4px; height: 18px; border-radius: 2px; }
+.vb .daysum { margin-top: auto; font-size: 12.5px; display: flex; justify-content: space-between; color: var(--muted); border-top: 1px dotted var(--line); padding-top: 6px; }
+.vb .jejumap { margin-top: 12px; height: 340px; overflow: hidden; }
+.vb .mobilebar { display: none; }
+
+@container (max-width: 760px) {
+  .vb .cols { grid-template-columns: 1fr; padding: 16px 14px 90px; }
+  .vb .linecard { grid-template-columns: 1fr; }
+  .vb .minimap { min-height: 160px; height: 160px; order: -1; }
+  .vb .receipt { display: none; }
+  .vb .daycols { grid-template-columns: 1fr; }
+  .vb .daycol { min-height: 0; }
+  .vb .opt { grid-template-columns: 1fr auto; }
+  .vb .opt .time { grid-column: 1; text-align: left; }
+  .vb .opt .price { grid-row: 1 / span 2; grid-column: 2; }
+  .vb .mobilebar { display: flex; position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 2px solid var(--ink); padding: 10px 14px; justify-content: space-between; align-items: center; gap: 10px; z-index: 4; }
+  .vb .mobilebar small { color: var(--muted); font-size: 12px; display: block; }
+  .vb .mobilebar strong { font-size: 19px; }
+}
+
+/* 아래 비교 문서 */
+.compare { margin-top: 36px; }
+.compare h2 { font-size: 20px; margin: 0 0 12px; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--page-line); border-radius: 12px; background: var(--page-chip); }
+.tablewrap table { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 14px; }
+.tablewrap th, .tablewrap td { padding: 10px 14px; border-bottom: 1px solid var(--page-line); vertical-align: top; text-align: left; }
+.tablewrap th { text-align: center; font-size: 13px; color: var(--page-muted); white-space: nowrap; }
+.tablewrap td:first-child { font-weight: 600; white-space: nowrap; }
+.tablewrap tr:last-child td { border-bottom: 0; }
+.notes { margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.notes div { background: var(--page-chip); border: 1px solid var(--page-line); border-radius: 12px; padding: 14px 18px; font-size: 14px; }
+.notes h3 { margin: 0 0 6px; font-size: 15px; }
+.notes ul { margin: 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>TravelPlanner UI 시안 A, B</h1>
+    <p>제주 샘플(서울에서 제주, 2027-03-10부터 3일, 성인 2명, 예산 450,000원)의 실제 API 응답으로 그린 정적 시안이야. 경로 카드를 누르거나, 일정의 장소를 끌어서 옮겨 볼 수 있어. 금액 재계산은 시안이라 일부만 동작해.</p>
+  </div>
+  <div class="controls" role="group" aria-label="시안 보기 설정">
+    <div><span class="seg-label">시안</span><span class="seg" id="ctl-variant"><button type="button" data-v="a" aria-pressed="true">A 지도 분할</button><button type="button" data-v="b" aria-pressed="false">B 노선도 견적서</button></span></div>
+    <div><span class="seg-label">화면</span><span class="seg" id="ctl-screen"><button type="button" data-s="route" aria-pressed="true">이동 경로</button><button type="button" data-s="plan" aria-pressed="false">현지 일정</button></span></div>
+    <div><span class="seg-label">기기</span><span class="seg" id="ctl-device"><button type="button" data-d="desktop" aria-pressed="true">데스크톱</button><button type="button" data-d="mobile" aria-pressed="false">모바일</button></span></div>
+  </div>
+  <p class="variant-note" id="variant-note"></p>
+  <div class="stage" id="stage" data-device="desktop"><div class="frame" id="frame"></div></div>
+
+  <section class="compare" aria-labelledby="cmp-h">
+    <h2 id="cmp-h">두 시안 비교</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>항목</th><th>시안 A 지도 분할</th><th>시안 B 노선도 견적서</th></tr></thead>
+      <tbody>
+        <tr><td>참고</td><td>Rome2Rio 지도 화면, Wanderlog 웹 일정</td><td>Rome2Rio 경로 카드와 정렬, Wanderlog 끌어서 옮기기, 견적서 형식</td></tr>
+        <tr><td>첫인상</td><td>지도가 화면 절반 이상이라 여행 앱다운 인상이 강함</td><td>비용 흐름이 먼저 보여 "비용 비교 앱"이라는 목적이 분명함</td></tr>
+        <tr><td>여행 견적</td><td>지도 오른쪽 아래 떠 있는 카드, 모바일은 하단 고정 막대</td><td>오른쪽 견적서 열(스크롤해도 따라옴), 모바일은 하단 합계 막대</td></tr>
+        <tr><td>경로 선택</td><td>목록에서 카드를 누르면 지도와 견적이 바로 바뀜</td><td>정렬 탭과 경로 목록, 위쪽 노선도에서 구간별 교통수단도 바꿈</td></tr>
+        <tr><td>일정 편집</td><td>날짜 버튼으로 하루씩, 장소 사이에 이동 수단, 지도에 번호 핀</td><td>3일을 열로 나란히 보고 날짜 사이로도 끌어서 옮김</td></tr>
+        <tr><td>지도 의존도</td><td>높음(키 없으면 좌표로 그린 약도 표시)</td><td>낮음(작은 약도만)</td></tr>
+        <tr><td>모바일</td><td>위 지도, 아래 끌어 올리는 목록(bottom sheet)</td><td>한 열로 쌓고 하단 합계 막대</td></tr>
+        <tr><td>구현 난이도</td><td>높음(화면 높이 고정 배치, 지도와 목록 연동)</td><td>중간(기존 문자열 렌더링 구조와 가까움)</td></tr>
+        <tr><td>학생이 설명하기</td><td>지도 연동 코드 설명이 필요함</td><td>계산 흐름이 화면에 그대로 보여 설명하기 쉬움</td></tr>
+      </tbody>
+    </table></div>
+    <div class="notes">
+      <div><h3>두 시안 공통</h3><ul>
+        <li>상단 4단계 표시와 여행 조건 칩(결정 대기 진단 1번)</li>
+        <li>교통 왕복, 현지 일정, 일일투어를 합친 여행 견적과 예산 막대(진단 2번)</li>
+        <li>추천을 배지로 붙이고 눌러서 바로 적용(진단 3번)</li>
+        <li>장소 사이에 이동 구간을 끼워 넣어 반복 카드 제거(진단 4, 5번)</li>
+        <li>그라데이션, 장식 카드, 큰 머리말 제목 없음(결정 0005)</li>
+      </ul></div>
+      <div><h3>실제 앱에 넣을 때 확인할 것</h3><ul>
+        <li>추천 경로 적용: 응답의 경로 조합(<code>modes</code>)을 구간 순서대로 선택값에 넣는 방식이라 프론트엔드만으로 가능해 보임. 구현 때 확인 필요</li>
+        <li>장소를 옮긴 뒤 금액: 시안은 직선 거리만 보여 주고, 실제 앱은 기존 일정 계산 API로 다시 계산</li>
+        <li>지도: 카카오맵 키가 없을 때 쓰는 좌표 약도는 시안처럼 직접 그림</li>
+        <li>모바일 끌어서 옮기기: 터치 지원 라이브러리 사용 여부를 따로 결정</li>
+      </ul></div>
+    </div>
+  </section>
+</div>
+
+<script>
+// ---------- 제주 샘플 실제 응답에서 옮긴 데이터 ----------
+const MODES = {
+  AIRPORT_RAIL: ['공항철도', 'rail'], AIRPORT_BUS: ['공항버스', 'bus'], TAXI: ['택시', 'road'], CAR: ['자가용', 'road'],
+  FLIGHT: ['항공편', 'air'], CITY_BUS: ['시내버스', 'bus']
+};
+const TRIP = {from: '서울', to: '제주', start: '3월 10일', end: '3월 12일', adults: 2, children: 0, budget: 450000};
+const PLACES = {
+  seoul: {name: '서울역', lat: 37.555, lon: 126.971}, gmp: {name: '김포국제공항', lat: 37.558, lon: 126.791},
+  cju: {name: '제주국제공항', lat: 33.51, lon: 126.493}, jeju: {name: '제주시 중심', lat: 33.5, lon: 126.531}
+};
+// 구간별 후보: 분, 일행 요금(성인 2명 기준), null이면 요금 미확인
+const SECTIONS = [
+  {key: 'seoul~gmp', from: 'seoul', to: 'gmp', km: 16, opts: {AIRPORT_RAIL: [31, 9800], AIRPORT_BUS: [44, 22000], TAXI: [26, 22300], CAR: [26, null]}},
+  {key: 'gmp~cju', from: 'gmp', to: 'cju', km: 451, opts: {FLIGHT: [82, 116000]}},
+  {key: 'cju~jeju', from: 'cju', to: 'jeju', km: 4, opts: {AIRPORT_BUS: [20, 22000], TAXI: [14, 9100], CAR: [14, null]}}
+];
+const BADGES = {
+  'AIRPORT_RAIL/FLIGHT/TAXI': ['최저가', '균형'],
+  'TAXI/FLIGHT/TAXI': ['최단 시간'],
+  'AIRPORT_RAIL/FLIGHT/AIRPORT_BUS': ['현재 선택']
+};
+const SIGHTS = {
+  seongsan: {name: '성산일출봉', lat: 33.459, lon: 126.9425, stay: 90, fee: 10000, note: '제주 동쪽의 응회구'},
+  doldam: {name: '함덕해수욕장', lat: 33.5432, lon: 126.6694, stay: 90, fee: 0, note: '제주 북쪽 해변'},
+  dongmun: {name: '동문시장', lat: 33.5117, lon: 126.5263, stay: 60, fee: 0, note: '제주시 전통시장'},
+  gimnyeong: {name: '김녕해수욕장', lat: 33.557, lon: 126.759, stay: 60, fee: 0, note: '제주 동북쪽 해변 산책로'}
+};
+// 서버가 계산한 관광지 간 이동(원래 순서 기준)
+const HOPS = {'seongsan>doldam': ['CITY_BUS', 90, 27, 4080], 'dongmun>gimnyeong': ['CITY_BUS', 75, 22, 3880]};
+const DAYS0 = [
+  {label: '1일차', date: '3월 10일 수', stops: ['seongsan', 'doldam']},
+  {label: '2일차', date: '3월 11일 목', stops: ['dongmun', 'gimnyeong']},
+  {label: '3일차', date: '3월 12일 금', stops: [], note: '돌아오는 날'}
+];
+const LOCAL_TOTAL = 17960;
+const TOUR = {name: '제주 동부 일일 버스투어', platform: '클룩', total: 130000};
+
+// ---------- 상태 ----------
+const state = {
+  variant: 'a', screen: 'route', device: 'desktop', sort: 'rec', tour: false, day: 0, sheetOpen: false,
+  choice: {'seoul~gmp': 'AIRPORT_RAIL', 'gmp~cju': 'FLIGHT', 'cju~jeju': 'AIRPORT_BUS'},
+  days: DAYS0.map(d => ({...d, stops: [...d.stops]})), changed: false, toast: ''
+};
+
+// ---------- 계산 ----------
+const won = v => v == null ? '미확인' : v.toLocaleString('ko-KR') + '원';
+// 숫자로 시작할 때만 숫자용 글꼴을 씀(한글이 고정폭 글꼴로 떨어지지 않게)
+const nspan = (v, cls = '') => '<span class="' + cls + (/^\d/.test(v) ? ' num' : '') + '">' + v + '</span>';
+const mins = m => [m >= 60 ? Math.floor(m / 60) + '시간' : '', m % 60 || m < 60 ? (m % 60) + '분' : ''].filter(Boolean).join(' ');
+const modeName = m => MODES[m][0];
+const modeVar = m => 'var(--m-' + MODES[m][1] + ')';
+function combos() {
+  const out = [];
+  const walk = (i, acc) => {
+    if (i === SECTIONS.length) { out.push(acc); return; }
+    Object.keys(SECTIONS[i].opts).forEach(m => walk(i + 1, [...acc, m]));
+  };
+  walk(0, []);
+  return out.map(modes => {
+    let minutes = 0, total = 0, missing = 0;
+    modes.forEach((m, i) => { const [mn, fare] = SECTIONS[i].opts[m]; minutes += mn; if (fare == null) missing++; else total += fare; });
+    return {id: modes.join('/'), modes, minutes, total, missing, round: total * 2};
+  });
+}
+const ROUTES = combos();
+const current = () => ROUTES.find(r => r.id === SECTIONS.map(s => state.choice[s.key]).join('/'));
+function sortedRoutes() {
+  const list = [...ROUTES];
+  const done = r => r.missing ? 1 : 0;
+  if (state.sort === 'price') list.sort((a, b) => done(a) - done(b) || a.total - b.total);
+  else if (state.sort === 'time') list.sort((a, b) => a.minutes - b.minutes || a.total - b.total);
+  else list.sort((a, b) => done(a) - done(b) || (a.total + a.minutes * 100) - (b.total + b.minutes * 100));
+  return list;
+}
+function estimate() {
+  const r = current();
+  const transport = r.missing ? null : r.round;
+  const sum = (transport ?? r.round) + LOCAL_TOTAL + (state.tour ? TOUR.total : 0);
+  return {r, transport, local: LOCAL_TOTAL, tour: state.tour ? TOUR.total : 0, sum, left: TRIP.budget - sum, ratio: Math.min(sum / TRIP.budget, 1)};
+}
+function distKm(a, b) {
+  const R = 6371, rad = x => x * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+}
+function hop(a, b) {
+  const known = HOPS[a + '>' + b];
+  if (known && !state.changedPairs?.has(a + '>' + b)) return {mode: known[0], min: known[1], km: known[2], fare: known[3]};
+  return {mode: 'CITY_BUS', min: null, km: distKm(SIGHTS[a], SIGHTS[b]), fare: null};
+}
+
+// ---------- 약도(SVG) ----------
+// 한반도 남쪽과 제주도를 단순한 다각형으로 그린 약도. 실제 지도가 아니라 카카오맵 키가 없을 때 쓰는 대체 화면을 보여 주는 용도
+const KOREA = [[126.1,37.75],[126.6,37.05],[126.3,36.65],[126.5,36.0],[126.62,35.6],[126.3,35.1],[126.4,34.6],[126.9,34.42],[127.4,34.62],[127.8,34.8],[128.4,34.86],[129.02,35.06],[129.35,35.42],[129.5,36.0],[129.42,36.6],[129.36,37.2],[129.05,37.68],[128.62,38.3],[128.35,38.62],[127.55,38.3],[126.95,37.96],[126.62,37.78]];
+const JEJU = [[126.16,33.30],[126.25,33.22],[126.45,33.22],[126.65,33.24],[126.85,33.30],[126.96,33.43],[126.94,33.47],[126.80,33.56],[126.65,33.555],[126.50,33.52],[126.33,33.47],[126.20,33.40]];
+function projector(box, w, h, pad) {
+  const [lon0, lat0, lon1, lat1] = box;
+  const k = Math.cos((lat0 + lat1) / 2 * Math.PI / 180);
+  const sx = (w - pad * 2) / ((lon1 - lon0) * k), sy = (h - pad * 2) / (lat1 - lat0);
+  const s = Math.min(sx, sy);
+  const ox = (w - (lon1 - lon0) * k * s) / 2, oy = (h - (lat1 - lat0) * s) / 2;
+  return (lon, lat) => [ox + (lon - lon0) * k * s, oy + (lat1 - lat) * s];
+}
+const poly = (pts, p) => pts.map(([lon, lat]) => p(lon, lat).map(v => v.toFixed(1)).join(',')).join(' ');
+function routeMap(w, h, {labels = true} = {}) {
+  const p = projector([124.2, 33.0, 129.8, 38.1], w, h, 24);
+  const r = current();
+  let segs = '', pins = '';
+  SECTIONS.forEach((s, i) => {
+    const a = PLACES[s.from], b = PLACES[s.to];
+    const [x1, y1] = p(a.lon, a.lat), [x2, y2] = p(b.lon, b.lat);
+    const air = r.modes[i] === 'FLIGHT';
+    segs += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + modeVar(r.modes[i]) + '" stroke-width="' + (air ? 3 : 5) + '" stroke-linecap="round"' + (air ? ' stroke-dasharray="7 6"' : '') + '/>';
+  });
+  const ends = [['seoul', '서울역', 'start'], ['jeju', '제주시 중심', 'end']];
+  ends.forEach(([k, name, side]) => {
+    const [x, y] = p(PLACES[k].lon, PLACES[k].lat);
+    pins += '<circle cx="' + x + '" cy="' + y + '" r="7" fill="var(--surface)" stroke="var(--ink)" stroke-width="3"/>';
+    if (labels) {
+      const tx = x + 14, ty = side === 'start' ? y - 12 : y + 26;
+      pins += '<g><rect x="' + (tx - 6) + '" y="' + (ty - 15) + '" width="' + (name.length * 13 + 14) + '" height="22" rx="6" fill="var(--surface)" stroke="var(--line)"/>'
+        + '<text x="' + tx + '" y="' + ty + '" font-size="12.5" font-weight="700" fill="var(--ink)">' + name + '</text></g>';
+    }
+  });
+  ['gmp', 'cju'].forEach(k => { const [x, y] = p(PLACES[k].lon, PLACES[k].lat); pins += '<circle cx="' + x + '" cy="' + y + '" r="4.5" fill="var(--ink)"/>'; });
+  return '<svg class="map" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="서울역에서 제주시 중심까지 선택한 경로 약도">'
+    + '<rect width="' + w + '" height="' + h + '" fill="var(--sea)"/>'
+    + '<polygon points="' + poly(KOREA, p) + '" fill="var(--land)" stroke="var(--line)" stroke-width="1.5"/>'
+    + '<polygon points="' + poly(JEJU, p) + '" fill="var(--land)" stroke="var(--line)" stroke-width="1.5"/>'
+    + segs + pins + '</svg>';
+}
+const DAYCOL = ['var(--m-air)', 'var(--m-rail)', 'var(--m-road)'];
+function jejuMap(w, h, focusDay = null, fit = 'meet') {
+  const p = projector([126.12, 33.17, 127.0, 33.62], w, h, 18);
+  let out = '';
+  state.days.forEach((d, di) => {
+    const on = focusDay == null || focusDay === di;
+    const pts = d.stops.map(k => p(SIGHTS[k].lon, SIGHTS[k].lat));
+    if (pts.length > 1) out += '<polyline points="' + pts.map(q => q.join(',')).join(' ') + '" fill="none" stroke="' + DAYCOL[di] + '" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="' + (on ? 1 : .25) + '"/>';
+    d.stops.forEach((k, i) => {
+      const [x, y] = p(SIGHTS[k].lon, SIGHTS[k].lat);
+      out += '<g opacity="' + (on ? 1 : .35) + '"><circle cx="' + x + '" cy="' + y + '" r="12" fill="' + DAYCOL[di] + '" stroke="var(--surface)" stroke-width="2"/>'
+        + '<text x="' + x + '" y="' + (y + 4.5) + '" text-anchor="middle" font-size="12" font-weight="700" fill="var(--pin-ink)">' + (i + 1) + '</text>'
+        + (on ? '<text x="' + x + '" y="' + (y + 28) + '" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--ink)" paint-order="stroke" stroke="var(--land)" stroke-width="4">' + SIGHTS[k].name + '</text>' : '') + '</g>';
+    });
+  });
+  const [ax, ay] = p(PLACES.cju.lon, PLACES.cju.lat);
+  return '<svg class="map" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid ' + fit + '" role="img" aria-label="제주 일정 장소 약도">'
+    + '<rect width="' + w + '" height="' + h + '" fill="var(--sea)"/>'
+    + '<polygon points="' + poly(JEJU, p) + '" fill="var(--land)" stroke="var(--line)" stroke-width="1.5"/>'
+    + '<rect x="' + (ax - 5) + '" y="' + (ay - 5) + '" width="10" height="10" rx="2" fill="var(--ink)"/><text x="' + (ax - 10) + '" y="' + (ay - 10) + '" text-anchor="end" font-size="11" fill="var(--muted)">제주공항</text>'
+    + out + '</svg>';
+}
+
+// ---------- 공통 조각 ----------
+function topbar(stepNow) {
+  const steps = ['여행 조건', '이동 경로', '현지 일정', '일일투어 비교'];
+  return '<div class="topbar"><div class="logo">Travel<span>Planner</span></div>'
+    + '<div class="tripchip"><b>서울 → 제주</b><span>3.10 ~ 3.12</span><span>성인 2</span><span class="edit">수정</span></div>'
+    + '<nav class="steps" aria-label="진행 단계">' + steps.map((s, i) => '<span class="step ' + (i < stepNow ? 'done' : i === stepNow ? 'now' : '') + '"'
+      + (i === stepNow ? ' aria-current="step"' : '') + '><i>' + (i < stepNow ? '✓' : i + 1) + '</i><span>' + s + '</span></span>').join('') + '</nav></div>';
+}
+function chain(r) {
+  return '<span class="modechain">' + r.modes.map((m, i) => (i ? '<span class="legsep">›</span>' : '') + '<span class="mdot" style="background:' + modeVar(m) + '"></span>' + modeName(m)).join('') + '</span>';
+}
+function badges(r) {
+  return (BADGES[r.id] || []).filter(b => b !== '현재 선택').map(b => '<span class="badge">' + b + '</span>').join('')
+    + (r.missing ? '<span class="badge warn">자가용 비용 입력 필요</span>' : '');
+}
+function estimateRows(e) {
+  return '<div class="row"><span>왕복 교통 (편도 × 2 추정)</span>' + nspan(e.transport == null ? '일부 미확인' : won(e.transport)) + '</div>'
+    + '<div class="row"><span>현지 일정 3일 (입장료, 이동비)</span>' + nspan(won(e.local)) + '</div>'
+    + '<div class="row"><span>일일투어</span>' + nspan(e.tour ? won(e.tour) : '선택 안 함') + '</div>';
+}
+
+// ---------- 시안 A ----------
+function renderA() {
+  const e = estimate();
+  const est = '<aside class="card estimate' + (state.sheetOpen ? ' open' : '') + '" aria-label="여행 견적">'
+    + '<h3 data-act="sheet"><span>여행 견적</span><span class="num">' + won(e.sum) + '</span></h3>'
+    + '<div class="budgetbar' + (e.left < 0 ? ' over' : '') + '"><i style="width:' + (e.ratio * 100).toFixed(1) + '%"></i></div>'
+    + '<small>예산 ' + won(TRIP.budget) + ' 중 ' + (e.left >= 0 ? won(e.left) + ' 남음' : won(-e.left) + ' 초과') + '</small>'
+    + '<div class="detail">' + estimateRows(e)
+    + '<button type="button" class="addtour" data-act="tour">' + (state.tour ? '일일투어 빼기' : '<b>+ 일일투어 더해 보기</b> (' + won(TOUR.total) + ')') + '</button>'
+    + '<small style="margin-top:6px">숙박비와 식비는 포함하지 않음</small></div></aside>';
+  let list = '', map = '', float = '';
+  if (state.screen === 'route') {
+    const r = current();
+    list = '<div class="sheethandle"></div><div class="listhead"><h2>서울에서 제주까지 ' + ROUTES.length + '가지 방법</h2><p>카드를 누르면 지도와 견적이 바로 바뀌어.</p>'
+      + '<div class="tabs" role="group" aria-label="정렬">' + [['rec', '추천순'], ['price', '최저가'], ['time', '최단 시간']].map(([k, l]) => '<button type="button" class="tab" data-sort="' + k + '" aria-pressed="' + (state.sort === k) + '">' + l + '</button>').join('') + '</div></div>'
+      + sortedRoutes().map(x => '<button type="button" class="routecard" data-route="' + x.id + '" aria-pressed="' + (x.id === r.id) + '">'
+        + '<span class="t">' + chain(x) + '</span>' + nspan(x.missing ? '일부 미확인' : won(x.total), 'price')
+        + '<span class="modechain">' + mins(x.minutes) + ' ' + badges(x) + '</span><span class="sub num">1인 ' + (x.missing ? '-' : won(x.total / 2)) + '</span></button>').join('');
+    map = routeMap(900, 760);
+    float = '<div class="card legcard"><h3>선택한 경로 구간</h3>' + SECTIONS.map((s, i) => {
+      const [mn, fare] = s.opts[r.modes[i]];
+      return '<div class="legrow"><span class="mdot" style="background:' + modeVar(r.modes[i]) + '"></span><span><b>' + modeName(r.modes[i]) + '</b> ' + PLACES[s.from].name + '에서 ' + PLACES[s.to].name + '</span><span class="num">' + won(fare) + '</span><span class="w">' + mins(mn) + ', ' + s.km + 'km</span></div>';
+    }).join('') + '</div>';
+  } else {
+    const d = state.days[state.day];
+    list = '<div class="sheethandle"></div><div class="listhead"><h2>제주 현지 일정</h2><p>장소 왼쪽 손잡이를 끌어서 순서를 바꿔.</p></div>'
+      + '<div class="days" role="group" aria-label="날짜">' + state.days.map((x, i) => '<button type="button" class="daybtn" data-day="' + i + '" aria-pressed="' + (i === state.day) + '"><b>' + x.label + '</b>' + x.date + '</button>').join('') + '</div>'
+      + '<div class="timeline" data-dropday="' + state.day + '">' + (d.stops.length ? d.stops.map((k, i) => {
+        const s = SIGHTS[k];
+        const h = i < d.stops.length - 1 ? hop(k, d.stops[i + 1]) : null;
+        return '<div class="stop" draggable="true" data-stop="' + k + '" data-from="' + state.day + '"><span class="drag" aria-hidden="true">⋮⋮</span>'
+          + '<span class="pinno" style="background:' + DAYCOL[state.day] + '">' + (i + 1) + '</span><div><h4>' + s.name + '</h4><p>' + s.note + ', ' + mins(s.stay) + ' 머무름</p></div><span class="num" style="font-size:13px">' + (s.fee ? won(s.fee) : '무료') + '</span></div>'
+          + (h ? '<div class="between"><span class="mdot" style="background:' + modeVar(h.mode) + '"></span><select aria-label="이동 수단"><option>시내버스</option><option>택시</option><option>자가용</option></select>'
+            + (h.min ? '<span>' + mins(h.min) + ', ' + h.km + 'km</span><span class="num">' + won(h.fare) + '</span>' : '<span>직선 ' + h.km + 'km, 저장하면 요금 다시 계산</span>') + '</div>' : '');
+      }).join('') : '<p class="emptyday">' + (d.note || '') + '. 아직 장소가 없어. 공항 가기 전에 들를 곳을 더해 봐.</p>')
+      + '<button type="button" class="addplace">+ 장소 검색해서 추가</button></div>';
+    map = jejuMap(900, 760, state.day);
+  }
+  return '<div class="app va">' + topbar(state.screen === 'route' ? 1 : 2)
+    + '<div class="body"><section class="listpane">' + list + (state.device === 'mobile' ? est : '') + '</section>'
+    + '<section class="mappane">' + map + '<div class="mapfloat">' + float + '<span></span></div>' + (state.device === 'mobile' ? '' : est) + '</section></div>'
+    + (state.toast ? '<div class="toast" role="status">' + state.toast + '</div>' : '') + '</div>';
+}
+
+// ---------- 시안 B ----------
+function receipt(e) {
+  return '<aside class="panel receipt" aria-label="여행 견적서"><h3>여행 견적서</h3><p class="meta">서울에서 제주, 3월 10일부터 2박 3일, 성인 2명</p>'
+    + [['왕복 교통', e.transport == null ? '일부 미확인' : won(e.transport)], ['현지 일정 3일', won(e.local)], ['일일투어', e.tour ? won(e.tour) : '선택 안 함']]
+      .map(([k, v]) => '<div class="row"><span>' + k + '</span><span class="leader"></span>' + nspan(v) + '</div>').join('')
+    + '<div class="total"><span>합계</span><strong class="num">' + won(e.sum) + '</strong></div>'
+    + '<div class="budgetbar' + (e.left < 0 ? ' over' : '') + '"><i style="width:' + (e.ratio * 100).toFixed(1) + '%"></i></div>'
+    + '<small style="color:var(--muted);font-size:12px">예산 ' + won(TRIP.budget) + ', ' + (e.left >= 0 ? won(e.left) + ' 남음' : won(-e.left) + ' 초과') + '</small>'
+    + '<button type="button" class="addtour" data-act="tour">' + (state.tour ? '일일투어 빼기' : '<b>+ ' + TOUR.name + '</b> 더해 보기') + '</button>'
+    + '<small style="color:var(--muted);font-size:12px;display:block;margin-top:8px">왕복은 편도 요금 두 배로 추정. 숙박비와 식비는 포함하지 않음</small></aside>';
+}
+function renderB() {
+  const e = estimate();
+  let main = '';
+  if (state.screen === 'route') {
+    const r = current();
+    const line = SECTIONS.map((s, i) => {
+      const m = r.modes[i];
+      const [mn, fare] = s.opts[m];
+      const sel = Object.keys(s.opts).length > 1
+        ? '<select data-leg="' + s.key + '" aria-label="' + PLACES[s.from].name + ' 구간 교통수단">' + Object.keys(s.opts).map(k => '<option value="' + k + '"' + (k === m ? ' selected' : '') + '>' + modeName(k) + '</option>').join('') + '</select>'
+        : '<b>' + modeName(m) + '</b>';
+      return (i === 0 ? '<div class="station"><span class="dot"></span><b>' + PLACES[s.from].name + '</b><small>출발</small></div>' : '')
+        + '<div class="seg"><span class="bar" style="background:' + modeVar(m) + '"></span><span class="what">' + sel + '<span>' + mins(mn) + ', ' + s.km + 'km</span></span><span class="amt num">' + won(fare) + '</span></div>'
+        + '<div class="station"><span class="dot"></span><b>' + PLACES[s.to].name + '</b><small>' + (i === SECTIONS.length - 1 ? '도착' : '환승') + '</small></div>';
+    }).join('');
+    main = '<h2>서울에서 제주까지</h2><p class="lead">편도 ' + mins(r.minutes) + ', 일행 ' + (r.missing ? '일부 미확인' : won(r.total)) + '. 구간마다 교통수단을 바꾸면 견적서가 함께 바뀌어.</p>'
+      + '<div class="panel linecard"><div class="line">' + line + '</div><div class="minimap">' + routeMap(420, 440, {labels: false}) + '</div></div>'
+      + '<div class="sortbar"><h3>다른 방법 ' + ROUTES.length + '가지</h3><div class="tabs" role="group" aria-label="정렬">' + [['rec', '추천순'], ['price', '최저가'], ['time', '최단 시간']].map(([k, l]) => '<button type="button" class="tab" data-sort="' + k + '" aria-pressed="' + (state.sort === k) + '">' + l + '</button>').join('') + '</div></div>'
+      + '<div class="options">' + sortedRoutes().slice(0, 6).map(x => '<button type="button" class="panel opt" data-route="' + x.id + '" aria-pressed="' + (x.id === r.id) + '"><span class="t">' + chain(x) + badges(x) + '</span>'
+        + '<span class="time">' + mins(x.minutes) + '</span>' + nspan(x.missing ? '일부 미확인' : won(x.total), 'price') + '</button>').join('')
+      + '</div><p class="lead" style="margin-top:10px">나머지 ' + (ROUTES.length - 6) + '가지는 자가용이 들어간 조합이야.</p>';
+  } else {
+    main = '<h2>제주 현지 일정</h2><p class="lead">장소 카드를 끌어서 순서를 바꾸거나 다른 날로 옮길 수 있어.</p>'
+      + '<div class="daycols">' + state.days.map((d, di) => {
+        let fee = 0, move = 0;
+        const body = d.stops.map((k, i) => {
+          const s = SIGHTS[k]; fee += s.fee;
+          const h = i < d.stops.length - 1 ? hop(k, d.stops[i + 1]) : null;
+          if (h?.fare) move += h.fare;
+          return '<div class="pcard" draggable="true" data-stop="' + k + '" data-from="' + di + '"><span class="drag" aria-hidden="true">⋮⋮</span><h4>' + s.name + '</h4><p>' + mins(s.stay) + ', ' + (s.fee ? '입장료 ' + won(s.fee) : '무료') + '</p></div>'
+            + (h ? '<div class="hop"><span class="bar" style="background:' + modeVar(h.mode) + '"></span>' + (h.min ? '시내버스 ' + mins(h.min) + ', ' + won(h.fare) : '직선 ' + h.km + 'km, 다시 계산 필요') + '</div>' : '');
+        }).join('');
+        return '<section class="panel daycol" data-dropday="' + di + '"><header><b>' + d.label + '</b><span>' + d.date + '</span></header>'
+          + (body || '<p style="color:var(--muted);font-size:13px;margin:4px 0">' + (d.note || '') + '. 장소를 여기로 끌어 놓아 봐.</p>')
+          + '<div class="daysum"><span>입장료와 이동비</span><span class="num">' + won(fee + move) + '</span></div></section>';
+      }).join('') + '</div>'
+      + '<div class="panel jejumap">' + jejuMap(700, 340, null, 'slice') + '</div>';
+  }
+  return '<div class="app vb">' + topbar(state.screen === 'route' ? 1 : 2)
+    + '<div class="body"><div class="cols"><main>' + main + '</main>' + receipt(e) + '</div></div>'
+    + '<div class="mobilebar"><div><small>여행 견적 (예산 ' + won(TRIP.budget) + ')</small><strong class="num">' + won(e.sum) + '</strong></div><button type="button" class="btn">견적서 보기</button></div>'
+    + (state.toast ? '<div class="toast" role="status">' + state.toast + '</div>' : '') + '</div>';
+}
+
+// ---------- 그리기와 이벤트 ----------
+const NOTES = {
+  a: '<b>시안 A 지도 분할.</b> Rome2Rio처럼 왼쪽 목록과 오른쪽 큰 지도를 나란히 두고, 여행 견적은 지도 위에 떠 있어. 모바일은 위 지도, 아래 끌어 올리는 목록이야.',
+  b: '<b>시안 B 노선도 견적서.</b> 선택한 경로를 지하철 노선도처럼 세로로 보여 주고, 오른쪽에 견적서를 계속 띄워 둬. 일정은 3일을 열로 나란히 놓고 끌어서 옮겨.'
+};
+const frame = document.getElementById('frame');
+let toastTimer;
+function render() {
+  const listScroll = frame.querySelector('.listpane, .vb .body')?.scrollTop ?? 0;
+  frame.innerHTML = state.variant === 'a' ? renderA() : renderB();
+  const scroller = frame.querySelector('.listpane, .vb .body');
+  if (scroller) scroller.scrollTop = listScroll;
+  document.getElementById('variant-note').innerHTML = NOTES[state.variant];
+  document.getElementById('stage').dataset.device = state.device;
+  [['ctl-variant', 'v', state.variant], ['ctl-screen', 's', state.screen], ['ctl-device', 'd', state.device]].forEach(([id, k, v]) =>
+    document.querySelectorAll('#' + id + ' button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset[k] === v))));
+  bindDrag();
+}
+function toast(msg) {
+  state.toast = msg; render();
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { state.toast = ''; render(); }, 2600);
+}
+document.querySelector('.controls').addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  if (b.dataset.v) state.variant = b.dataset.v;
+  if (b.dataset.s) state.screen = b.dataset.s;
+  if (b.dataset.d) state.device = b.dataset.d;
+  state.sheetOpen = false; render();
+});
+frame.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-route],[data-sort],[data-act],[data-day]'); if (!t) return;
+  if (t.dataset.route) {
+    t.dataset.route.split('/').forEach((m, i) => state.choice[SECTIONS[i].key] = m);
+    toast('경로를 바꿨어. 여행 견적이 ' + won(estimate().sum) + '으로 바뀌었어.'); return;
+  }
+  if (t.dataset.sort) state.sort = t.dataset.sort;
+  if (t.dataset.act === 'tour') state.tour = !state.tour;
+  if (t.dataset.act === 'sheet') state.sheetOpen = !state.sheetOpen;
+  if (t.dataset.day) state.day = +t.dataset.day;
+  render();
+});
+frame.addEventListener('change', ev => {
+  const s = ev.target.closest('select[data-leg]'); if (!s) return;
+  state.choice[s.dataset.leg] = s.value; render();
+});
+// 장소 끌어서 옮기기: 같은 날 순서 변경(A, B), 다른 날로 이동(B)
+let dragged = null;
+function bindDrag() {
+  frame.querySelectorAll('[draggable="true"]').forEach(el => {
+    el.addEventListener('dragstart', e => { dragged = {k: el.dataset.stop, from: +el.dataset.from}; el.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', el.dataset.stop); });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+  });
+  frame.querySelectorAll('[data-dropday]').forEach(zone => {
+    zone.addEventListener('dragover', e => { if (!dragged) return; e.preventDefault(); zone.classList.add('dropline'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dropline'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('dropline'); if (!dragged) return;
+      const to = +zone.dataset.dropday;
+      const target = e.target.closest('[data-stop]');
+      const src = state.days[dragged.from].stops;
+      src.splice(src.indexOf(dragged.k), 1);
+      const dst = state.days[to].stops;
+      let at = dst.length;
+      if (target && target.dataset.stop !== dragged.k) {
+        const r = target.getBoundingClientRect();
+        at = dst.indexOf(target.dataset.stop) + ((e.clientY - r.top) > r.height / 2 ? 1 : 0);
+      }
+      dst.splice(at, 0, dragged.k);
+      state.changedPairs = new Set();
+      state.days.forEach((d, di) => d.stops.forEach((k, i) => { if (i && DAYS0[di].stops[i - 1] !== d.stops[i - 1]) state.changedPairs.add(d.stops[i - 1] + '>' + k); }));
+      dragged = null;
+      toast('순서를 바꿨어. 실제 앱에서는 이동비를 서버에서 다시 계산해.');
+    });
+  });
+}
+render();
+</script>
+</body>
+</html>

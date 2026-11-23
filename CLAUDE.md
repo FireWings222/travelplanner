@@ -30,6 +30,7 @@
 - 디자인 관련 조사와 의사결정은 `doc/design/`에 남긴다. 목록은 `doc/design/README.md`에서 관리한다.
   - 조사: `research/YYYY-MM-DD-주제.md`, `research/_template.md` 형식
   - 결정: `decisions/NNNN-주제.md`, `decisions/_template.md` 형식, 결정 하나에 파일 하나
+  - 시안: `drafts/YYYY-MM-DD-주제.html`, 외부 파일 없이 열리는 단일 HTML
 - 결정을 바꿀 때는 기존 파일을 지우지 않고 상태를 "대체됨"으로 바꾼 뒤 새 번호의 결정과 서로 링크한다.
 - 파일 이름은 영문 소문자와 하이픈으로 쓴다(Windows git에서 한글 파일 이름이 깨져 보이는 것을 피하려고).
 
