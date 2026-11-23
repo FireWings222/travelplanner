@@ -402,6 +402,7 @@ svg.map .callout { filter: drop-shadow(var(--callout-shadow)); }
     <div><span class="pick-label">시안</span><span class="pick" id="ctl-variant"><button type="button" data-v="a" aria-pressed="true">A 지도 분할</button><button type="button" data-v="b" aria-pressed="false">B 노선도 견적서</button></span></div>
     <div><span class="pick-label">화면</span><span class="pick" id="ctl-screen"><button type="button" data-s="route" aria-pressed="true">이동 경로</button><button type="button" data-s="plan" aria-pressed="false">현지 일정</button></span></div>
     <div><span class="pick-label">기기</span><span class="pick" id="ctl-device"><button type="button" data-d="desktop" aria-pressed="true">데스크톱</button><button type="button" data-d="mobile" aria-pressed="false">모바일</button></span></div>
+    <div><span class="pick-label">색</span><span class="pick" id="ctl-theme"><button type="button" data-t="light" aria-pressed="false">라이트</button><button type="button" data-t="dark" aria-pressed="false">다크</button><button type="button" data-t="system" aria-pressed="true">시스템</button></span></div>
   </div>
   <p class="variant-note" id="variant-note"></p>
   <div class="stage" id="stage" data-device="desktop"><div class="frame" id="frame"></div></div>
@@ -942,8 +943,15 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { state.toast = ''; render(); }, 2600);
 }
+// 색 선택: 라이트, 다크는 data-theme으로 고정하고, 시스템은 기기 설정(prefers-color-scheme)을 따름
+document.getElementById('ctl-theme').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-t]'); if (!b) return;
+  if (b.dataset.t === 'system') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = b.dataset.t;
+  document.querySelectorAll('#ctl-theme button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+});
 document.querySelector('.controls').addEventListener('click', ev => {
-  const b = ev.target.closest('button'); if (!b) return;
+  const b = ev.target.closest('button'); if (!b || b.dataset.t) return;
   const before = state.variant + state.screen + state.device;
   if (b.dataset.v) state.variant = b.dataset.v;
   if (b.dataset.s) state.screen = b.dataset.s;
