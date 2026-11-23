@@ -40,7 +40,7 @@
 
 - [ ] `CustomOverlay`로 시안의 이름표와 날짜 색 번호 핀을 표현할 수 있는지 구현 단계에서 확인
 - [ ] 경로 카드 선택, 장소 순서 변경 때 지도 범위와 선이 바로 바뀌는지 확인
-- [ ] 시연 환경의 카카오 JavaScript SDK 도메인 등록 확인
+- [x] 시연 환경의 카카오 JavaScript SDK 도메인 등록 확인(2026-11-23). 처음에는 `domain mismatched` 401 오류였고, 학생 앱의 [앱] > [플랫폼 키] > [JavaScript 키] > [JavaScript SDK 도메인]에 `http://localhost:8080`을 등록한 뒤 SDK 응답 200과 지도 생성 확인. 키는 실행하는 PowerShell 창에서 환경 변수로 넣고 같은 창에서 `bootRun`을 실행해야 앱에 전달됨
 
 ## 변경 이력
 
