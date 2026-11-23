@@ -273,7 +273,6 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
 .redesign .listhead { padding: 20px 4px 6px; }
 .redesign .listhead h1 { font-size: 21px; font-weight: 800; margin: 0 0 2px; line-height: 1.3; letter-spacing: 0; }
 .redesign .listhead p { margin: 0 0 14px; color: var(--ink-2); font-size: 14.5px; }
-.redesign .tripline { margin: 0 0 4px; font-size: 13.5px; font-weight: 700; color: var(--ink-2); }
 .redesign .sort { display: inline-flex; background: var(--field-2); border-radius: 9px; padding: 3px; gap: 2px; }
 .redesign .sort button { border: 0; background: transparent; border-radius: 7px; padding: 6px 14px; font-size: 14.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
 .redesign .sort button[aria-pressed="true"] { background: var(--paper); color: var(--ink); font-weight: 700; box-shadow: var(--lift-shadow); }
@@ -463,4 +462,49 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
 @media (max-width: 860px) {
     .redesign .addform { grid-template-columns: 1fr; }
     .redesign .saved { margin-bottom: 8px; }
+}
+
+/* 공통 머리글: 로고, 여행 조건 묶음, 단계 탭, 저장한 여행 링크. 모든 화면에서 쓰므로 머리글 자체에 redesign 클래스를 붙임 */
+.site-header.redesign { position: relative; z-index: 4; display: flex; align-items: stretch; gap: 20px; padding: 0 20px; min-height: 62px;
+    background: var(--paper); border: 0; flex: none; }
+.site-header.redesign .logo { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 19px; letter-spacing: -0.02em;
+    white-space: nowrap; color: var(--ink); text-decoration: none; }
+.site-header.redesign .logo em { font-style: normal; color: var(--brand); }
+.site-header.redesign .logo .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--brand); display: grid; place-items: center; }
+.site-header.redesign .logo .mark i { width: 14px; height: 14px; border: 1.5px solid var(--brand-on); border-radius: 50%; display: grid; place-items: center; }
+.site-header.redesign .logo .mark i::before { content: ""; width: 5px; height: 8px; background: var(--brand-on);
+    clip-path: polygon(50% 0, 100% 100%, 50% 79%, 0 100%); transform: rotate(35deg); }
+.site-header.redesign .tripbox { display: flex; align-items: stretch; align-self: center; flex: none; min-width: 0; background: var(--field);
+    border-radius: 10px; overflow: hidden; }
+.site-header.redesign .tripbox[hidden] { display: none; }
+.site-header.redesign .tf { display: flex; flex-direction: column; justify-content: center; padding: 5px 14px; min-width: 0; white-space: nowrap; }
+.site-header.redesign .tf + .tf { box-shadow: inset 1px 0 0 var(--rule); }
+.site-header.redesign .tf small { font-size: 11.5px; font-weight: 700; color: var(--ink-3); line-height: 1.3; }
+.site-header.redesign .tf b { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.site-header.redesign .tedit { display: flex; align-items: center; padding: 0 14px; font-size: 14px; font-weight: 700; color: var(--brand);
+    text-decoration: none; box-shadow: inset 1px 0 0 var(--rule); }
+.site-header.redesign .steps { display: flex; gap: 22px; margin-left: auto; flex: none; }
+.site-header.redesign .step { display: inline-flex; align-items: center; gap: 7px; padding: 0; font-size: 15px; font-weight: 600; color: var(--ink-3);
+    white-space: nowrap; text-decoration: none; border-top: 3px solid transparent; border-bottom: 3px solid transparent; box-shadow: none; }
+.site-header.redesign .step:hover { color: var(--ink); box-shadow: none; }
+.site-header.redesign .step i { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+.site-header.redesign .step.done { color: var(--ink-2); }
+.site-header.redesign .step.done i, .site-header.redesign .step[aria-current] i { color: var(--brand); }
+.site-header.redesign .step[aria-current] { color: var(--ink); font-weight: 800; border-bottom-color: var(--brand); }
+.site-header.redesign .saved-link { align-self: center; padding: 0; border: 0; border-radius: 0; font-size: 14px; font-weight: 700;
+    color: var(--ink-2); text-decoration: none; white-space: nowrap; }
+.site-header.redesign .saved-link:hover { background: transparent; color: var(--ink); }
+@media (max-width: 860px) {
+    .site-header.redesign { flex-wrap: wrap; gap: 0 10px; padding: 10px 14px 0; min-height: 0; }
+    .site-header.redesign .logo > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .site-header.redesign .logo .mark { width: 34px; height: 34px; border-radius: 9px; }
+    .site-header.redesign .tripbox { flex: 1 1 0; }
+    .site-header.redesign .tf { padding: 4px 9px; }
+    .site-header.redesign .tf.extra { display: none; }
+    .site-header.redesign .tf b { font-size: 14px; }
+    .site-header.redesign .tedit { margin-left: auto; padding: 0 10px; }
+    .site-header.redesign .steps { margin-left: 0; width: 100%; gap: 18px; height: 40px; margin-top: 6px; }
+    .site-header.redesign .step span { display: none; }
+    .site-header.redesign .step[aria-current] span { display: inline; }
+    .site-header.redesign .saved-link { display: none; }
 }

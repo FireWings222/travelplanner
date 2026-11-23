@@ -1,5 +1,5 @@
 import {$, $$, api, read, write, e, modes, won, minutes, number, status, showError, fareFields, readFare,
-    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues} from './common.js';
+    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader} from './common.js';
 import {createMap, drawJourney} from './route-map.js';
 
 // 서버 추천 이름을 경로 카드 꼬리표에 쓰는 짧은 이름으로 바꿉니다. 목록에 없는 추천은 서버 이름을 그대로 씁니다.
@@ -35,8 +35,6 @@ export async function init(cities) {
     }
     // 도시 ID를 화면에 보여 줄 이름으로 바꿉니다.
     const city = id => cities.find(item => item.id === id)?.name ?? id;
-    $('#trip-line').textContent = city(trip.origin) + '에서 ' + city(trip.destination) + ', ' + trip.start + ' ~ ' + trip.end
-        + ', 성인 ' + trip.party.adults + '명' + (trip.party.children ? ', 아동 ' + trip.party.children + '명' : '');
 
     let legs = read('legs') ?? {};
     let sort = 'rec';
@@ -222,6 +220,7 @@ export async function init(cities) {
         $('#route-note').textContent = (sample ? '샘플 운임과 입장료는 테스트용 가상 가격입니다. ' : '')
             + '왕복 금액은 편도 요금의 두 배로 추정합니다.';
         renderEstimate();
+        renderHeader(cities);
         renderMap().catch(error => mapFail(error.message));
     }
 

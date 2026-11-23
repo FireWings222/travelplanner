@@ -1,5 +1,5 @@
 import {$, $$, api, read, write, e, busy, status, showError, modes, won, minutes, number, fareFields, readFare,
-    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues} from './common.js';
+    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader} from './common.js';
 import {createMap, drawDays, dayPin, dayColor} from './route-map.js';
 
 const START = 9 * 60;
@@ -142,6 +142,7 @@ export async function init(cities) {
         save.hidden = false;
         save.textContent = id ? '저장한 일정 갱신' : '일정 저장';
         status('');
+        renderHeader(cities);
         render();
     }
 
@@ -269,8 +270,6 @@ export async function init(cities) {
 
     // 화면 전체를 그립니다: 제목, 날짜 버튼, 타임라인, 안내, 견적, 지도
     function render() {
-        $('#trip-line').textContent = city(plan.trip.origin) + '에서 ' + city(plan.trip.destination) + ', ' + plan.trip.start + ' ~ ' + plan.trip.end
-            + ', 성인 ' + plan.trip.party.adults + '명' + (plan.trip.party.children ? ', 아동 ' + plan.trip.party.children + '명' : '');
         $('#plan-title').textContent = city(plan.trip.destination) + ' 현지 일정';
         const sample = quote.days.some(day => day.admissions.some(item => item.source === 'SAMPLE'));
         $('#plan-note').textContent = '입장료와 이동 요금은 일행 전체 금액입니다.' + (sample ? ' 샘플 운임과 입장료는 테스트용 가상 가격입니다.' : '');

@@ -390,3 +390,28 @@ export function connectEstimate(node) {
         toggle.textContent = open ? '접기' : '내역';
     });
 }
+
+// 공통 머리글의 여행 조건 묶음과 단계 탭 완료 표시를 세션 상태로 채웁니다(DESIGN.md 단계 탭, 여행 조건 묶음).
+// 여행 조건이 있으면 출발, 도착, 일정, 인원과 "수정" 링크를 보여 줍니다. 홈에서는 검색 폼이 조건을 보여 주므로 묶음을 숨깁니다.
+// 완료 표시: 1단계는 여행 조건, 2단계는 계산한 경로 선택(legs), 3단계는 만든 일정(plan)이 세션에 있을 때 ✓로 바꿉니다.
+// 경로 비교, 여행 일정 화면처럼 세션 상태를 바꾸는 화면은 바꾼 뒤 이 함수를 다시 부릅니다.
+export function renderHeader(cities) {
+    const box = $('#tripbox');
+    if (!box) return;
+    const trip = read('trip');
+    const city = id => cities.find(item => item.id === id)?.name ?? id;
+    const day = value => Number(value.slice(5, 7)) + '.' + Number(value.slice(8, 10));
+    const field = (label, value, extra = '') => '<span class="tf' + extra + '"><small>' + label + '</small><b>' + value + '</b></span>';
+    box.hidden = !trip || document.body.dataset.page === 'home';
+    box.innerHTML = trip ? field('출발', e(city(trip.origin))) + field('도착', e(city(trip.destination)))
+        + field('일정', '<span class="num">' + e(day(trip.start)) + ' ~ ' + e(day(trip.end)) + '</span>')
+        + field('인원', '성인 ' + trip.party.adults + (trip.party.children ? ', 아동 ' + trip.party.children : ''), ' extra')
+        + '<a class="tedit" href="/">수정</a>' : '';
+    const done = {trip: Boolean(trip), legs: Boolean(read('legs')), plan: Boolean(read('plan')), tour: false};
+    $$('.steps [data-step]').forEach((step, index) => {
+        const finished = done[step.dataset.step] && !step.hasAttribute('aria-current');
+        step.classList.toggle('done', finished);
+        $('i', step).textContent = finished ? '✓' : String(index + 1);
+        $('i', step).setAttribute('aria-label', finished ? (index + 1) + '단계 완료' : (index + 1) + '단계');
+    });
+}

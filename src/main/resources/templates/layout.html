@@ -3,7 +3,7 @@
 <head th:fragment="head(title)">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f4f8f5">
+    <meta name="theme-color" content="#ffffff">
     <meta th:if="${!#strings.isEmpty(kakaoMapJavaScriptKey)}" name="kakao-map-key" th:content="${kakaoMapJavaScriptKey}">
     <title th:text="${title + ' | TravelPlanner'}">TravelPlanner</title>
     <link rel="stylesheet" href="/webjars/bootstrap/5.3.8/css/bootstrap.min.css">
@@ -11,18 +11,17 @@
     <script type="module" src="/js/app.js"></script>
 </head>
 <body>
-<header th:fragment="header(active)" class="site-header">
+<header th:fragment="header(active)" class="site-header redesign">
     <a class="skip-link" href="#main">본문으로 이동</a>
-    <div class="container header-inner">
-        <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><i></i></span>Travel<span>Planner</span></a>
-        <nav aria-label="주 메뉴">
-            <a href="/search" th:attr="aria-current=${active == 'routes'} ? 'page'">경로 비교</a>
-            <a href="/itinerary" th:attr="aria-current=${active == 'plan'} ? 'page'">여행 일정</a>
-            <a href="/tours" th:attr="aria-current=${active == 'tours'} ? 'page'">일일투어</a>
-            <a href="/compare" th:attr="aria-current=${active == 'compare'} ? 'page'">비용 비교</a>
-        </nav>
-        <a class="saved-link" href="/itinerary#saved">저장한 여행</a>
-    </div>
+    <a class="logo" href="/" aria-label="TravelPlanner 처음으로"><span class="mark" aria-hidden="true"><i></i></span><span>Travel<em>Planner</em></span></a>
+    <div id="tripbox" class="tripbox" hidden></div>
+    <nav class="steps" aria-label="진행 단계">
+        <a class="step" href="/" data-step="trip" th:attr="aria-current=${active == 'home'} ? 'step'"><i>1</i><span>여행 조건</span></a>
+        <a class="step" href="/search" data-step="legs" th:attr="aria-current=${active == 'routes'} ? 'step'"><i>2</i><span>이동 경로</span></a>
+        <a class="step" href="/itinerary" data-step="plan" th:attr="aria-current=${active == 'plan'} ? 'step'"><i>3</i><span>현지 일정</span></a>
+        <a class="step" href="/tours" data-step="tour" th:attr="aria-current=${active == 'tours' or active == 'compare'} ? 'step'"><i>4</i><span>일일투어 비교</span></a>
+    </nav>
+    <a class="saved-link" href="/itinerary#saved">저장한 여행</a>
 </header>
 <footer th:fragment="footer" class="site-footer"><div class="container footer-inner"><a class="brand" href="/">Travel<span>Planner</span></a><span>샘플 운임과 입장료는 테스트용 가상 가격입니다.</span></div></footer>
 </body>
