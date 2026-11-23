@@ -16,7 +16,7 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 작성 �
 | 0004 | [디자인 조사와 결정을 doc/design에 기록](decisions/0004-design-docs.md) | 결정 | 2026-11-23 |
 | 0005 | [AI가 만든 것처럼 보이는 디자인을 피함](decisions/0005-avoid-generated-look.md) | 결정 | 2026-11-23 |
 | 0006 | [디자인 참고 서비스와 트렌드 기준](decisions/0006-design-references.md) | 결정 | 2026-11-23 |
-| 0007 | [UI 시안 선택](decisions/0007-draft-selection.md) | 제안 | |
+| 0007 | [UI 시안 선택(시안 A, 원본 초록)](decisions/0007-draft-selection.md) | 결정 | 2026-11-23 |
 | 0008 | [지도는 카카오맵으로 구현](decisions/0008-kakao-map.md) | 결정 | 2026-11-23 |
 
 ## 시안 목록
@@ -36,8 +36,6 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 작성 �
 
 | 질문 | 관련 문서 |
 |---|---|
-| 시안 A, B 선택 | 0007 |
-| 시안 디자인과 색 조합이 실제 카카오맵 위에서도 어울리는지(학생에게 JavaScript 키를 받은 뒤 localhost에서 확인) | 0008 |
 | 개선의 1차 목표(사용 흐름 개선과 포트폴리오 첫인상 가운데 우선순위) | 현행 UI 진단 |
 | 우선 대응할 화면 크기(데스크톱, 모바일) | 현행 UI 진단 8번 |
 | Bootstrap 5 유지 여부 | 0002 |
