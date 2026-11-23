@@ -21,9 +21,25 @@
     <section class="panel search-panel" aria-labelledby="search-heading">
       <div class="panel-heading"><div><h2 id="search-heading">어디로 떠나시나요?</h2><p>출발지와 목적지를 선택해 여행을 시작하세요.</p></div><button type="button" class="soft sample-button" id="example">제주 샘플 불러오기</button></div>
       <form id="trip-form">
-        <div class="search-grid">
-          <label>출발지<input name="origin" list="city-list" placeholder="예: 서울" required maxlength="40" autocomplete="off"></label>
-          <label>목적지<input name="destination" list="city-list" placeholder="예: 제주" required maxlength="40" autocomplete="off"></label>
+        <div class="place-grid">
+          <div class="trip-place">
+            <label for="trip-origin">출발지</label>
+            <div class="place-field"><input id="trip-origin" name="origin" list="city-list" placeholder="예: 서울역 또는 도로명 주소"
+                 required maxlength="160" autocomplete="off" aria-describedby="origin-place-status">
+              <button type="button" class="soft" id="find-origin" aria-label="출발지 장소 찾기">장소 찾기</button></div>
+            <p class="place-status" id="origin-place-status" role="status"></p>
+            <ul class="place-results" id="origin-place-results" hidden></ul>
+          </div>
+          <div class="trip-place">
+            <label for="trip-destination">목적지</label>
+            <div class="place-field"><input id="trip-destination" name="destination" list="city-list" placeholder="예: 강릉역 또는 도로명 주소"
+                 required maxlength="160" autocomplete="off" aria-describedby="destination-place-status">
+              <button type="button" class="soft" id="find-destination" aria-label="목적지 장소 찾기">장소 찾기</button></div>
+            <p class="place-status" id="destination-place-status" role="status"></p>
+            <ul class="place-results" id="destination-place-results" hidden></ul>
+          </div>
+        </div>
+        <div class="search-grid trip-dates">
           <label>여행 시작일<input type="date" name="start" required></label>
           <label>여행 종료일<input type="date" name="end" required></label>
           <label>성인<input name="adults" type="number" value="2" min="1" max="30" required></label>
@@ -41,7 +57,7 @@
     </section>
   </div>
   <section class="container home-extra" aria-labelledby="destinations-heading">
-    <div class="panel-heading"><div><h2 id="destinations-heading">둘러볼 수 있는 여행지</h2><p>도시를 선택해 목적지에 바로 입력하세요.</p></div></div>
+    <div class="panel-heading"><div><h2 id="destinations-heading">전국 시·도</h2><p>시·도를 선택하면 대표 지점을 사용합니다. 정확한 주소나 장소는 위에서 찾을 수 있습니다.</p></div></div>
     <div id="catalog" class="city-grid"></div>
   </section>
 </main>

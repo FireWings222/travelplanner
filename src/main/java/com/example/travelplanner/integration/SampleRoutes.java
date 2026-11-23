@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -13,13 +14,17 @@ public class SampleRoutes implements TravelProviders.Routes {
     private static final Place GIMPO = new Place("gmp", "김포국제공항", 37.558, 126.791);
     private static final Place GIMHAE = new Place("pus", "김해국제공항", 35.179, 128.938);
     private static final Place JEJU = new Place("cju", "제주국제공항", 33.510, 126.493);
-    private final TravelProviders.Catalog catalog;
+    private static final List<Place> JEJU_GATEWAYS = List.of(GIMPO, GIMHAE,
+            new Place("cjj", "청주국제공항", 36.716, 127.499),
+            new Place("tae", "대구국제공항", 35.894, 128.658),
+            new Place("kwj", "광주공항", 35.126, 126.810),
+            new Place("rsu", "여수공항", 34.843, 127.617),
+            new Place("usn", "울산공항", 35.593, 129.352));
     private final OdsayRoutes odsay;
     private final KakaoRoadRoutes road;
 
-    /** 도시 기준 좌표를 제공하는 카탈로그와 실제 대중교통 조회에 사용할 ODsay를 연결합니다. */
-    public SampleRoutes(TravelProviders.Catalog catalog, OdsayRoutes odsay, KakaoRoadRoutes road) {
-        this.catalog = catalog;
+    /** 실제 대중교통과 자동차 경로를 조회하는 제공자를 연결합니다. */
+    public SampleRoutes(OdsayRoutes odsay, KakaoRoadRoutes road) {
         this.odsay = odsay;
         this.road = road;
     }
@@ -30,16 +35,27 @@ public class SampleRoutes implements TravelProviders.Routes {
      * JourneyService의 도시 간 비교에서 호출합니다. 출발지와 목적지가 같으면 빈 목록을 반환하고, 제주가 포함되면 공항 접근·국내선·공항에서 목적지 순으로 구간을 구성합니다.
      */
     @Override
-    public List<List<Segment>> options(String origin, String destination) {
-        if (origin.equals(destination)) return List.of();
-        Place from = catalog.center(origin);
-        Place to = catalog.center(destination);
-        if (origin.equals("jeju") || destination.equals("jeju")) {
-            Place departure = airport(origin);
-            Place arrival = airport(destination);
+    public List<List<Segment>> options(String origin, String destination, Place from, Place to) {
+        if (samePoint(from, to)) return List.of();
+        boolean fromJeju = origin.equals("jeju");
+        boolean toJeju = destination.equals("jeju");
+        if (fromJeju != toJeju) {
+            Place departure = fromJeju ? JEJU : gateway(from);
+            Place arrival = toJeju ? JEJU : gateway(to);
             int km = kilometers(departure, arrival);
             Segment flight = perPerson(departure, arrival, Mode.FLIGHT, km, 45 + km / 12, 0, 58000);
-            return List.of(airportAccess(from, departure), List.of(flight), airportAccess(arrival, to));
+            List<List<Segment>> sections = new ArrayList<>();
+            if (!samePoint(from, departure)) {
+                sections.add(legacyCenter(from) ? airportAccess(from, departure) : pointToPoint(from, departure));
+            }
+            sections.add(List.of(flight));
+            if (!samePoint(arrival, to)) {
+                sections.add(legacyCenter(to) ? airportAccess(arrival, to) : pointToPoint(arrival, to));
+            }
+            return List.copyOf(sections);
+        }
+        if (!legacyCenter(from) || !legacyCenter(to)) {
+            return List.of(pointToPoint(from, to));
         }
         int km = kilometers(from, to);
         return List.of(road.enrich(List.of(
@@ -50,6 +66,24 @@ public class SampleRoutes implements TravelProviders.Routes {
                 shared(from, to, Mode.CAR, km, 22 + km, 72000))));
     }
 
+    private List<Segment> pointToPoint(Place from, Place to) {
+        int km = kilometers(from, to);
+        List<Segment> choices = new ArrayList<>();
+        int driveMinutes = Math.max(5, 10 + km * (km <= 30 ? 2 : 1));
+        choices.add(sampleCar(from, to, km, driveMinutes));
+        choices.add(new Segment(from, to, Mode.TAXI, BigDecimal.valueOf(km), driveMinutes, 0,
+                null, Source.SAMPLE, CHECKED));
+        if (km <= 8) choices.add(perPerson(from, to, Mode.WALK, km, km * 14, 0, 0));
+        return road.enrich(odsay.enrich(choices));
+    }
+
+    private static boolean legacyCenter(Place place) {
+        return switch (place.id()) {
+            case "seoul", "busan", "jeju" -> true;
+            default -> false;
+        };
+    }
+
     /**
      * 관광지 사이의 교통수단 후보를 만들고 조회 가능한 버스·지하철 구간을 ODsay 데이터로 보완합니다.
      *
@@ -57,6 +91,7 @@ public class SampleRoutes implements TravelProviders.Routes {
      */
     @Override
     public List<Segment> local(Place from, Place to) {
+        if (from.id().startsWith("kakao-") || to.id().startsWith("kakao-")) return pointToPoint(from, to);
         int km = kilometers(from, to);
         List<Segment> choices = new ArrayList<>();
         if (!isJeju(from, to)) {
@@ -89,13 +124,8 @@ public class SampleRoutes implements TravelProviders.Routes {
     }
 
     /** 제주행 또는 제주발 경로를 만들 때 사용할 국내 공항의 기준 좌표를 도시 ID로 찾습니다. */
-    private static Place airport(String id) {
-        return switch (id) {
-            case "seoul" -> GIMPO;
-            case "busan" -> GIMHAE;
-            case "jeju" -> JEJU;
-            default -> throw new IllegalArgumentException("공항 정보가 없습니다.");
-        };
+    private static Place gateway(Place place) {
+        return JEJU_GATEWAYS.stream().min(Comparator.comparingDouble(airport -> distance(place, airport))).orElseThrow();
     }
 
     /** 버스·철도·항공편처럼 인원수 기준으로 계산할 샘플 이동 구간을 만듭니다. */
@@ -119,10 +149,18 @@ public class SampleRoutes implements TravelProviders.Routes {
 
     /** 실제 노선 거리가 없는 샘플 구간의 요금과 시간을 추정할 때 두 지점의 직선거리를 사용합니다. */
     private static int kilometers(Place from, Place to) {
+        return Math.max(1, (int) Math.round(distance(from, to)));
+    }
+
+    private static boolean samePoint(Place from, Place to) {
+        return from.id().equals(to.id()) || distance(from, to) < 0.005;
+    }
+
+    private static double distance(Place from, Place to) {
         double latitude = Math.toRadians(to.latitude() - from.latitude());
         double longitude = Math.toRadians(to.longitude() - from.longitude());
         double a = Math.pow(Math.sin(latitude / 2), 2) + Math.cos(Math.toRadians(from.latitude()))
                 * Math.cos(Math.toRadians(to.latitude())) * Math.pow(Math.sin(longitude / 2), 2);
-        return Math.max(1, (int) Math.round(6371 * 2 * Math.asin(Math.sqrt(a))));
+        return 6371 * 2 * Math.asin(Math.sqrt(a));
     }
 }

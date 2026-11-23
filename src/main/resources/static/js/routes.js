@@ -32,7 +32,7 @@ export async function init(cities) {
             + (selected.cost.missing.length && Number(selected.cost.totalKrw) === 0
                 ? '' : '<p class="muted">' + moneyDetails(selected.cost) + '</p>')
             + '<p class="muted">구간별 교통수단에서 요금과 시간의 출처를 확인할 수 있습니다. 왕복은 편도 요금을 2회 적용한 추정치입니다.</p>'
-            + missing(selected.cost) + (selected.sections.length ? '' : '<p>출발지와 목적지가 같은 도시입니다.</p>'));
+            + missing(selected.cost) + (selected.sections.length ? '' : '<p>출발 지점과 도착 지점이 같습니다.</p>'));
         controls.innerHTML = selected.sections.length
             ? panel('<h2>구간별 교통수단</h2>' + legCards(selected.sections, legs)) : '';
         connectLegs(controls, (key, leg) => busy(controls, () => update({...legs, [key]: leg})).catch(showError));

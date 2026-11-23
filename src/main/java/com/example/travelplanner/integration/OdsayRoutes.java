@@ -136,6 +136,7 @@ public class OdsayRoutes {
         Place to = samples.get(0).to();
         List<Segment> choices = new ArrayList<>();
         boolean hasRail = false;
+        boolean hasBus = false;
         for (Segment sample : samples) {
             int type = switch (sample.mode()) {
                 case SUBWAY, AIRPORT_RAIL -> 1;
@@ -143,12 +144,17 @@ public class OdsayRoutes {
                 default -> 0;
             };
             hasRail |= type == 1;
+            hasBus |= type == 2;
             Segment route = type == 0 ? null : firstRoute(paths, type, from, to, sample.mode(), checkedAt);
             choices.add(route == null ? sample : route);
         }
         if (!hasRail) {
             Segment subway = firstRoute(paths, 1, from, to, Mode.SUBWAY, checkedAt);
             if (subway != null) choices.add(subway);
+        }
+        if (!hasBus) {
+            Segment bus = firstRoute(paths, 2, from, to, Mode.CITY_BUS, checkedAt);
+            if (bus != null) choices.add(bus);
         }
         Segment mixed = firstRoute(paths, 3, from, to, Mode.BUS_SUBWAY, checkedAt);
         if (mixed != null) choices.add(mixed);

@@ -57,6 +57,18 @@ nav a:hover, nav a[aria-current] { color:var(--green); box-shadow:0 2px var(--gr
 .panel-heading p, .muted, .meta { color:var(--muted); }
 .panel-heading p, .muted { margin:0 0 7px; }
 .search-grid { display:grid; grid-template-columns:1.25fr 1.25fr 1fr 1fr .55fr .55fr; gap:12px; }
+.place-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:14px; }
+.trip-place { min-width:0; }
+.place-field { display:flex; gap:8px; margin-top:6px; }
+.place-field button { flex:none; white-space:nowrap; }
+.place-status:not(:empty) { margin:5px 0 0; font-size:14px; color:var(--muted); overflow-wrap:anywhere; }
+.place-results { list-style:none; margin:6px 0 0; padding:0; max-height:14rem; overflow:auto; border:1px solid var(--line); border-radius:10px; }
+.place-results li + li { border-top:1px solid var(--line); }
+.place-results button { display:block; width:100%; padding:9px 11px; background:var(--paper); color:var(--ink);
+    border:0; text-align:left; overflow-wrap:anywhere; }
+.place-results button:hover, .place-results button:focus-visible { background:var(--mint); }
+.place-results small { display:block; color:var(--muted); }
+.search-grid.trip-dates { grid-template-columns:1.2fr 1.2fr .8fr .8fr; }
 .search-bottom { display:grid; grid-template-columns:1.05fr 1.05fr 1fr minmax(145px,.9fr); gap:12px; align-items:end; margin-top:14px; }
 label { display:flex; flex-direction:column; gap:6px; color:#30473a; font-weight:720; font-size:14px; min-width:0; }
 input:not([type="checkbox"]), select {
@@ -181,6 +193,8 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
     .city-grid { grid-template-columns:repeat(3,1fr); }
 }
 @media (max-width: 640px) {
+    .place-grid { grid-template-columns:1fr; }
+    .search-grid.trip-dates { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .container { width:calc(100% - 28px); }
     .header-inner { flex-wrap:wrap; padding-block:10px; gap:3px 8px; }
     .header-inner nav { order:3; width:100%; justify-content:space-between; gap:8px; }

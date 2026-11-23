@@ -106,7 +106,8 @@ export function showTrip(trip, cities) {
     // 여행 조건에 저장된 도시 ID를 요약 화면에 보여줄 이름으로 바꿉니다.
     const city = id => cities.find(city => city.id === id)?.name ?? id;
     node.hidden = false;
-    node.innerHTML = '<strong>' + e(city(trip.origin)) + ' <span aria-hidden="true">→</span> ' + e(city(trip.destination))
+    node.innerHTML = '<strong>' + e(trip.originPlace?.name ?? city(trip.origin))
+        + ' <span aria-hidden="true">→</span> ' + e(trip.destinationPlace?.name ?? city(trip.destination))
         + '</strong><span>' + e(trip.start) + ' – ' + e(trip.end) + '</span><span>성인 ' + trip.party.adults
         + '명 · 아동 ' + trip.party.children + '명</span>' + (trip.budget == null ? '' : '<span>예산 ' + won(trip.budget) + '</span>');
 }

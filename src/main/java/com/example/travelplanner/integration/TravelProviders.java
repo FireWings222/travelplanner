@@ -18,7 +18,7 @@ public final class TravelProviders {
 
     public interface Routes {
         /** 경로 제공자가 도시 간 여정의 이동 구간과 구간별 교통수단 후보를 반환하는 계약입니다. */
-        List<List<Segment>> options(String origin, String destination);
+        List<List<Segment>> options(String origin, String destination, Place from, Place to);
         /** 경로 제공자가 관광지 등 두 지점 사이의 교통수단 후보를 반환하는 계약입니다. */
         List<Segment> local(Place from, Place to);
     }

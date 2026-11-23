@@ -39,7 +39,13 @@ public final class Travel {
                        @NotNull LocalDate start, @NotNull LocalDate end,
                        @Valid @NotNull Party party,
                        @PositiveOrZero @Digits(integer = 12, fraction = 0) BigDecimal budget,
-                       Mode preferredMode, @NotNull TripType type) {}
+                       Mode preferredMode, @NotNull TripType type,
+                       @Valid SearchedPlace originPlace, @Valid SearchedPlace destinationPlace) {
+        public Trip(String origin, String destination, LocalDate start, LocalDate end, Party party,
+                    BigDecimal budget, Mode preferredMode, TripType type) {
+            this(origin, destination, start, end, party, budget, preferredMode, type, null, null);
+        }
+    }
 
     public record Fare(@PositiveOrZero @Digits(integer = 9, fraction = 2) BigDecimal adult,
                        @PositiveOrZero @Digits(integer = 9, fraction = 2) BigDecimal child,

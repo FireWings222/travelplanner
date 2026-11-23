@@ -56,6 +56,17 @@ public class KakaoPlaceSearch {
         return readAddresses(city, request("address.json", scopedAddress, "&analyze_type=exact"));
     }
 
+    /** 지역 이름을 붙이지 않고 전국의 주소 또는 장소명을 검색합니다. */
+    public List<SearchedPlace> searchNationwide(String query, boolean address) {
+        String term = query.strip();
+        int limit = address ? 160 : 80;
+        if (term.isEmpty() || term.length() > limit) {
+            throw new IllegalArgumentException("검색어를 1~" + limit + "자로 입력해 주세요.");
+        }
+        return address ? readAddresses(null, request("address.json", term, "&analyze_type=exact"))
+                : readPlaces(null, request("keyword.json", term, "&size=15"));
+    }
+
     /** 장소명 검색과 주소 검색의 공통 카카오 REST 호출입니다. 키는 인증 헤더에만 포함합니다. */
     private JsonNode request(String endpoint, String query, String options) {
         if (apiKey.isEmpty()) throw new NotFound("카카오맵 장소 검색에 사용할 REST API 키를 설정해 주세요.");
@@ -86,8 +97,8 @@ public class KakaoPlaceSearch {
             if (address.isBlank()) address = item.path("address_name").asText("");
             var place = new SearchedPlace("kakao-" + id, name, address,
                     item.path("y").asDouble(Double.NaN), item.path("x").asDouble(Double.NaN));
-            if (id.matches("[0-9]{1,24}") && !name.isBlank() && name.length() <= 100 && address.length() <= 200
-                    && CatalogService.matchesAddress(city, address) && CatalogService.validCoordinates(place)) {
+            if (id.matches("[0-9]{1,24}") && !name.isBlank() && name.length() <= 100
+                    && validAddress(city, address) && CatalogService.validCoordinates(place)) {
                 found.putIfAbsent(place.id(), place);
             }
         }
@@ -103,7 +114,7 @@ public class KakaoPlaceSearch {
             JsonNode road = item.path("road_address");
             String address = road.path("address_name").asText("");
             if (address.isBlank()) address = item.path("address_name").asText("");
-            if (address.length() > 200 || !CatalogService.matchesAddress(city, address)) continue;
+            if (!validAddress(city, address)) continue;
             String name = road.path("building_name").asText("");
             if (name.isBlank() || name.length() > 200) name = address;
             String id = UUID.nameUUIDFromBytes(address.getBytes(StandardCharsets.UTF_8)).toString().replace("-", "");
@@ -112,5 +123,10 @@ public class KakaoPlaceSearch {
             if (CatalogService.validCoordinates(place)) found.putIfAbsent(place.id(), place);
         }
         return List.copyOf(found.values());
+    }
+
+    private static boolean validAddress(Destination city, String address) {
+        return !address.isBlank() && address.length() <= 200
+                && (city == null || CatalogService.matchesAddress(city, address));
     }
 }

@@ -11,12 +11,40 @@ public class SampleCatalog implements TravelProviders.Catalog {
     private final List<Destination> places = List.of(
             new Destination("seoul", "서울", "대한민국 한국 Seoul"),
             new Destination("busan", "부산", "대한민국 한국 Busan"),
-            new Destination("jeju", "제주", "대한민국 한국 Jeju"));
+            new Destination("jeju", "제주", "제주특별자치도 제주시 서귀포 Jeju"),
+            new Destination("incheon", "인천", "인천광역시 Incheon"),
+            new Destination("daejeon", "대전", "대전광역시 Daejeon"),
+            new Destination("daegu", "대구", "대구광역시 Daegu"),
+            new Destination("gwangju", "광주광역시", "광주 Gwangju"),
+            new Destination("ulsan", "울산", "울산광역시 Ulsan"),
+            new Destination("sejong", "세종", "세종특별자치시 Sejong"),
+            new Destination("gyeonggi", "경기", "경기도 수원 성남 고양 Gyeonggi"),
+            new Destination("gangwon", "강원", "강원도 강원특별자치도 춘천 강릉 속초 Gangwon"),
+            new Destination("chungbuk", "충북", "충청북도 청주 Chungbuk"),
+            new Destination("chungnam", "충남", "충청남도 홍성 천안 Chungnam"),
+            new Destination("jeonbuk", "전북", "전라북도 전북특별자치도 전주 Jeonbuk"),
+            new Destination("jeonnam", "전남", "전라남도 무안 순천 여수 목포 Jeonnam"),
+            new Destination("gyeongbuk", "경북", "경상북도 안동 경주 포항 Gyeongbuk"),
+            new Destination("gyeongnam", "경남", "경상남도 창원 김해 통영 Gyeongnam"));
 
-    private final Map<String, Place> centers = Map.of(
-            "seoul", new Place("seoul", "서울역", 37.555, 126.971),
-            "busan", new Place("busan", "부산역", 35.115, 129.042),
-            "jeju", new Place("jeju", "제주시 중심", 33.500, 126.531));
+    private final Map<String, Place> centers = Map.ofEntries(
+            Map.entry("seoul", new Place("seoul", "서울역", 37.555, 126.971)),
+            Map.entry("busan", new Place("busan", "부산역", 35.115, 129.042)),
+            Map.entry("jeju", new Place("jeju", "제주시 중심", 33.500, 126.531)),
+            Map.entry("incheon", new Place("incheon", "인천시청", 37.456, 126.705)),
+            Map.entry("daejeon", new Place("daejeon", "대전역", 36.332, 127.434)),
+            Map.entry("daegu", new Place("daegu", "동대구역", 35.879, 128.628)),
+            Map.entry("gwangju", new Place("gwangju", "광주광역시청", 35.160, 126.851)),
+            Map.entry("ulsan", new Place("ulsan", "울산시청", 35.539, 129.311)),
+            Map.entry("sejong", new Place("sejong", "세종시청", 36.480, 127.289)),
+            Map.entry("gyeonggi", new Place("gyeonggi", "경기도청", 37.288, 127.056)),
+            Map.entry("gangwon", new Place("gangwon", "강원특별자치도청", 37.886, 127.730)),
+            Map.entry("chungbuk", new Place("chungbuk", "충청북도청", 36.636, 127.492)),
+            Map.entry("chungnam", new Place("chungnam", "충청남도청", 36.659, 126.673)),
+            Map.entry("jeonbuk", new Place("jeonbuk", "전북특별자치도청", 35.820, 127.108)),
+            Map.entry("jeonnam", new Place("jeonnam", "전라남도청", 34.817, 126.463)),
+            Map.entry("gyeongbuk", new Place("gyeongbuk", "경상북도청", 36.576, 128.506)),
+            Map.entry("gyeongnam", new Place("gyeongnam", "경상남도청", 35.238, 128.692)));
 
     private final List<Attraction> sights = List.of(
             kr("palace", "seoul", "경복궁", "조선 왕조의 궁궐", 120, 3000, 37.5796, 126.9770),

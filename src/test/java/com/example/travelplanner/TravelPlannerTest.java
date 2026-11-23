@@ -228,9 +228,48 @@ class TravelPlannerTest {
         assertThrows(IllegalArgumentException.class, () -> catalog.validateTrip(new Trip(
                 "seoul", "jeju", DATE, DATE.minusDays(1), PARTY, null, null, TripType.FAMILY)));
         http.perform(get("/api/destinations/search")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3));
+                .andExpect(jsonPath("$.length()").value(17));
         http.perform(get("/api/tours/search").param("destination", "jeju").param("date", "bad"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").isString());
+    }
+
+    @Test
+    void routesAndSavedPlansPreserveSelectedPlacesWithinTheSameProvince() throws Exception {
+        String tripJson = """
+                {"origin":"수원역","destination":"성남시청","start":"2027-03-10","end":"2027-03-10",
+                 "party":{"adults":1,"children":0},"type":"SOLO",
+                 "originPlace":{"id":"kakao-101","name":"수원역","address":"경기도 수원시 팔달구 덕영대로 924",
+                    "latitude":37.265,"longitude":127.000},
+                 "destinationPlace":{"id":"kakao-102","name":"성남시청","address":"경기 성남시 중원구 성남대로 997",
+                    "latitude":37.421,"longitude":127.126}}
+                """;
+        http.perform(post("/api/routes/compare").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"trip\":" + tripJson + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trip.origin").value("gyeonggi"))
+                .andExpect(jsonPath("$.trip.destination").value("gyeonggi"))
+                .andExpect(jsonPath("$.selected.sections[0].chosen.from.latitude").value(37.265))
+                .andExpect(jsonPath("$.selected.sections[0].chosen.to.id").value("kakao-102"));
+        var from = new SearchedPlace("kakao-101", "수원역", "경기 수원시 팔달구 덕영대로 924", 37.265, 127.000);
+        var to = new SearchedPlace("kakao-102", "성남시청", "경기도 성남시 중원구 성남대로 997", 37.421, 127.126);
+        var trip = new Trip(from.name(), to.name(), DATE, DATE, PARTY, null, null, TripType.FAMILY, from, to);
+        var generated = plans.generate(trip).plan();
+        assertEquals(List.of(to.id()), generated.days().get(0).stops());
+        var saved = plans.save(null, generated);
+        try {
+            assertEquals(generated, plans.get(saved.id()).plan());
+        } finally {
+            plans.delete(saved.id());
+        }
+    }
+
+    @Test
+    void newlySupportedRegionsCanRouteToJejuUsingAnAirportGateway() {
+        var trip = new Trip("대전", "제주", DATE, DATE, PARTY, null, null, TripType.FAMILY);
+        var sections = routes.compare(new RouteRequest(trip, null)).selected().sections();
+        assertEquals("대전역", sections.get(0).chosen().from().name());
+        assertEquals(Mode.FLIGHT, sections.get(1).chosen().mode());
+        assertEquals("청주국제공항", sections.get(1).chosen().from().name());
     }
 
     /** 외부 투어 제공자가 실패해도 샘플 상품 검색이 유지되는지 검증합니다. */

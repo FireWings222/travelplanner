@@ -40,6 +40,12 @@ public class TravelApi {
         return catalog.search(q);
     }
 
+    @GetMapping("/places/search")
+    public List<SearchedPlace> tripPlaces(@RequestParam String q,
+                                          @RequestParam(defaultValue = "false") boolean address) {
+        return places.searchNationwide(q, address);
+    }
+
     /** 일정 편집 및 투어 등록 화면에 도시와 검색어로 필터링한 관광지를 반환합니다. */
     @GetMapping("/attractions")
     public List<Attraction> attractions(@RequestParam(required = false) String destination,

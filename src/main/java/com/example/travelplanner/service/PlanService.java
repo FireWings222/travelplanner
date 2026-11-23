@@ -57,7 +57,15 @@ public class PlanService {
         for (int i = 0; i < dates.size(); i++) {
             int from = Math.min(sights.size(), i * perDay);
             int to = Math.min(sights.size(), from + perDay);
-            days.add(new Day(dates.get(i), sights.subList(from, to), Map.of()));
+            List<String> stops = sights.subList(from, to);
+            if (i == 0 && trip.destinationPlace() != null) {
+                List<String> firstDayStops = new ArrayList<>();
+                firstDayStops.add(trip.destinationPlace().id());
+                firstDayStops.addAll(stops);
+                days.add(new Day(dates.get(i), firstDayStops, Map.of(), List.of(trip.destinationPlace())));
+            } else {
+                days.add(new Day(dates.get(i), stops, Map.of()));
+            }
         }
         return quote(new Plan(trip, days));
     }

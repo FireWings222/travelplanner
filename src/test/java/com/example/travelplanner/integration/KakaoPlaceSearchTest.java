@@ -27,6 +27,7 @@ class KakaoPlaceSearchTest {
         assertEquals("제주특별자치도 제주시 관덕로 25", results.get(0).name());
         assertEquals(126.522, results.get(0).longitude());
         assertEquals(results, KakaoPlaceSearch.readAddresses(city, json));
+        assertEquals(2, KakaoPlaceSearch.readAddresses(null, json).size());
     }
 
     /** 카카오맵 문자열 좌표와 지번 주소를 읽고 다른 도시 결과를 제외하는지 확인합니다. */
@@ -43,5 +44,6 @@ class KakaoPlaceSearchTest {
                 """);
         assertEquals(List.of(new SearchedPlace("kakao-123", "제주목 관아", "제주 제주시 삼도이동", 33.513, 126.522)),
                 KakaoPlaceSearch.readPlaces(city, response));
+        assertEquals(2, KakaoPlaceSearch.readPlaces(null, response).size());
     }
 }

@@ -7,6 +7,58 @@ const loaders = {
     compare: () => import('./compare.js')
 };
 
+function tripPlaceField(field, previous) {
+    const input = $('#trip-' + field);
+    const results = $('#' + field + '-place-results');
+    const message = $('#' + field + '-place-status');
+    const find = $('#find-' + field);
+    let selected;
+    let request = 0;
+
+    function set(place) {
+        request++;
+        selected = place;
+        if (place) input.value = place.name;
+        message.textContent = place?.address ?? '';
+        results.replaceChildren();
+        results.hidden = true;
+    }
+    input.addEventListener('input', () => set(null));
+    find.addEventListener('click', async () => {
+        const term = input.value.trim();
+        if (!term) {
+            message.textContent = '주소나 장소 이름을 입력해 주세요.';
+            input.focus();
+            return;
+        }
+        const token = ++request;
+        results.replaceChildren();
+        results.hidden = true;
+        message.textContent = '전국에서 장소를 찾고 있습니다.';
+        const search = address => api('/places/search?' + new URLSearchParams({q: term, address}));
+        try {
+            const address = term.length > 80 || /\d+(?:-\d+)?$/.test(term);
+            let places = await search(address);
+            if (token !== request) return;
+            if (!places.length && address && term.length <= 80) places = await search(false);
+            if (token !== request) return;
+            message.textContent = places.length ? '주소를 확인하고 장소를 선택해 주세요.'
+                : '결과가 없습니다. 시·군 이름을 함께 쓰거나 건물 번호까지 입력해 보세요.';
+            results.innerHTML = places.map((place, index) => '<li><button type="button" data-trip-place="' + index
+                + '"><strong>' + e(place.name) + '</strong><small>' + e(place.address) + '</small></button></li>').join('');
+            results.hidden = places.length === 0;
+            $$('[data-trip-place]', results).forEach(button => button.onclick = () => {
+                set(places[Number(button.dataset.tripPlace)]);
+                input.focus();
+            });
+        } catch (error) {
+            if (token === request) message.textContent = error.message;
+        }
+    });
+    set(previous ?? null);
+    return {clear: () => set(null), selected: () => selected};
+}
+
 // 홈 화면의 날짜·도시 입력과 제주 예제 버튼을 준비하고, 검색이 성공하면 경로 비교 화면으로 이동합니다.
 // cities는 /api/destinations/search에서 받은 목록입니다. 검색을 제출하면 /api/routes/compare 응답의 표준 도시 ID가 포함된 여행 조건을 세션에 저장합니다.
 // 새 여행을 시작할 때 기존 legs, plan, planId, comparison을 비워 이전 선택이 새 경로에 섞이지 않게 합니다.
@@ -34,15 +86,20 @@ async function home(cities) {
         fields.budget.value = previous.budget ?? '';
         fields.type.value = previous.type;
     }
+    const originField = tripPlaceField('origin', previous?.originPlace);
+    const destinationField = tripPlaceField('destination', previous?.destinationPlace);
     $('#catalog').innerHTML = cities.map(city => '<button type="button" class="city-tile" data-city="' + e(city.id)
         + '"><strong>' + e(city.name) + '</strong><span class="tile-plus" aria-hidden="true">+</span></button>').join('');
     // 홈의 추천 도시 버튼을 누르면 목적지 입력란에 해당 도시를 채웁니다.
     $$('.city-tile').forEach(tile => tile.addEventListener('click', () => {
+        destinationField.clear();
         fields.destination.value = cityName(tile.dataset.city);
         fields.destination.focus();
     }));
     // 제주 예제 버튼으로 날짜, 인원과 예산을 검색 폼에 채웁니다.
     $('#example').addEventListener('click', () => {
+        originField.clear();
+        destinationField.clear();
         Object.entries({origin: '서울', destination: '제주', start: '2027-03-10', end: '2027-03-12',
             adults: '2', children: '0', budget: '450000', preferredMode: '', type: 'COUPLE'})
             .forEach(([key, value]) => fields[key].value = value);
@@ -56,6 +113,7 @@ async function home(cities) {
         button.disabled = true;
         status('여행 조건을 확인하는 중입니다.');
         const trip = {origin: fields.origin.value, destination: fields.destination.value,
+            originPlace: originField.selected(), destinationPlace: destinationField.selected(),
             start: fields.start.value, end: fields.end.value, party: {adults: +fields.adults.value, children: +fields.children.value},
             budget: fields.budget.value ? +fields.budget.value : null, preferredMode: fields.preferredMode.value || null, type: fields.type.value};
         try {

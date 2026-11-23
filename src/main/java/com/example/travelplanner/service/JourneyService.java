@@ -39,7 +39,9 @@ public class JourneyService {
      */
     public RouteResults compare(RouteRequest request) {
         Trip trip = catalog.validateTrip(request.trip());
-        List<List<Segment>> options = routes.options(trip.origin(), trip.destination());
+        Place from = catalog.point(trip.origin(), trip.originPlace());
+        Place to = catalog.point(trip.destination(), trip.destinationPlace());
+        List<List<Segment>> options = routes.options(trip.origin(), trip.destination(), from, to);
         Journey selected = resolve(options, request.legs(), trip.preferredMode(), trip.party());
         List<RouteOption> alternatives = new ArrayList<>();
         alternatives.add(option("selected", selected));

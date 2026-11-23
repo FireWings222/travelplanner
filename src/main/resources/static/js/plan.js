@@ -29,7 +29,8 @@ export async function init(cities) {
         $('#saved-plans').innerHTML = records.length ? records.map(record => {
             const city = cities.find(item => item.id === record.trip.destination);
             const supported = city && cities.some(item => item.id === record.trip.origin);
-            return '<div class="saved-row"><div><strong>' + e(city?.name ?? record.trip.destination) + '</strong><p class="muted">' + e(record.trip.start) + ' – '
+            return '<div class="saved-row"><div><strong>' + e(record.trip.destinationPlace?.name ?? city?.name ?? record.trip.destination)
+                + '</strong><p class="muted">' + e(record.trip.start) + ' – '
                 + e(record.trip.end) + '</p></div><div class="actions"><button type="button" class="soft" data-open="' + e(record.id)
                 + '"' + (supported ? '>열기' : ' disabled>지원 종료') + '</button><button type="button" class="danger" data-delete="' + e(record.id) + '">삭제</button></div></div>';
         }).join('') : '<p class="empty">저장한 여행이 없습니다.</p>';

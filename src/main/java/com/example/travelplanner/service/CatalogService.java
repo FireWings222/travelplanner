@@ -39,11 +39,15 @@ public class CatalogService {
      */
     public Destination destination(String value) {
         String term = normalize(value);
+        if (term.isEmpty()) throw new IllegalArgumentException("여행 지역을 입력해 주세요.");
+        String label = value.strip();
         List<Destination> exact = catalog.destinations().stream().filter(city ->
-                normalize(city.id()).equals(term) || normalize(city.name()).equals(term)).toList();
-        List<Destination> matches = exact.isEmpty() ? search(value) : exact;
-        if (term.isEmpty() || matches.size() != 1) {
-            throw new IllegalArgumentException("목록에서 도시를 하나 선택해 주세요: " + value);
+                normalize(city.id()).equals(term) || (!label.contains(" ") && matchesAddress(city, label))).toList();
+        List<Destination> matches = exact.isEmpty() ? catalog.destinations().stream()
+                .filter(city -> city.keywords().toLowerCase(Locale.ROOT).endsWith(" " + term))
+                .filter(city -> term.matches("[a-z]+")).toList() : exact;
+        if (matches.size() != 1) {
+            throw new IllegalArgumentException("시·도를 선택하거나 장소 검색 결과에서 정확한 위치를 선택해 주세요.");
         }
         return matches.get(0);
     }
@@ -70,8 +74,24 @@ public class CatalogService {
     public Trip validateTrip(Trip trip) {
         long days = ChronoUnit.DAYS.between(trip.start(), trip.end()) + 1;
         if (days < 1 || days > 30) throw new IllegalArgumentException("여행 기간은 1일 이상 30일 이하여야 합니다.");
-        return new Trip(destination(trip.origin()).id(), destination(trip.destination()).id(),
-                trip.start(), trip.end(), trip.party(), trip.budget(), trip.preferredMode(), trip.type());
+        return new Trip(region(trip.origin(), trip.originPlace()).id(),
+                region(trip.destination(), trip.destinationPlace()).id(), trip.start(), trip.end(),
+                trip.party(), trip.budget(), trip.preferredMode(), trip.type(),
+                trip.originPlace(), trip.destinationPlace());
+    }
+
+    private Destination region(String city, SearchedPlace place) {
+        if (place == null) return destination(city);
+        if (!validCoordinates(place) || !place.id().matches(SearchedPlace.ID_PATTERN)) {
+            throw new IllegalArgumentException("검색한 장소의 좌표나 식별자가 올바르지 않습니다.");
+        }
+        return catalog.destinations().stream().filter(region -> matchesAddress(region, place.address())).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("검색한 장소의 국내 주소를 확인할 수 없습니다."));
+    }
+
+    public Place point(String region, SearchedPlace selected) {
+        return selected == null ? center(region)
+                : new Place(selected.id(), selected.name(), selected.latitude(), selected.longitude());
     }
 
     /**
@@ -112,13 +132,28 @@ public class CatalogService {
 
     /** 카카오 지도에서 사용하는 약칭과 행정구역 정식 명칭을 모두 인식합니다. */
     public static boolean matchesAddress(Destination city, String address) {
-        String province = switch (city.id()) {
-            case "seoul" -> "서울특별시";
-            case "busan" -> "부산광역시";
-            case "jeju" -> "제주특별자치도";
-            default -> city.name();
+        String province = address.strip().split("\\s+", 2)[0];
+        if (province.equals(city.name())) return true;
+        return switch (city.id()) {
+            case "seoul" -> province.equals("서울특별시");
+            case "busan" -> province.equals("부산광역시");
+            case "jeju" -> province.equals("제주특별자치도");
+            case "incheon" -> province.equals("인천광역시");
+            case "daejeon" -> province.equals("대전광역시");
+            case "daegu" -> province.equals("대구광역시");
+            case "gwangju" -> province.equals("광주");
+            case "ulsan" -> province.equals("울산광역시");
+            case "sejong" -> province.equals("세종특별자치시");
+            case "gyeonggi" -> province.equals("경기도");
+            case "gangwon" -> province.equals("강원도") || province.equals("강원특별자치도");
+            case "chungbuk" -> province.equals("충청북도");
+            case "chungnam" -> province.equals("충청남도");
+            case "jeonbuk" -> province.equals("전라북도") || province.equals("전북특별자치도");
+            case "jeonnam" -> province.equals("전라남도");
+            case "gyeongbuk" -> province.equals("경상북도");
+            case "gyeongnam" -> province.equals("경상남도");
+            default -> false;
         };
-        return address.startsWith(city.name() + " ") || address.startsWith(province + " ");
     }
 
     /** 지도와 교통 API에 보낼 수 있는 국내 경위도인지 검사합니다. */
