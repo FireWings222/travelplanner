@@ -6,6 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PlanRepository extends JpaRepository<SavedPlan, UUID> {
-    /** PlanService의 저장 목록에 사용할 일정 레코드를 최근 수정 순으로 조회합니다. */
+    /** Spring Data JPA가 메서드 이름을 기준으로 전체 일정을 수정 시각 내림차순으로 조회합니다. */
     List<SavedPlan> findAllByOrderByUpdatedAtDesc();
 }

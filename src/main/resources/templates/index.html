@@ -11,20 +11,15 @@
       <h1>가까운 곳으로,<br><em>우리나라 여행.</em></h1>
       <p>목적지까지 가는 길부터 현지 일정까지.<br>이동 시간과 비용을 한곳에서 비교해 보세요.</p>
     </div>
-    <aside class="hero-image" aria-label="제주 여행 예시">
-      <p class="hero-route-label">2박 3일 여행 예시</p>
-      <p class="hero-route">서울 <span aria-label="에서">→</span> 제주</p>
-      <p class="hero-route-detail">김포공항에서 제주로<br>동문시장부터 성산일출봉까지</p>
-    </aside>
   </section>
   <div class="container search-wrap">
     <section class="panel search-panel" aria-labelledby="search-heading">
-      <div class="panel-heading"><div><h2 id="search-heading">어디로 떠나시나요?</h2><p>출발지와 목적지를 선택해 여행을 시작하세요.</p></div><button type="button" class="soft sample-button" id="example">제주 샘플 불러오기</button></div>
+      <div class="panel-heading"><div><h2 id="search-heading">어디로 떠나시나요?</h2><p>출발지와 목적지를 선택해 여행을 시작하세요.</p></div></div>
       <form id="trip-form">
         <div class="place-grid">
           <div class="trip-place">
             <label for="trip-origin">출발지</label>
-            <div class="place-field"><input id="trip-origin" name="origin" list="city-list" placeholder="예: 서울역 또는 도로명 주소"
+            <div class="place-field"><input id="trip-origin" name="origin" list="city-list" placeholder="장소명 또는 주소"
                  required maxlength="160" autocomplete="off" aria-describedby="origin-place-status">
               <button type="button" class="soft" id="find-origin" aria-label="출발지 장소 찾기">장소 찾기</button></div>
             <p class="place-status" id="origin-place-status" role="status"></p>
@@ -32,7 +27,7 @@
           </div>
           <div class="trip-place">
             <label for="trip-destination">목적지</label>
-            <div class="place-field"><input id="trip-destination" name="destination" list="city-list" placeholder="예: 강릉역 또는 도로명 주소"
+            <div class="place-field"><input id="trip-destination" name="destination" list="city-list" placeholder="장소명 또는 주소"
                  required maxlength="160" autocomplete="off" aria-describedby="destination-place-status">
               <button type="button" class="soft" id="find-destination" aria-label="목적지 장소 찾기">장소 찾기</button></div>
             <p class="place-status" id="destination-place-status" role="status"></p>
@@ -42,14 +37,14 @@
         <div class="search-grid trip-dates">
           <label>여행 시작일<input type="date" name="start" required></label>
           <label>여행 종료일<input type="date" name="end" required></label>
-          <label>성인<input name="adults" type="number" value="2" min="1" max="30" required></label>
+          <label>성인<input name="adults" type="number" min="1" max="30" required></label>
           <label>아동<input name="children" type="number" value="0" min="0" max="30" required></label>
         </div>
         <datalist id="city-list"></datalist>
         <div class="search-bottom">
           <label>예산 (원)<input name="budget" type="number" min="0" max="999999999999" placeholder="선택 입력"></label>
           <label>선호 교통수단<select name="preferredMode" id="preferred-mode"></select></label>
-          <label>여행 유형<select name="type"><option value="COUPLE">커플 여행</option><option value="SOLO">혼자 여행</option><option value="FAMILY">가족 여행</option><option value="FRIENDS">친구 여행</option><option value="OTHER">기타</option></select></label>
+          <label>여행 유형<select name="type" required><option value="">선택하세요</option><option value="COUPLE">커플 여행</option><option value="SOLO">혼자 여행</option><option value="FAMILY">가족 여행</option><option value="FRIENDS">친구 여행</option><option value="OTHER">기타</option></select></label>
           <button class="primary search-submit" type="submit"><span class="search-icon" aria-hidden="true"></span> 여행 검색</button>
         </div>
         <div id="status" class="status" role="status" aria-live="polite"></div>

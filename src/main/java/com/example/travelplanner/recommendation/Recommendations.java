@@ -17,17 +17,20 @@ public final class Recommendations {
     public static Map<String, RoutePick> routes(List<RouteOption> candidates) {
         if (candidates.isEmpty() || candidates.get(0).journey().sections().isEmpty()) return Map.of();
         Map<String, RoutePick> picks = new LinkedHashMap<>();
-        add(picks, "가장 짧은 이동", candidates, Comparator.comparingInt(x -> x.journey().minutes()), "편도 이동 시간 최소");
-        add(picks, "가장 적은 환승", candidates, Comparator.comparingInt((RouteOption x) -> x.journey().transfers())
-                .thenComparingInt(x -> x.journey().minutes()), "환승 횟수 최소, 동률이면 이동 시간 우선");
+        List<RouteOption> timed = candidates.stream().filter(x -> x.journey().minutes() != null).toList();
+        add(picks, "가장 짧은 이동", timed, Comparator.comparingInt(x -> x.journey().minutes()), "편도 이동 시간 최소");
+        List<RouteOption> transferKnown = candidates.stream().filter(x -> x.journey().transfers() != null).toList();
+        add(picks, "가장 적은 환승", transferKnown, Comparator.comparingInt((RouteOption x) -> x.journey().transfers())
+                .thenComparing(x -> x.journey().minutes(), Comparator.nullsLast(Integer::compare)), "환승 횟수 최소, 동률이면 이동 시간 우선");
         List<RouteOption> priced = candidates.stream().filter(x -> x.journey().cost().isComplete()).toList();
         if (!priced.isEmpty()) {
             add(picks, "가장 저렴한 이동", priced, Comparator.comparing(x -> x.journey().cost().totalKrw()),
                     "전체 요금이 확인된 후보 중 일행 편도 교통비 최소");
-            add(picks, "비용과 시간 균형", priced, Comparator.comparing(x -> x.journey().cost().totalKrw()
-                    .add(BigDecimal.valueOf(100L * x.journey().minutes()))),
-                    "전체 요금이 확인된 후보 중 일행 편도 교통비 + 이동 1분당 100원 점수 최소");
         }
+        List<RouteOption> balanced = timed.stream().filter(x -> x.journey().cost().isComplete()).toList();
+        add(picks, "비용과 시간 균형", balanced, Comparator.comparing(x -> x.journey().cost().totalKrw()
+                .add(BigDecimal.valueOf(100L * x.journey().minutes()))),
+                "요금과 시간이 확인된 후보 중 일행 편도 교통비 + 이동 1분당 100원 점수 최소");
         return picks;
     }
 

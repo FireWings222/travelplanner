@@ -22,7 +22,8 @@ class KakaoRoadRoutesTest {
         var response = json.readTree("""
                 {"routes":[{"result_code":0,"summary":{
                   "duration":839,"distance":5230,"fare":{"taxi":8500,"toll":100}
-                }}]}
+                },"sections":[{"roads":[{"vertexes":[126.493,33.510,126.502,33.503,126.531,33.500]},
+                  {"vertexes":[126.541,33.511,126.542]}]}]}]}
                 """);
         var routes = KakaoRoadRoutes.apply(List.of(sample(Mode.TAXI), sample(Mode.CAR)), response, checkedAt);
         var taxi = routes.get(0);
@@ -34,6 +35,9 @@ class KakaoRoadRoutesTest {
         assertEquals(new BigDecimal("5.230"), car.kilometers());
         assertEquals(BigDecimal.valueOf(8500), taxi.fare().shared());
         assertNull(car.fare());
+        assertEquals(List.of(List.of(new RoutePoint(33.510, 126.493), new RoutePoint(33.503, 126.502),
+                new RoutePoint(33.500, 126.531))), taxi.geometry());
+        assertEquals(taxi.geometry(), car.geometry());
     }
 
     /** 자동차 길찾기에 성공하지 못했을 때 기존 샘플을 반환하는지 확인합니다. */
@@ -49,6 +53,6 @@ class KakaoRoadRoutesTest {
     /** 도로 응답 적용 전 화면에 사용하던 구간을 만듭니다. */
     private Segment sample(Mode mode) {
         return new Segment(from, to, mode, BigDecimal.valueOf(4), 20, 0,
-                new Fare(null, null, BigDecimal.TEN), Source.SAMPLE, checkedAt);
+                new Fare(null, null, BigDecimal.TEN), Source.UNCONFIRMED, checkedAt);
     }
 }

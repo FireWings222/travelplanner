@@ -19,6 +19,7 @@ public class SavedPlan {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    // JPA는 수정 시 버전을 비교해 같은 일정을 동시에 갱신할 때 먼저 저장된 변경의 덮어쓰기를 막습니다.
     @Version
     private long version;
 

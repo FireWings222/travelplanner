@@ -1,5 +1,5 @@
-import {$, $$, api, read, write, e, modes, won, minutes, number, status, showError, fareFields, readFare,
-    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader} from './common.js';
+import {$, $$, api, read, write, e, modes, won, minutes, distance, status, showError, fareFields, readFare,
+    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader, transitSteps} from './common.js';
 import {createMap, drawJourney} from './route-map.js';
 
 // 서버 추천 이름을 경로 카드 꼬리표에 쓰는 짧은 이름으로 바꿉니다. 목록에 없는 추천은 서버 이름을 그대로 씁니다.
@@ -39,6 +39,7 @@ export async function init(cities) {
     let legs = read('legs') ?? {};
     let sort = 'rec';
     let result = null;
+    // undefined는 현지 견적 조회 중, null은 견적을 가져오지 못했거나 대상 일정이 없음을 뜻합니다.
     let local;
     let pending = false;
     let view = null;
@@ -58,7 +59,7 @@ export async function init(cities) {
     // 현재 탭에서 만든 일정이 같은 여행이면 /api/itineraries/quote로 현지 일정 합계를 받아 견적에 더합니다.
     const plan = read('plan');
     const samePlan = plan && ['origin', 'destination', 'start', 'end'].every(key => plan.trip[key] === trip[key]);
-    const localReady = samePlan ? api('/itineraries/quote', plan).then(quote => {
+    const localReady = samePlan && plan.days.some(day => day.stops.length) ? api('/itineraries/quote', plan).then(quote => {
         const total = quote.total;
         local = {value: total.missing.length && Number(total.totalKrw) === 0 ? null : total.totalKrw, partial: total.missing.length > 0};
     }).catch(() => { local = null; }) : Promise.resolve(local = null);
@@ -72,10 +73,11 @@ export async function init(cities) {
     function sorted() {
         const options = result.alternatives.map((option, index) => ({option, index, picks: tags(option).length}));
         const price = item => item.option.journey.cost.missing.length ? Infinity : Number(item.option.journey.cost.totalKrw);
+        const time = item => item.option.journey.minutes ?? Infinity;
         const by = {
             rec: (a, b) => b.picks - a.picks || a.index - b.index,
-            price: (a, b) => price(a) - price(b) || a.option.journey.minutes - b.option.journey.minutes,
-            time: (a, b) => a.option.journey.minutes - b.option.journey.minutes || price(a) - price(b)
+            price: (a, b) => price(a) - price(b) || time(a) - time(b),
+            time: (a, b) => time(a) - time(b) || price(a) - price(b)
         }[sort];
         return options.sort(by).map(item => item.option);
     }
@@ -90,13 +92,10 @@ export async function init(cities) {
             const unknown = section.cost.missing.length > 0;
             return '<div class="leg">' + modeIcon(chosen.mode, 20)
                 + '<span><b>' + e(modes[chosen.mode] ?? chosen.mode) + '</b> ' + e(chosen.from.name) + '에서 ' + e(chosen.to.name)
-                + '<small class="num">' + minutes(chosen.minutes) + ', ' + number(chosen.kilometers) + 'km'
+                + '<small class="num">' + minutes(chosen.minutes) + ', ' + distance(chosen.kilometers)
                 + (chosen.transfers ? ', 환승 ' + chosen.transfers + '회' : '') + '</small></span>'
                 + '<span class="num">' + (unknown && Number(section.cost.totalKrw) === 0 ? '<span class="warntext">미확인</span>' : e(fare(section.cost))) + '</span>'
-                + (chosen.boardings?.length ? '<ol class="boardings" aria-label="대중교통 탑승 순서">' + chosen.boardings.map(boarding =>
-                    '<li>' + e(modes[boarding.mode] ?? boarding.mode) + (boarding.lines.length ? ' ' + e(boarding.lines.join(', ')) : '')
-                    + (boarding.start || boarding.end ? ', ' + e(boarding.start ?? '미확인') + '에서 ' + e(boarding.end ?? '미확인') : '')
-                    + (boarding.minutes != null ? ', ' + minutes(boarding.minutes) : '') + '</li>').join('') + '</ol>' : '')
+                + transitSteps(chosen)
                 + '<div class="leg-extra">'
                 + (link ? '<a class="textbtn" href="' + e(link) + '" target="_blank" rel="noopener noreferrer">카카오맵에서 길찾기</a>' : '')
                 + '<details' + (override || unknown ? ' open' : '') + '><summary>요금 직접 입력</summary>'
@@ -177,7 +176,9 @@ export async function init(cities) {
         const sections = result.selected.sections;
         view = await mapReady;
         if (!view || !sections.length) return;
-        const key = JSON.stringify(sections.map(section => [section.chosen.mode, section.cost.totalKrw]));
+        // 지도 이름표에 구간 금액도 표시하므로 요금만 바뀌어도 다시 그립니다. 확대 범위는 교통수단 구성이 바뀌지 않으면 유지합니다.
+        const key = JSON.stringify(sections.map(({chosen, cost}) =>
+            [chosen.mode, chosen.checkedAt, chosen.mapObject, cost.totalKrw]));
         if (key === drawnKey) return;
         const nextModes = sections.map(section => section.chosen.mode).join();
         const modesChanged = nextModes !== drawnModes;
@@ -186,6 +187,9 @@ export async function init(cities) {
         const next = await drawJourney(view, sections, rightPad);
         if (!next) return;
         drawn = next;
+        const note = $('#route-geometry-note');
+        note.hidden = !drawn.hasMissingGeometry;
+        note.textContent = drawn.hasMissingGeometry ? '경로 좌표를 확인할 수 없는 구간은 위치만 표시합니다.' : '';
         if (modesChanged || !drawn.focuses.includes(focus)) focus = 'all';
         view.onResize = () => drawn.fit(focus);
         renderFocus();
@@ -195,7 +199,9 @@ export async function init(cities) {
     // 목록을 다시 그립니다. 정렬을 바꾼 경우에는 카드가 새 자리로 미끄러지게 합니다(DESIGN.md reorder).
     function renderList(slide = false) {
         const before = {};
+        // 교체 전후의 카드 위치를 ID로 맞춰, 같은 카드가 정렬 전 위치에서 정렬 후 위치로 이동하는 것처럼 보이게 합니다.
         if (slide && !reduceMotion.matches) $$('.routecard', list).forEach(node => before[node.dataset.option] = node.getBoundingClientRect().top);
+        // 서버는 현재 적용한 경로를 첫 번째 후보로 보냅니다. 표시 순서를 바꿔도 선택 기준은 이 순서를 따릅니다.
         const selected = result.alternatives[0];
         list.innerHTML = sorted().map(option => card(option, selected)).join('');
         if (!slide || reduceMotion.matches) return;
@@ -212,13 +218,13 @@ export async function init(cities) {
         const sections = result.selected.sections;
         $('#route-title').textContent = sections.length
             ? city(trip.origin) + '에서 ' + city(trip.destination) + '까지 ' + result.alternatives.length + '가지 방법'
-            : '출발지와 목적지가 같은 도시입니다';
+            : '출발 지점과 도착 지점이 같습니다';
         $('#route-sort').hidden = !sections.length;
         $$('#route-sort [data-sort]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sort === sort)));
         renderList();
-        const sample = sections.some(section => section.chosen.source === 'SAMPLE');
-        $('#route-note').textContent = (sample ? '샘플 운임과 입장료는 테스트용 가상 가격입니다. ' : '')
-            + '왕복 금액은 편도 요금의 두 배로 추정합니다.';
+        const unconfirmed = sections.some(section => section.chosen.minutes == null);
+        $('#route-note').textContent = (unconfirmed ? '조회하지 못한 구간의 시간과 거리는 미확인으로 표시합니다. ' : '')
+            + '왕복 금액은 확인된 편도 요금의 두 배로 추정합니다.';
         renderEstimate();
         renderHeader(cities);
         renderMap().catch(error => mapFail(error.message));

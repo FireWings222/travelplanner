@@ -16,7 +16,7 @@ class OdsayRoutesTest {
     private final Segment sample = new Segment(new Place("cju", "제주공항", 33.510, 126.493),
             new Place("jeju", "제주시 중심", 33.500, 126.531), Mode.AIRPORT_BUS,
             BigDecimal.valueOf(4), 20, 0, new Fare(BigDecimal.TEN, BigDecimal.ONE, null),
-            Source.SAMPLE, checkedAt);
+            Source.UNCONFIRMED, checkedAt);
 
     /** ODsay 응답에서 요금·시간·지도 코드를 읽고 제공되지 않은 아동 운임을 비워 두는지 검증합니다. */
     @Test
@@ -60,7 +60,8 @@ class OdsayRoutesTest {
         assertEquals(38, mixed.minutes());
         assertEquals(BigDecimal.valueOf(1650), mixed.fare().adult());
         assertEquals(1, mixed.transfers());
-        assertEquals(List.of(new Boarding(Mode.CITY_BUS, List.of("101", "102"), "정류장 A", "정류장 B", 10),
+        assertEquals(List.of(new Boarding(Mode.WALK, List.of(), mixed.from().name(), "정류장 A", 4),
+                new Boarding(Mode.CITY_BUS, List.of("101", "102"), "정류장 A", "정류장 B", 10),
                 new Boarding(Mode.SUBWAY, List.of("1호선"), "역 A", "역 B", 20)), mixed.boardings());
     }
 

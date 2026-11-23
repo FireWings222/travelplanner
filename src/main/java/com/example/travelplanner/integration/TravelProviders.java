@@ -12,7 +12,6 @@ public final class TravelProviders {
         List<Destination> destinations();
         /** 카탈로그 구현이 일정과 투어에 사용할 전체 관광지 목록을 제공하는 계약입니다. */
         List<Attraction> attractions();
-        default List<Attraction> suggestedAttractions() { return attractions(); }
         /** 카탈로그 구현이 여행지의 기준 지점과 좌표를 제공하는 계약입니다. */
         Place center(String destination);
     }
@@ -27,6 +26,7 @@ public final class TravelProviders {
     public interface Tours {
         /** 투어 서비스가 조회 결과를 필터링할 수 있도록 제공자의 플랫폼을 알려주는 계약입니다. */
         Platform platform();
+        /** 여러 플랫폼을 합친 제공자에 한해 검색 가능한 플랫폼을 따로 지정할 수 있습니다. */
         default boolean supports(Platform requested) { return platform() == requested; }
         /** 투어 제공자가 지정 도시의 일일투어 후보를 반환하는 계약입니다. */
         List<Tour> search(String destination);

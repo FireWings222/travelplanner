@@ -16,14 +16,15 @@ export const inclusions = {transportIncluded: '관광지 간 이동', admissionI
 // 투어 목록과 비용 비교 카드에 교통·입장료·식사·가이드 포함 여부를 표시합니다.
 export const inclusionTags = detail => '<div class="tags">' + Object.entries(inclusions).map(([key, label]) =>
     '<span class="tag ' + (detail[key] ? 'included' : '') + '">' + label + (detail[key] ? ' 포함' : ' 불포함') + '</span>').join('') + '</div>';
-export const sources = {SAMPLE: '테스트용 가상 가격', MANUAL: '사용자 입력 요금',
+export const sources = {UNCONFIRMED: '조회 미확인', CATALOG: '관광지 참고 정보', MANUAL: '사용자 입력 요금',
     PROVIDER: '제공업체 가격', ODSAY: 'ODsay 예상 요금·시간',
-    KAKAO_MOBILITY: '카카오모빌리티 예상 정보', KAKAO_MAP: '카카오맵 검색 장소',
+    KAKAO_MOBILITY: '카카오모빌리티 예상 정보', KAKAO_MAP: '카카오맵 검색 장소', KAKAO_ROUTING: '카카오맵 예상 경로',
     PUBLISHED: '공개 요금', ESTIMATED: '단체 추정가'};
 // 비용과 거리를 한국어 숫자 형식으로 표시합니다.
 export const number = value => new Intl.NumberFormat('ko-KR', {maximumFractionDigits: 2}).format(value);
 // 합계·요금에 원 단위를 붙이고 데이터가 없으면 미확인으로 표시합니다.
 export const won = value => value == null ? '미확인' : number(value) + '원';
+export const distance = value => value == null ? '거리 미확인' : number(value) + 'km';
 // 서버가 반환한 분 단위 소요 시간을 화면의 시간·분 표기로 바꿉니다.
 export function minutes(value) {
     if (value == null) return '미확인';
@@ -113,8 +114,9 @@ export function showTrip(trip, cities) {
         + '명 · 아동 ' + trip.party.children + '명</span>' + (trip.budget == null ? '' : '<span>예산 ' + won(trip.budget) + '</span>');
 }
 // 구간이나 투어에 요금 출처 배지와 확인 시각을 표시합니다.
-export const priceType = (source, checkedAt) => '<span class="tag ' + (source === 'SAMPLE' ? 'sample' : '') + '">'
+export const priceType = (source, checkedAt) => '<span class="tag">'
     + e(sources[source]) + '</span>' + (checkedAt ? '<span class="meta">확인 ' + e(checked(checkedAt)) + ' KST</span>' : '');
+// 일정 출처와 별도의 가격 출처가 있으면 각각 연결합니다. 직접 등록 상품의 예약 URL은 이 함수에서 처리하지 않습니다.
 export const tourReferenceLinks = reference => [[reference?.sourceUrl, '출처 보기'], [reference?.priceUrl, '공개 요금 보기']]
     .map(([url, label]) => [safeUrl(url), label]).filter(([url]) => url)
     .map(([url, label]) => '<a class="soft" href="' + e(url) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>').join('');
@@ -139,6 +141,26 @@ export function itemRow(item) {
     const amount = item.missing.length && Number(item.totalKrw) === 0 ? '미확인' : won(item.totalKrw);
     return '<li><div>' + e(item.label) + '<small>' + e(sources[item.source]) + original + '</small></div><strong>'
         + amount + '</strong></li>';
+}
+
+/** 지도 선과 이동 내역이 같은 교통수단 색을 사용하도록 단계별 분류를 공유합니다. */
+export const transitStepKind = mode => ({WALK: 'walk', CITY_BUS: 'bus', SUBWAY: 'rail'}[mode]);
+
+// 공급자가 반환한 단계 순서대로 도보와 탑승을 함께 표시합니다. 역이나 정류장 이름이 없으면 미확인입니다.
+export function transitSteps(segment, listClass = 'boardings') {
+    if (!segment.boardings?.length) return '';
+    return '<ol class="' + listClass + ' transit-steps" aria-label="도보 및 대중교통 이동 순서">'
+        + segment.boardings.map(step => {
+            const kind = transitStepKind(step.mode);
+            const facts = [step.minutes == null ? '' : minutes(step.minutes),
+                step.meters == null ? '' : (step.meters < 1000 ? number(step.meters) + 'm' : distance(step.meters / 1000))]
+                .filter(Boolean).join(', ');
+            const routeName = step.lines?.length ? ' ' + e(step.lines.join(', ')) : '';
+            return '<li>' + (kind ? '<i class="transit-line ' + kind + '" aria-hidden="true"></i>' : '')
+                + '<b>' + e(modes[step.mode] ?? step.mode) + routeName + '</b> '
+                + e(step.start ?? '출발 지점 미확인') + '에서 ' + e(step.end ?? '도착 지점 미확인')
+                + (facts ? ', ' + facts : '') + '</li>';
+        }).join('') + '</ol>';
 }
 
 // 구간, 투어, 비교 폼에서 공통으로 쓰는 금액 입력 필드를 만듭니다.
@@ -175,17 +197,12 @@ export function legCards(sections, choices = {}, day = '') {
         const total = section.cost.missing.length && Number(section.cost.totalKrw) === 0
             ? '요금 미확인' : '일행 ' + won(section.cost.totalKrw) + (section.cost.missing.length ? ' (부분 합계)' : '');
         return '<article class="leg"><div class="leg-head"><div><h3>' + e(chosen.from.name) + ' <span aria-hidden="true">→</span> '
-            + e(chosen.to.name) + '</h3><p>' + number(chosen.kilometers) + 'km · ' + minutes(chosen.minutes) + ' · 환승 '
-            + chosen.transfers + '회 · ' + total + '</p>'
+            + e(chosen.to.name) + '</h3><p>' + distance(chosen.kilometers) + ', ' + minutes(chosen.minutes)
+            + (chosen.transfers == null ? '' : ', 환승 ' + chosen.transfers + '회') + ', ' + total + '</p>'
             + priceType(chosen.source, chosen.checkedAt) + '</div><label>교통수단<select class="leg-mode" data-key="' + e(section.key)
             + '" data-day="' + e(day) + '">' + options(section.options.map(option => [option.mode,
                 legOptionLabel(option)]), chosen.mode) + '</select></label></div>'
-            + (chosen.boardings?.length ? '<ol class="cost-list transit-boardings" aria-label="대중교통 탑승 순서">'
-                + chosen.boardings.map(boarding => '<li><div><strong>' + e(modes[boarding.mode])
-                    + (boarding.lines.length ? ' · ' + e(boarding.lines.join(', ')) : '') + '</strong>'
-                    + (boarding.start || boarding.end ? '<small>' + e(boarding.start ?? '미확인') + ' → '
-                        + e(boarding.end ?? '미확인') + '</small>' : '')
-                    + '</div><span>' + e(minutes(boarding.minutes)) + '</span></li>').join('') + '</ol>' : '')
+            + transitSteps(chosen, 'transit-boardings')
             + '<details class="fare-edit"' + (override ? ' open' : '') + '><summary>요금 직접 입력</summary>'
             + '<form class="leg-fare" data-key="' + e(section.key) + '" data-day="' + e(day) + '">'
             + '<p class="muted">성인·아동 1인 요금 또는 일행 공동 요금을 입력하세요. 값을 비우고 적용하면 기본 요금으로 돌아갑니다.</p>'
@@ -193,9 +210,10 @@ export function legCards(sections, choices = {}, day = '') {
             + '<ul class="cost-list">' + itemRow(section.cost) + '</ul>'
             + (mapLink ? '<a class="soft" href="' + e(mapLink)
                 + '" target="_blank" rel="noopener noreferrer">카카오맵에서 길찾기</a>' : '')
-            + (chosen.mapObject && $('meta[name="kakao-map-key"]')
+            + ((chosen.mapObject || chosen.geometry?.length) && $('meta[name="kakao-map-key"]')
                 ? ' <button type="button" class="soft leg-map-toggle" aria-expanded="false" data-route="'
-                    + e(JSON.stringify({mapObject: chosen.mapObject, from: chosen.from, to: chosen.to}))
+                    + e(JSON.stringify({mode: chosen.mode, mapObject: chosen.mapObject, geometry: chosen.geometry,
+                        boardings: chosen.boardings, from: chosen.from, to: chosen.to}))
                     + '">지도에서 보기</button><div class="leg-map-panel" hidden>'
                     + '<p class="muted" role="status"></p><div class="leg-map" hidden></div></div>'
                 : '') + '</article>';
@@ -213,13 +231,12 @@ export function kakaoDirectionsUrl(segment) {
     return 'https://map.kakao.com/link/by/' + mode + '/' + place(segment.from) + '/' + place(segment.to);
 }
 
-// 교통수단을 바꾸기 전에 후보별 시간, 기본 요금과 샘플 여부를 확인할 수 있게 표시합니다.
+// 교통수단을 고르기 전에 후보별 시간과 조회 가능한 요금을 표시합니다.
 function legOptionLabel(option) {
     const fare = option.fare;
     const amount = fare?.shared != null ? '일행 ' + won(fare.shared)
         : fare?.adult != null ? '성인 ' + won(fare.adult) : '요금 미확인';
-    return (modes[option.mode] ?? option.mode) + ' · ' + minutes(option.minutes) + ' · ' + amount
-        + (option.source === 'SAMPLE' ? ' (샘플)' : '');
+    return (modes[option.mode] ?? option.mode) + ', ' + minutes(option.minutes) + ', ' + amount;
 }
 // 구간 카드의 교통수단·요금 변경을 각 화면의 재계산 함수에 연결하고 지도 버튼의 조회를 처리합니다.
 // 교통수단 변경 시 이전 수단의 직접 요금을 초기화합니다. 요금 입력은 현재 선택한 수단과 구간 ID를 콜백에 전달합니다.
@@ -322,6 +339,7 @@ export function animateValues(root) {
         const key = node.dataset.roll;
         const to = Number(node.dataset.val);
         const from = rolled[key];
+        // 새 DOM의 표시값은 최종값으로 먼저 저장합니다. 다음 렌더링은 일시적인 애니메이션 중간값을 이어받지 않습니다.
         rolled[key] = to;
         if (from === undefined || from === to) return;
         changed.add(key);
@@ -366,17 +384,20 @@ export function animateValues(root) {
 // partial이 true인 줄이 있으면 합계에 "(부분 합계)"를 붙입니다. budget이 없으면 예산 막대를 그리지 않습니다.
 // action은 내역 아래에 넣을 버튼이나 링크 HTML입니다. 모바일에서는 open이 true일 때만 내역이 펼쳐집니다.
 export function estimateCard({rows, budget, action = '', open = false}) {
+    const hasTotal = rows.some(row => row.value != null);
     const sum = rows.reduce((total, row) => total + (row.value == null ? 0 : Number(row.value)), 0);
     const partial = rows.some(row => row.partial);
     const hasBudget = budget != null && Number(budget) > 0;
+    // 막대의 폭만 100%에서 멈춥니다. 예산 초과분은 실제 비율과 남은 금액에서 확인할 수 있습니다.
     const ratio = hasBudget ? Math.min(100, sum / Number(budget) * 100) : 0;
     const left = hasBudget ? Number(budget) - sum : 0;
     return '<div class="est-main"><span class="est-label">여행 견적</span>'
-        + (hasBudget ? rollValue('pct', sum / Number(budget) * 100, 'pct', 'span', 'est-pct num') : '<span class="est-pct">예산 미입력</span>')
-        + '<strong class="est-sum num">' + rollValue('sum', sum) + (partial ? '<small>(부분 합계)</small>' : '') + '</strong>'
+        + (hasBudget ? (hasTotal ? rollValue('pct', sum / Number(budget) * 100, 'pct', 'span', 'est-pct num') : '')
+            : '<span class="est-pct">예산 미입력</span>')
+        + '<strong class="est-sum num">' + (hasTotal ? rollValue('sum', sum) + (partial ? '<small>(부분 합계)</small>' : '') : '미확인') + '</strong>'
         + '<button type="button" class="est-toggle" aria-expanded="' + open + '">' + (open ? '접기' : '내역') + '</button>'
         + '<span class="delta" aria-hidden="true"></span>'
-        + (hasBudget ? '<div class="budgetbar' + (left < 0 ? ' over' : '') + '"><i data-roll="bar" data-val="' + ratio.toFixed(2)
+        + (hasBudget && hasTotal ? '<div class="budgetbar' + (left < 0 ? ' over' : '') + '"><i data-roll="bar" data-val="' + ratio.toFixed(2)
             + '" data-fmt="bar" style="width:' + ratio.toFixed(2) + '%"></i></div>'
             + '<p class="est-left num' + (left < 0 ? ' over' : '') + '">예산 ' + won(budget) + ' 중 ' + rollValue('left', left, 'left', 'b', '') + '</p>' : '')
         + '</div><div class="detail">'
@@ -412,6 +433,7 @@ export function renderHeader(cities) {
         + field('일정', '<span class="num">' + e(day(trip.start)) + ' ~ ' + e(day(trip.end)) + '</span>')
         + field('인원', '성인 ' + trip.party.adults + (trip.party.children ? ', 아동 ' + trip.party.children : ''), ' extra')
         + '<a class="tedit" href="/">수정</a>' : '';
+    // 현재 단계의 aria-current는 서버 템플릿이 붙이고, 완료 표시는 브라우저 탭에 저장된 자료를 기준으로 보완합니다.
     const done = {trip: Boolean(trip), legs: Boolean(read('legs')), plan: Boolean(read('plan')), tour: false};
     $$('.steps [data-step]').forEach((step, index) => {
         const finished = done[step.dataset.step] && !step.hasAttribute('aria-current');

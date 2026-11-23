@@ -5,6 +5,8 @@
     --paper: #fff;
     --ink: #152a22;
     --muted: #51655b;
+    --m-rail: #0d6fc4;
+    --m-bus: #d43d2a;
     --line: #dce6dd;
     --green: #146748;
     --green-dark: #0b4d35;
@@ -36,19 +38,13 @@ nav a, .saved-link { text-decoration:none; color:#3f5349; font-size:15px; font-w
 nav a:hover, nav a[aria-current] { color:var(--green); box-shadow:0 2px var(--green); }
 .saved-link { padding:8px 14px; border:1px solid var(--line); border-radius:10px; }
 .saved-link:hover { background:var(--mint); }
-.hero { position:relative; display:grid; grid-template-columns: .86fr 1.14fr; min-height:410px; padding-top:32px; align-items:stretch; }
+.hero { padding-top:32px; }
 .hero-text { padding:46px 14px 55px 0; }
 .eyebrow { color:var(--green); display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:14px; letter-spacing:.035em; }
 .eyebrow-line { width:21px; height:2px; background:currentColor; }
 .hero h1 { margin:15px 0 15px; font-size:clamp(42px, 5.1vw, 74px); font-weight:850; line-height:1.13; letter-spacing:-.085em; word-break:keep-all; }
 .hero h1 em { color:var(--green); font-style:normal; }
 .hero-text p, .page-title p { font-size:18px; color:var(--muted); line-height:1.65; margin:0; word-break:keep-all; }
-.hero-image { min-height:358px; margin:0; padding:clamp(24px,5vw,60px); display:flex; flex-direction:column;
-    justify-content:center; border-radius:26px; color:#fff; background:linear-gradient(145deg,#153f35,#28634f); }
-.hero-route-label { margin:0 0 12px; color:#d3f0df; font-weight:600; }
-.hero-route { margin:0 0 14px; font-size:clamp(2rem,5vw,3.75rem); font-weight:800; line-height:1.15; }
-.hero-route span { color:#b1e2c5; }
-.hero-route-detail { margin:0; line-height:1.65; }
 .search-wrap { position:relative; margin-top:-28px; }
 .panel { border:1px solid var(--line); border-radius:20px; background:var(--paper); box-shadow:var(--shadow); }
 .search-panel { padding:27px 30px 24px; }
@@ -121,7 +117,6 @@ p { margin:0 0 9px; }
 .metrics strong { font-size:22px; font-weight:820; letter-spacing:-.025em; }
 .tag { display:inline-flex; align-items:center; background:#edf1ef; color:#385346; border-radius:20px; font-size:13px;
     font-weight:750; padding:4px 8px; vertical-align:middle; white-space:nowrap; }
-.tag.sample { background:var(--warm); color:#684416; }
 .tag.included { background:var(--mint); color:var(--green-dark); }
 .tags { display:flex; flex-wrap:wrap; gap:5px; margin:8px 0; }
 .meta { font-size:13px; margin-inline-start:7px; }
@@ -131,10 +126,11 @@ p { margin:0 0 9px; }
 .leg-head label { min-width:160px; }
 .leg-head select { width:100%; max-width:100%; }
 .leg-head label { max-width:100%; }
-.transit-boardings { list-style:decimal inside; }
-.transit-boardings li { display:list-item; }
-.transit-boardings li > div { display:inline-block; vertical-align:top; }
-.transit-boardings li > span { float:right; color:var(--muted); }
+.transit-boardings { list-style:none; padding:0; }
+.transit-line { display:inline-block; width:1em; margin-right:.4em; vertical-align:middle; border-top:2px solid; }
+.transit-line.bus { color:var(--m-bus); }
+.transit-line.rail { color:var(--m-rail); }
+.transit-line.walk { color:var(--ink-2, var(--muted)); border-top-style:dotted; }
 .leg p { margin-bottom:4px; color:var(--muted); }
 details { margin:10px 0; }
 summary { color:var(--green-dark); font-weight:750; cursor:pointer; }
@@ -200,14 +196,12 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
     .header-inner { flex-wrap:wrap; padding-block:10px; gap:3px 8px; }
     .header-inner nav { order:3; width:100%; justify-content:space-between; gap:8px; }
     .brand { font-size:20px; }
-    .hero { grid-template-columns:1fr; padding-top:0; }
+    .hero { padding-top:0; }
     .hero-text { padding:26px 0 19px; }
     .hero p,.page-title p { font-size:16px; }
-    .hero-image { min-height:185px; border-radius:17px; }
     .search-wrap { margin-top:12px; }
     .search-panel, .section { padding:16px; border-radius:15px; }
     .search-grid, .search-bottom { grid-template-columns:repeat(2, minmax(0,1fr)); }
-    .sample-button { max-width:110px; }
     .home-extra { padding-block:24px; }
     .footer-inner { flex-direction:column; align-items:start; justify-content:center; padding-block:14px; }
     .leg-head, .tour-top { flex-wrap:wrap; }
@@ -241,9 +235,7 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
     --flash: #dcefe3;
     --warn: #a14a00;
     --over: #c92a2a;
-    --m-rail: #0d6fc4;
     --m-air: #146748;
-    --m-bus: #d43d2a;
     --m-road: #a87900;
     --d1: #146748;
     --d2: #0d6fc4;
@@ -278,7 +270,7 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
 .redesign input:not([type="checkbox"]), .redesign select { border: 1px solid var(--ink-3); border-radius: 8px; background: var(--paper); color: var(--ink); min-height: 38px; padding: 7px 10px; }
 .redesign label { color: var(--ink-2); font-size: 13.5px; font-weight: 700; }
 
-/* 지도 분할 화면: 머리글 아래를 목록과 지도가 채움 */
+/* 지도 분할 화면은 경로 비교와 일정 화면에서 사용합니다. 목록만 별도로 스크롤할 수 있게 하고 지도 영역의 크기를 유지합니다. */
 .map-screen { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 .map-screen .site-header { flex: none; }
 .map-screen > main { flex: 1; min-height: 0; }
@@ -378,7 +370,7 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
     .redesign *, .redesign *::after { animation: none !important; transition: none !important; }
 }
 
-/* 모바일: 위 지도, 아래 끌어 올리는 목록, 맨 아래 견적 막대 */
+/* 모바일에서는 지도를 위에 두고, 목록과 견적을 아래에 쌓습니다. 견적은 일반 배치에 들어가므로 지도 위 여백이 필요하지 않습니다. */
 @media (max-width: 860px) {
     .redesign .split { display: flex; flex-direction: column; position: relative; }
     .redesign .mappane { flex: none; height: 300px; order: -1; margin: 0; border-radius: 0; }

@@ -1,38 +1,14 @@
-import {$, $$, api, read, write, e, busy, status, showError, modes, won, minutes, number, fareFields, readFare,
-    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader} from './common.js';
+import {$, $$, api, read, write, e, busy, status, showError, modes, won, minutes, distance, fareFields, readFare,
+    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader, transitSteps} from './common.js';
 import {createMap, drawDays, dayPin, dayColor} from './route-map.js';
 
-const START = 9 * 60;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const GRIP = '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="2.5" cy="3" r="1.5"/>'
     + '<circle cx="7.5" cy="3" r="1.5"/><circle cx="2.5" cy="8" r="1.5"/><circle cx="7.5" cy="8" r="1.5"/><circle cx="2.5" cy="13" r="1.5"/>'
     + '<circle cx="7.5" cy="13" r="1.5"/></svg>';
-// 분 단위 시각을 "09:00" 형식으로 씁니다.
-const clock = value => String(Math.floor(value / 60)).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0');
-// 카카오맵 검색으로 추가한 장소는 머무는 시간과 입장료를 모릅니다.
-const searched = stop => stop.id.startsWith('kakao-');
 // 요금 근거가 없는 0원은 "미확인", 일부만 있으면 "(부분 합계)"로 씁니다.
 const fare = cost => !cost.missing.length ? won(cost.totalKrw)
     : Number(cost.totalKrw) === 0 ? '미확인' : won(cost.totalKrw) + ' (부분 합계)';
-
-// 하루 일정의 예상 도착 시각을 계산합니다. 첫 장소에 09:00에 도착한다고 가정하고 머무는 시간과 이동 시간을 더합니다.
-// 머무는 시간을 모르는 장소(카카오맵 검색 장소) 뒤로는 시각을 비웁니다.
-function schedule(summary) {
-    let time = START;
-    let known = true;
-    let stay = 0;
-    const arrivals = summary.stops.map((stop, index) => {
-        const arrival = known ? time : null;
-        if (searched(stop)) known = false;
-        else { stay += stop.visitMinutes; time += stop.visitMinutes; }
-        const section = summary.journey.sections[index];
-        if (section) time += section.chosen.minutes;
-        return arrival;
-    });
-    const last = summary.stops.at(-1);
-    const end = summary.stops.length && known ? time : null;
-    return {arrivals, stay, end: last ? end : null};
-}
 
 // 여행 일정 화면(시안 A 지도 분할): 왼쪽 날짜 버튼과 장소 타임라인, 오른쪽 카카오맵, 지도 위 여행 견적 카드를 그립니다.
 // 여행 계획과 저장 ID는 현재 탭의 세션에서 읽습니다. 저장한 여행 목록은 서버에서 조회하고, 여행 조건이 있으면 일정 견적을 불러옵니다.
@@ -41,6 +17,7 @@ export async function init(cities) {
     const save = $('#save-plan');
     const estimate = $('#estimate');
     const mapSlot = $('#plan-map');
+    // plan은 편집 중인 계획, quote는 그 계획의 견적 응답입니다. id가 있을 때만 저장된 DB 일정을 갱신합니다.
     let plan = read('plan');
     let id = read('planId');
     let date;
@@ -123,6 +100,7 @@ export async function init(cities) {
         try {
             let result;
             try { result = await api('/routes/compare', {trip, legs: read('legs') ?? {}}); }
+            // 저장된 구간 선택을 적용한 요청이 실패하면 같은 여행의 기본 경로로 다시 시도합니다.
             catch { result = await api('/routes/compare', {trip}); }
             const unknown = result.selected.cost.missing.length > 0;
             transport = {value: unknown && Number(result.roundTripKrw) === 0 ? null : result.roundTripKrw, partial: unknown};
@@ -175,6 +153,7 @@ export async function init(cities) {
         if (!quote) return;
         const local = quote.total;
         const localUnknown = local.missing.length > 0;
+        const hasStops = quote.days.some(day => day.stops.length);
         estimate.hidden = false;
         estimate.innerHTML = estimateCard({
             budget: plan.trip.budget,
@@ -183,7 +162,8 @@ export async function init(cities) {
                 {key: 'transport', label: '왕복 교통 (편도의 2배)', value: transport?.value ?? null, partial: Boolean(transport?.partial),
                     text: transport === undefined ? '계산 중' : '미확인'},
                 {key: 'local', label: '현지 일정 ' + plan.days.length + '일', partial: localUnknown,
-                    value: localUnknown && Number(local.totalKrw) === 0 ? null : local.totalKrw},
+                    value: !hasStops || (localUnknown && Number(local.totalKrw) === 0) ? null : local.totalKrw,
+                    text: hasStops ? '미확인' : '장소 추가 전'},
                 {key: 'tour', label: '일일투어', value: null, text: '선택 안 함'}
             ],
             action: '<a class="outline" href="/tours">일일투어 더해 보기</a>'
@@ -209,12 +189,10 @@ export async function init(cities) {
             + '<select class="hop-mode" data-key="' + e(section.key) + '" aria-label="' + e(chosen.from.name) + '에서 ' + e(chosen.to.name) + ' 이동 수단">'
             + section.options.map(option => '<option value="' + e(option.mode) + '"' + (option.mode === chosen.mode ? ' selected' : '') + '>'
                 + e(modes[option.mode] ?? option.mode) + '</option>').join('') + '</select>'
-            + '<span class="num">' + minutes(chosen.minutes) + ', ' + number(chosen.kilometers) + 'km</span>'
+            + '<span class="num">' + minutes(chosen.minutes) + ', ' + distance(chosen.kilometers) + '</span>'
             + '<span class="num amt">' + (section.cost.missing.length && Number(section.cost.totalKrw) === 0
                 ? '<span class="warntext">미확인</span>' : e(fare(section.cost))) + '</span>'
-            + (chosen.boardings?.length ? '<ol class="boardings">' + chosen.boardings.map(boarding => '<li>' + e(modes[boarding.mode] ?? boarding.mode)
-                + (boarding.lines.length ? ' ' + e(boarding.lines.join(', ')) : '')
-                + (boarding.start || boarding.end ? ', ' + e(boarding.start ?? '미확인') + '에서 ' + e(boarding.end ?? '미확인') : '') + '</li>').join('') + '</ol>' : '')
+            + transitSteps(chosen)
             + '<div class="hop-extra">'
             + (link ? '<a class="textbtn" href="' + e(link) + '" target="_blank" rel="noopener noreferrer">카카오맵에서 길찾기</a>' : '')
             + '<details' + (override || section.cost.missing.length ? ' open' : '') + '><summary>요금 직접 입력</summary>'
@@ -224,35 +202,30 @@ export async function init(cities) {
             + '</div></div>';
     }
 
-    // 고른 날짜의 타임라인: 하루 요약, 장소 카드와 이동 구간 줄, 일정 끝 시각, 장소 검색 추가
+    // 고른 날짜의 타임라인에 요약과 방문 순서, 이동 구간, 장소 추가 기능을 표시합니다.
     function renderDay() {
         const index = plan.days.findIndex(item => item.date === date);
         const day = plan.days[index];
         const summary = quote.days[index];
         const color = 'var(' + dayColor(index) + ')';
-        const times = schedule(summary);
         const travel = summary.journey.minutes;
-        const facts = summary.stops.length ? '<p class="dayfacts num"><b>' + clock(START) + ' ~ ' + (times.end == null ? '미정' : clock(times.end))
-            + '</b>, 머무름 ' + (times.stay ? minutes(times.stay) : '없음') + (summary.stops.some(searched) ? '(확인된 장소)' : '')
-            + ', 이동 ' + (travel ? minutes(travel) : '없음') + ', 일행 ' + e(fare(summary.total)) + '</p>' : '';
+        const facts = summary.stops.length ? '<p class="dayfacts num">머무름 ' + minutes(summary.visitMinutes)
+            + ', 이동 ' + (travel === 0 ? '없음' : minutes(travel)) + ', 일행 ' + e(fare(summary.total)) + '</p>' : '';
         const rows = summary.stops.map((stop, n) => {
             const admission = summary.admissions[n];
-            const fee = searched(stop) || (admission.missing.length && Number(admission.totalKrw) === 0) ? '미확인'
-                : Number(admission.totalKrw) === 0 ? '무료' : won(admission.totalKrw);
-            const arrival = times.arrivals[n];
+            const fee = !admission.missing.length && Number(admission.totalKrw) === 0 ? '무료' : fare(admission);
             const section = summary.journey.sections[n];
             return '<div class="stop-row" data-index="' + n + '"><div class="stop" data-stop="' + e(stop.id) + '">'
                 + '<button type="button" class="drag" aria-label="' + e(stop.name) + ' 순서 바꾸기, 위아래 화살표 키로 옮기기">' + GRIP + '</button>'
                 + dayPin(n + 1, color)
-                + '<div class="stop-body"><span class="arr num' + (arrival == null ? ' none' : '') + '">' + (arrival == null ? '도착 시간 미정' : clock(arrival) + ' 도착')
-                + '</span><h2>' + e(stop.name) + '</h2><p>' + e(stop.description)
-                + (searched(stop) ? ', 머무는 시간 미확인' : ', ' + minutes(stop.visitMinutes) + ' 머무름') + '</p></div>'
+                + '<div class="stop-body"><h2>' + e(stop.name) + '</h2><p>' + e(stop.description)
+                + (stop.visitMinutes == null ? '' : ', ' + minutes(stop.visitMinutes) + ' 머무름') + '</p></div>'
                 + '<div class="stop-side"><span class="fee num">' + fee + '</span><button type="button" class="textbtn danger" data-remove="' + n
                 + '" aria-label="' + e(stop.name) + ' 삭제">삭제</button></div></div>'
                 + (section ? hop(section, day) : '') + '</div>';
         }).join('');
         list.innerHTML = '<div class="timeline">' + facts + (summary.stops.length ? rows
-                + '<div class="endrow num">' + (times.end == null ? '끝나는 시간 미정' : clock(times.end) + ' 일정 끝') + '</div>'
+                + '<div class="endrow">일정 끝</div>'
             : '<p class="emptyday">아직 장소가 없습니다. 아래에서 장소를 검색해 추가하세요.</p>') + '</div>'
             + (day.stops.length < 15
                 ? '<button type="button" class="addplace" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>장소 검색해서 추가</button>'
@@ -271,8 +244,7 @@ export async function init(cities) {
     // 화면 전체를 그립니다: 제목, 날짜 버튼, 타임라인, 안내, 견적, 지도
     function render() {
         $('#plan-title').textContent = city(plan.trip.destination) + ' 현지 일정';
-        const sample = quote.days.some(day => day.admissions.some(item => item.source === 'SAMPLE'));
-        $('#plan-note').textContent = '입장료와 이동 요금은 일행 전체 금액입니다.' + (sample ? ' 샘플 운임과 입장료는 테스트용 가상 가격입니다.' : '');
+        $('#plan-note').textContent = '입장료와 이동 요금은 일행 전체 금액입니다.';
         renderDays();
         renderDay();
         renderEstimate();
@@ -284,12 +256,17 @@ export async function init(cities) {
         const view = await getMap();
         if (!view) return;
         const focus = plan.days.findIndex(item => item.date === date);
-        const key = JSON.stringify([focus, quote.days.map(day => day.stops.map(stop => stop.id)), quote.days.map(day => day.journey.sections.map(s => s.chosen.mode))]);
+        // 선택 날짜나 방문 순서가 바뀌거나 공급자 경로가 새로 조회되면 지도를 다시 그립니다.
+        const key = JSON.stringify([focus, quote.days.map(day => day.stops.map(stop => stop.id)),
+            quote.days.map(day => day.journey.sections.map(({chosen}) => [chosen.mode, chosen.checkedAt, chosen.mapObject]))]);
         if (key === drawnKey) return;
         drawnKey = key;
         const next = await drawDays(view, quote.days, focus, rightPad);
         if (!next) return;
         drawn = next;
+        const note = $('#plan-geometry-note');
+        note.hidden = !drawn.hasMissingGeometry;
+        note.textContent = drawn.hasMissingGeometry ? '경로 좌표를 확인할 수 없는 구간은 위치만 표시합니다.' : '';
         view.onResize = () => drawn.fit();
         drawn.fit();
     }
@@ -341,6 +318,7 @@ export async function init(cities) {
             message.textContent = '카카오맵에서 장소를 검색하는 중입니다.';
             try {
                 const places = await busy(add, () => api('/itineraries/places?' + params));
+                // 검색 도중 날짜를 바꾸면 기존 폼이 교체됩니다. 이전 날짜의 결과를 새 타임라인에 붙이지 않습니다.
                 if (!add.isConnected) return;
                 message.textContent = places.length ? '카카오맵 검색 결과' : address
                     ? '주소를 찾지 못했습니다. 건물 번호나 지번까지 입력하세요.'
@@ -392,6 +370,7 @@ export async function init(cities) {
             handle.addEventListener('pointerdown', down => {
                 if (pending || down.button !== 0) return;
                 down.preventDefault();
+                // 포인터가 손잡이나 목록 밖으로 나가도 이동과 놓기 이벤트를 같은 손잡이에서 받습니다.
                 handle.setPointerCapture(down.pointerId);
                 let drag = null;
                 let slot = null;
@@ -423,6 +402,7 @@ export async function init(cities) {
                         if (Math.abs(dy) >= 1) item.animate([{transform: 'translateY(' + dy + 'px)'}, {transform: 'none'}], {duration: 160, easing: 'ease-out'});
                     });
                 };
+                // 가벼운 누름은 끌기로 처리하지 않습니다. 목록 가장자리까지 이동하면 스크롤해 화면 밖 장소도 대상으로 삼습니다.
                 const onMove = event => {
                     const dy = event.clientY - down.clientY;
                     if (!drag && Math.abs(dy) < 4) return;
@@ -460,6 +440,7 @@ export async function init(cities) {
                     moved = day.stops[from];
                     changeStops(day, stops);
                 };
+                // 취소는 서버에 새 순서를 보내지 않습니다. 놓기에서도 실제 순서가 달라졌을 때만 견적을 다시 요청합니다.
                 const onUp = () => finish(true);
                 const onCancel = () => finish(false);
                 handle.addEventListener('pointermove', onMove);

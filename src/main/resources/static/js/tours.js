@@ -25,7 +25,7 @@ export async function init(cities) {
     // 카드와 비교 목록에 표시할 관광지 이름을 ID로 찾습니다.
     const nameOf = id => sights.find(sight => sight.id === id)?.name ?? id;
     const selectedStops = [];
-    let shortlist = read('tourShortlist') ?? [];
+    let shortlist = (read('tourShortlist') ?? []).filter(tour => tour.id !== 'jeju-day');
     let nextPrice = 0;
     let latestSearch = 0;
 
@@ -131,6 +131,8 @@ export async function init(cities) {
             + '</div></div></article>';
     }
 
+    // 카탈로그는 날짜별 판매 여부 대신 확인한 공개가 또는 10인 기준 추정가를 보여 줍니다.
+    // date는 비교 화면으로 넘길 여행일이고, 6인과 20인 금액은 서버가 계산한 값을 그대로 표시합니다.
     function catalogCard(tour, date) {
         const {details, reference} = tour;
         const {estimate, discount} = reference;
@@ -165,6 +167,7 @@ export async function init(cities) {
         if (search.elements.platform.value) params.set('platform', search.elements.platform.value);
         status('투어를 검색하는 중입니다.');
         const result = await api('/tours/search?' + params);
+        // 사용자가 검색 조건을 다시 제출하면 늦게 도착한 이전 요청의 목록과 안내를 버립니다.
         if (token !== latestSearch) return;
         status(result.notices.join(' '));
         $('#tour-list').innerHTML = result.tours.length ? result.tours.map(tour => tourCard(tour, date)).join('')

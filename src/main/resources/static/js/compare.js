@@ -16,6 +16,7 @@ export async function init(cities) {
     const tour = await api('/tours/' + encodeURIComponent(id));
     $('#edit-comparison').hidden = false;
     const detail = tour.details;
+    // 카탈로그의 prices 날짜는 참고 요금의 기준일입니다. 비교 기본값은 여행 시작일 또는 오늘을 사용합니다.
     const fallback = {tourId: id, date: trip?.start ?? (tour.reference ? dateAfter(0) : detail.prices[0].from),
         party: trip?.party ?? {adults: tour.reference?.estimate ? 10 : 1, children: 0}};
     let request = saved?.tourId === id ? saved : fallback;
@@ -68,9 +69,11 @@ export async function init(cities) {
 
     // 투어 또는 자유여행 한쪽의 비용, 소요 시간, 방문지와 세부 비용을 카드로 표시합니다.
     function side(title, side, stops, variant, details = '') {
+        const unknown = side.cost.missing.length > 0 && Number(side.cost.totalKrw) === 0;
         return panel('<div class="side-header"><span class="eyebrow">' + e(title) + '</span>'
-            + '<span class="side-amount">' + won(side.cost.totalKrw) + '</span><p class="muted">'
-            + (side.cost.missing.length ? '확인된 항목의 부분 합계 · ' : '') + moneyDetails(side.cost) + '</p></div>'
+            + '<span class="side-amount">' + (unknown ? '미확인' : won(side.cost.totalKrw)) + '</span>'
+            + (unknown ? '' : '<p class="muted">' + (side.cost.missing.length ? '확인된 항목의 부분 합계, ' : '')
+                + moneyDetails(side.cost) + '</p>') + '</div>'
             + '<div class="side-facts"><span>이동 ' + minutes(side.travelMinutes) + '</span><span>일정 ' + minutes(side.scheduledMinutes)
             + '</span></div><p>' + e(side.convenience) + '</p><p class="muted">' + stops.map(stop => e(stop.name)).join(' → ') + '</p>' + details
             + '<ul class="cost-list">' + side.items.map(itemRow).join('') + '</ul>' + missing(side.cost), variant);

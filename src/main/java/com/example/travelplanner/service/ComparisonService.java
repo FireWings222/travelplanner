@@ -37,9 +37,9 @@ public class ComparisonService {
     /**
      * 투어와 자유여행 양쪽의 비용·시간을 계산하고 방문지나 미확인 요금 차이를 응답에 포함합니다.
      *
-     * 비용 비교 API에서 투어 ID, 날짜, 여행 인원과 자유여행 경로 변경값을 전달합니다. 투어가 속한 도시 중심을 숙소 기준으로 사용합니다.
+     * 비용 비교 API는 투어 ID, 날짜, 인원과 자유여행 경로 변경값을 전달합니다. 투어 집합과 종료 비용은 지역 대표 지점을 숙소 기준으로 사용합니다.
      *
-     * 자유여행은 구간 이동비와 입장료를 합하고, 투어는 날짜별 상품 가격에 집합·종료 이동비와 불포함 비용을 반영합니다.
+     * 자유여행은 구간 이동비와 입장료를 합합니다. 투어는 등록된 날짜별 요금, 공개 기준가 또는 인원별 추정가에 별도 비용을 더합니다.
      *
      * 필수 금액이 빠지면 차액을 확정하지 않습니다. 방문지가 서로 다르면 어느 쪽에만 있는지 안내하고 비용 추천을 보류합니다.
      */
@@ -52,6 +52,7 @@ public class ComparisonService {
         List<Attraction> independentStops = request.stops() == null
                 ? tourStops : catalog.stops(base, request.stops(), request.places());
         if (independentStops.isEmpty()) throw new IllegalArgumentException("자유여행 관광지를 한 곳 이상 선택해 주세요.");
+        // 사용자가 만든 일정과 카탈로그 코스는 첫 방문지에서 마지막 방문지까지 계산합니다. 그 외 기본 비교는 지역 대표 지점에서 왕복합니다.
         Journey local = request.stops() == null && reference == null
                 ? journeys.loop(base, independentStops, request.legs(), null, request.party())
                 : journeys.visits(independentStops, journeys.visitLegs(base, independentStops, request.legs()),
@@ -71,6 +72,7 @@ public class ComparisonService {
                 centerName, request);
         Integer returnMinutes = access(guided, "종료 장소 → 숙소", request.tourReturn(), detail.endPlace(),
                 centerName, request);
+        // 일부 입장료가 상품가에 포함된 코스는 해당 방문지만 투어 측 별도 비용에서 제외합니다.
         if (!detail.admissionIncluded()) {
             List<Attraction> extraAdmission = reference == null ? tourStops : tourStops.stream()
                     .filter(stop -> !reference.coveredAdmissionStops().contains(stop.id())).toList();
@@ -83,17 +85,19 @@ public class ComparisonService {
 
         Total tourCost = pricing.total(guided, request.party());
         Total soloCost = pricing.total(own, request.party());
+        // 집합·종료 시각이 있는 상품은 자정을 넘는 경우도 계산합니다. 카탈로그는 조사된 소요 시간만 표시합니다.
         Integer duration = reference == null
                 ? Integer.valueOf(Math.floorMod((int) Duration.between(detail.departure(), detail.arrival()).toMinutes(), 24 * 60))
                 : reference.durationMinutes();
         Integer accessMinutes = outboundMinutes != null && returnMinutes != null ? outboundMinutes + returnMinutes : null;
-        Integer tourTravel = tour.id().equals("jeju-day") && accessMinutes != null ? 120 + accessMinutes : null;
         Integer scheduledMinutes = duration == null ? null : duration + (accessMinutes == null ? 0 : accessMinutes);
         String itinerary = reference == null ? "정해진 집합 시간과 방문 순서" : "카탈로그에 등록된 방문 순서";
-        Side tourSide = new Side(List.copyOf(guided), tourCost, tourTravel, scheduledMinutes,
+        Side tourSide = new Side(List.copyOf(guided), tourCost, null, scheduledMinutes,
                 itinerary + (detail.guideIncluded() ? " · 가이드 포함" : ""));
+        Integer visitMinutes = PlanService.visitMinutes(independentStops);
+        Integer independentMinutes = local.minutes() == null || visitMinutes == null ? null : local.minutes() + visitMinutes;
         Side soloSide = new Side(List.copyOf(own), soloCost, local.minutes(),
-                local.minutes() + independentStops.stream().mapToInt(Attraction::visitMinutes).sum(),
+                independentMinutes,
                 "방문 순서와 체류 시간을 직접 조정");
         List<String> notices = new ArrayList<>();
         if (reference != null) {
@@ -130,7 +134,7 @@ public class ComparisonService {
     }
 
     /**
-     * 비용 비교에서 숙소와 투어 집합·종료 장소 사이의 이동비를 직접 입력값이나 경로 견적으로 계산합니다.
+     * 숙소와 투어 집합·종료 장소 사이의 비용은 직접 입력값이나 같은 기준 장소로 처리합니다.
      *
      * 집합·종료 장소의 이름이 도시 중심의 이름과 같으면 기본 비용과 이동 시간을 0으로 봅니다. 직접 입력한 금액이 있으면 그 금액을 우선합니다.
      *
@@ -142,7 +146,7 @@ public class ComparisonService {
             return null;
         }
         costs.add(item(name, override == null ? Pricing.free() : override,
-                override == null ? Source.SAMPLE : Source.MANUAL, request));
+                override == null ? Source.CATALOG : Source.MANUAL, request));
         return 0;
     }
 

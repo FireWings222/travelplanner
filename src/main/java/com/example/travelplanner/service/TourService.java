@@ -37,7 +37,8 @@ public class TourService {
      *
      * 일일투어 화면이 보낸 도시를 표준 ID로 바꿔 DB의 직접 등록 상품과 제공자 상품을 모읍니다.
      *
-     * 플랫폼 또는 날짜가 지정되면 그 조건에 맞는 상품만 남깁니다. 제공자 실패는 notices에 기록해 다른 상품의 조회를 계속합니다.
+     * 플랫폼 조건은 상품별로 적용합니다. 직접 등록 상품은 날짜별 요금표로 거르고, 카탈로그는 조사 기준가를 계속 표시합니다.
+     * 제공자 조회가 실패하면 notices에 기록하고 다른 상품은 그대로 반환합니다.
      */
     public SearchResult search(String destination, LocalDate date, Platform platform) {
         String city = catalog.destination(destination).id();
@@ -60,7 +61,7 @@ public class TourService {
     /**
      * 비용 비교나 상세 조회에 사용할 투어 ID를 직접 등록 상품과 제공자 상품에서 찾습니다.
      *
-     * UUID 형식의 ID는 등록 상품 저장소에서 찾습니다. 샘플처럼 UUID 형식이 아닌 ID는 도시별 검색 결과에서 찾습니다.
+     * UUID 형식의 ID는 등록 상품 저장소에서 찾고, 카탈로그 ID는 도시별 검색 결과에서 찾습니다.
      *
      * 비용 비교는 이 메서드의 상품으로 방문지와 해당 날짜의 가격을 판단합니다.
      */
@@ -117,9 +118,9 @@ public class TourService {
     }
 
     /**
-     * 여행일이 투어 가격 적용 기간에 포함되는지 확인해 해당 날짜의 요금을 반환합니다.
+     * 직접 등록 상품은 요청 날짜의 요금을 반환합니다. 가격 범위에는 시작일과 종료일이 모두 포함됩니다.
      *
-     * 가격 범위의 시작일과 종료일을 모두 포함해 비교합니다. 해당 날짜의 가격이 없으면 null을 반환해 검색 필터와 비교 화면이 판단할 수 있게 합니다.
+     * 해당 기간이 없으면 null을 반환합니다. 카탈로그는 운영 여부와 별개로 조사 기준가 또는 10인 기준 추정가를 반환합니다.
      */
     public static Fare fare(Tour tour, LocalDate date) {
         if (tour.reference() != null) return tour.details().prices().get(0).fare();
@@ -128,6 +129,7 @@ public class TourService {
                 .map(Price::fare).findFirst().orElse(null);
     }
 
+    /** 카탈로그 추정가는 성인과 아동을 합한 인원으로 계산합니다. 공개 단체 할인은 확인된 성인 요금에 적용합니다. */
     public static Fare fare(Tour tour, LocalDate date, Party party) {
         Fare base = fare(tour, date);
         TourReference reference = tour.reference();

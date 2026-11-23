@@ -39,11 +39,11 @@ public class OdsayRoutes {
     }
 
     /**
-     * SampleRoutes가 제공한 출발·도착 좌표로 길찾기를 요청하고 결과를 기존 선택지에 반영합니다.
+     * RouteLookup이 제공한 출발·도착 좌표로 길찾기를 요청하고 응답에 있는 대중교통 경로를 추가합니다.
      *
-     * SampleRoutes가 같은 두 지점에 대해 만든 교통수단 목록을 받습니다. 목록 첫 항목에서 출발·도착 좌표를 읽고 도시 내 경로를 한 번 요청합니다.
+     * 목록 첫 항목에서 출발·도착 좌표를 읽고 도시 내 경로를 한 번 요청합니다.
      *
-     * 서버 키가 없거나 조회 결과가 없으면 받은 샘플 선택지를 반환합니다. 이 단계는 요금·시간과 노선 코드만 연결합니다.
+     * 서버 키가 없거나 조회 결과가 없으면 기존 선택지만 유지합니다.
      */
     List<Segment> enrich(List<Segment> samples) {
         if (apiKey.isEmpty() || Thread.currentThread().isInterrupted()) return samples;
@@ -176,17 +176,23 @@ public class OdsayRoutes {
             int transfers = Math.max(0, busCount + subwayCount - 1);
             return new Segment(from, to, mode, BigDecimal.valueOf(distance, 3), minutes, transfers,
                     new Fare(BigDecimal.valueOf(payment), null, null), Source.ODSAY, checkedAt,
-                    info.path("mapObj").asText(null), boardings(path.path("subPath")));
+                    info.path("mapObj").asText(null), TransitBoardings.withWalkEndpoints(boardings(path.path("subPath")), from, to));
         }
         return null;
     }
 
-    /** 도보를 제외한 탑승 구간을 순서대로 읽습니다. lane에 여러 노선이 있으면 함께 표시합니다. */
+    /** 도보와 탑승 단계의 순서를 읽습니다. ODsay의 개별 단계에 지도 좌표를 붙이지 않고 loadLane 결과를 별도로 사용합니다. */
     private static List<Boarding> boardings(JsonNode subPaths) {
         List<Boarding> result = new ArrayList<>();
         for (JsonNode part : subPaths) {
             int type = part.path("trafficType").asInt(-1);
-            if (type != 1 && type != 2) continue;
+            Mode mode = switch (type) {
+                case 1 -> Mode.SUBWAY;
+                case 2 -> Mode.CITY_BUS;
+                case 3 -> Mode.WALK;
+                default -> null;
+            };
+            if (mode == null) continue;
             String field = type == 1 ? "name" : "busNo";
             List<String> names = new ArrayList<>();
             JsonNode lanes = part.path("lane");
@@ -195,7 +201,7 @@ public class OdsayRoutes {
                 if (!name.isBlank() && !names.contains(name)) names.add(name);
             }
             int minutes = part.path("sectionTime").asInt(-1);
-            result.add(new Boarding(type == 1 ? Mode.SUBWAY : Mode.CITY_BUS, List.copyOf(names),
+            result.add(new Boarding(mode, List.copyOf(names),
                     part.path("startName").asText(null), part.path("endName").asText(null),
                     minutes < 0 ? null : minutes));
         }

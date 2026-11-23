@@ -26,7 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:travelplanner-tests;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
         "ODSAY_API_KEY=",
-        "KAKAO_MOBILITY_REST_API_KEY="
+        "KAKAO_MOBILITY_REST_API_KEY=",
+        "KAKAO_MAP_REST_API_KEY="
 })
 @AutoConfigureMockMvc
 class TravelPlannerTest {
@@ -84,62 +85,70 @@ class TravelPlannerTest {
     @Test
     void multipliesAdultAndChildFaresByHeadcount() {
         var fare = fare(65000, 49000);
-        var cost = pricing.item("투어", fare, Source.SAMPLE, PARTY);
+        var cost = pricing.item("투어", fare, Source.MANUAL, PARTY);
         amount("179000", cost.totalKrw());
         amount("65000", pricing.total(List.of(cost), PARTY).adultPerPersonKrw());
         amount("49000", pricing.total(List.of(cost), PARTY).childPerPersonKrw());
     }
 
-    /** 구간 교통수단을 바꾸면 경로 가격과 투어 비교 결과가 갱신되는지 검증합니다. */
+    /** 직접 입력한 구간 요금만 경로와 투어 비교에 반영되는지 검증합니다. */
     @Test
     void changingALegRecalculatesTheRouteAndTourComparison() {
         var before = routes.compare(new RouteRequest(TRIP, Map.of()));
         var segment = before.selected().sections().get(0);
-        var after = routes.compare(new RouteRequest(TRIP, Map.of(segment.key(), new Leg(Mode.TAXI, null))));
+        var taxiFare = new Fare(null, null, new BigDecimal("23000"));
+        var after = routes.compare(new RouteRequest(TRIP, Map.of(segment.key(), new Leg(Mode.TAXI, taxiFare))));
         assertNotEquals(before.selected().cost().totalKrw(), after.selected().cost().totalKrw());
-        assertNotEquals(before.selected().minutes(), after.selected().minutes());
+        assertNull(after.selected().minutes());
 
-        var comparisonBefore = comparison.compare(request(DATE, Map.of()));
+        var tour = registerDatedTour();
+        var comparisonBefore = comparison.compare(request(tour.id(), DATE, Map.of()));
         var local = comparisonBefore.journey().sections().get(0);
-        var comparisonAfter = comparison.compare(request(DATE, Map.of(local.key(), new Leg(Mode.TAXI, null))));
+        var comparisonAfter = comparison.compare(request(tour.id(), DATE, Map.of(local.key(), new Leg(Mode.TAXI, taxiFare))));
         assertNotEquals(comparisonBefore.independent().cost().totalKrw(), comparisonAfter.independent().cost().totalKrw());
-        assertNotEquals(comparisonBefore.independent().travelMinutes(), comparisonAfter.independent().travelMinutes());
-        assertNotEquals(comparisonBefore.tourMinusIndependentKrw(), comparisonAfter.tourMinusIndependentKrw());
+        assertNull(comparisonAfter.independent().travelMinutes());
+        assertNull(comparisonAfter.tourMinusIndependentKrw());
     }
 
     /** 투어에 포함된 입장료가 투어 쪽에 중복 계산되지 않는지 검증합니다. */
     @Test
     void includedAdmissionIsOnlyChargedToIndependentVisitors() {
-        var result = comparison.compare(request(DATE, Map.of()));
+        var result = comparison.compare(request(registerDatedTour().id(), DATE, Map.of()));
         assertTrue(result.tour().details().admissionIncluded());
         assertTrue(result.guided().items().stream().noneMatch(item -> item.label().endsWith("입장료")));
         assertEquals(4, result.independent().items().stream().filter(item -> item.label().endsWith("입장료")).count());
     }
 
-    /** 제주행 공항 접근과 항공편 비용이 모두 포함되고 왕복 견적이 계산되는지 검증합니다. */
+    /** 제주행 공항 연결을 유지하고 조회하지 않은 항공편의 요금과 시간을 비워 두는지 검증합니다. */
     @Test
     void addsAllAirportLegsAndCalculatesRoundTrip() {
         var result = routes.compare(new RouteRequest(TRIP, null));
         assertEquals(3, result.selected().sections().size());
-        assertEquals(12, result.alternatives().size());
+        assertEquals(4, result.alternatives().size());
         assertEquals(List.of("gmp", "cju", "jeju"), result.selected().sections().stream()
                 .map(section -> section.chosen().to().id()).toList());
+        var flight = result.selected().sections().get(1).chosen();
+        assertEquals(Mode.FLIGHT, flight.mode());
+        assertNull(flight.fare());
+        assertNull(flight.minutes());
         var amounts = result.selected().sections().stream().map(leg -> leg.cost().totalKrw())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         amount(amounts.toPlainString(), result.selected().cost().totalKrw());
         amount(amounts.multiply(BigDecimal.valueOf(2)).toPlainString(), result.roundTripKrw());
     }
 
-    /** 서울과 부산 사이의 육상 교통수단이 원화로 비교되는지 검증합니다. */
+    /** API 키가 없는 육상 경로에 가상 열차나 버스 운임이 추가되지 않는지 검증합니다. */
     @Test
-    void comparesMainlandRoutesWithKoreanWonFares() {
+    void keepsUnconfirmedRoadOptionsWhenProviderKeysAreAbsent() {
         var trip = new Trip("서울", "부산", DATE, DATE, PARTY, null, null, TripType.FAMILY);
         var result = routes.compare(new RouteRequest(trip, null));
         assertEquals(1, result.selected().sections().size());
         var options = result.selected().sections().get(0).options();
-        assertEquals(List.of(Mode.KTX, Mode.TRAIN, Mode.INTERCITY_BUS, Mode.EXPRESS_BUS, Mode.CAR),
-                options.stream().map(Segment::mode).toList());
-        assertTrue(result.selected().cost().totalKrw().signum() > 0);
+        assertEquals(List.of(Mode.CAR, Mode.TAXI), options.stream().map(Segment::mode).toList());
+        assertTrue(options.stream().allMatch(segment -> segment.fare() == null && segment.minutes() == null
+                && segment.kilometers() == null && segment.transfers() == null));
+        assertFalse(result.selected().cost().isComplete());
+        assertTrue(result.recommendations().isEmpty());
     }
 
     /** 택시 공동 비용이 한 번 합산되고 여행 인원에 균등 배분되는지 검증합니다. */
@@ -174,26 +183,26 @@ class TravelPlannerTest {
     /** 같은 방문지 기준의 비용 비교와 날짜별 투어 요금 적용을 검증합니다. */
     @Test
     void comparesMatchingStopsAndAppliesDatedTourPricing() {
-        var result = comparison.compare(request(DATE, Map.of()));
+        var tour = registerDatedTour();
+        var result = comparison.compare(request(tour.id(), DATE, Map.of()));
         assertEquals(result.tourStops(), result.independentStops());
         amount("179000", result.guided().cost().totalKrw());
-        amount(result.guided().cost().totalKrw().subtract(result.independent().cost().totalKrw()).toPlainString(),
-                result.tourMinusIndependentKrw());
-        var april = comparison.compare(request(LocalDate.of(2027, 4, 1), Map.of()));
+        assertNull(result.tourMinusIndependentKrw());
+        var april = comparison.compare(request(tour.id(), LocalDate.of(2027, 4, 1), Map.of()));
         amount("196000", april.guided().cost().totalKrw());
-        var unmatched = comparison.compare(new CompareRequest("jeju-day", DATE, PARTY,
+        var unmatched = comparison.compare(new CompareRequest(tour.id(), DATE, PARTY,
                 List.of("dongmun"), Map.of(), null, null, null));
         assertTrue(unmatched.notices().stream().anyMatch(notice -> notice.startsWith("투어만 방문")));
         assertTrue(unmatched.recommendation().contains("보류"));
-        var unavailable = comparison.compare(request(LocalDate.of(2040, 1, 1), Map.of()));
-        assertNull(unavailable.tourMinusIndependentKrw());
+        var unavailable = comparison.compare(request(tour.id(), LocalDate.of(2040, 1, 1), Map.of()));
+        assertFalse(unavailable.guided().cost().isComplete());
     }
 
     /** PlanService의 일정 등록, 조회, 수정, 목록, 삭제 흐름을 검증합니다. */
     @Test
     void savesEditsListsAndDeletesTheItinerary() {
         var plan = plans.generate(TRIP).plan();
-        assertEquals(List.of("doldam"), plan.days().get(1).stops());
+        assertTrue(plan.days().stream().allMatch(day -> day.stops().isEmpty()));
         var saved = plans.save(null, plan);
         assertEquals(plan, plans.get(saved.id()).plan());
         assertTrue(plans.list().stream().anyMatch(item -> item.id().equals(saved.id())));
@@ -244,7 +253,7 @@ class TravelPlannerTest {
             assertEquals("seongsan", journey.sections().get(0).chosen().to().id());
             assertEquals(Mode.TAXI, journey.sections().get(0).chosen().mode());
 
-            var result = comparison.compare(new CompareRequest("jeju-day", DATE, PARTY,
+            var result = comparison.compare(new CompareRequest("domestic-jeju-a", DATE, PARTY,
                     List.of(place.id()), Map.of(), null, null, null, List.of(place)));
             assertEquals(place.name(), result.independentStops().get(0).name());
         } finally {
@@ -257,8 +266,10 @@ class TravelPlannerTest {
     void rejectsInvalidInputsAndRendersPages() throws Exception {
         for (String path : List.of("/", "/search", "/itinerary", "/tours", "/compare")) {
             http.perform(get(path)).andExpect(status().isOk())
-                    .andExpect(content().string(org.hamcrest.Matchers.containsString("TravelPlanner")));
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString("TravelPlanner")))
+                    .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("샘플"))));
         }
+        http.perform(get("/api/tours/jeju-day")).andExpect(status().isNotFound());
         http.perform(post("/api/routes/compare").contentType(MediaType.APPLICATION_JSON).content("""
                 {"trip":{"origin":"서울","destination":"jeju","start":"2027-03-10","end":"2027-03-12",
                  "party":{"adults":0,"children":-1},"type":"FAMILY"}}
@@ -310,19 +321,20 @@ class TravelPlannerTest {
         assertEquals("청주국제공항", sections.get(1).chosen().from().name());
     }
 
-    /** 외부 투어 제공자가 실패해도 샘플 상품 검색이 유지되는지 검증합니다. */
+    /** 외부 투어 제공자가 실패해도 카탈로그 투어 검색이 유지되는지 검증합니다. */
     @Test
-    void keepsSampleToursWhenAPartnerProviderFails() {
+    void keepsCatalogToursWhenAPartnerProviderFails() throws Exception {
         TravelProviders.Tours failing = mock(TravelProviders.Tours.class);
         when(failing.platform()).thenReturn(Platform.NOL);
         when(failing.search("jeju")).thenThrow(new TravelProviders.Unavailable("timeout", null));
         var repository = mock(com.example.travelplanner.repository.TourRepository.class);
         when(repository.findByDestinationOrderByCheckedAtDesc("jeju")).thenReturn(List.of());
         var fallback = new TourService(catalog, repository,
-                List.of(failing, new com.example.travelplanner.integration.SampleTours()), null);
+                List.of(failing, new com.example.travelplanner.integration.DomesticTours(new ObjectMapper())), null);
         var result = fallback.search("jeju", DATE, null);
         assertEquals(1, result.notices().size());
-        assertEquals("jeju-day", result.tours().get(0).id());
+        assertEquals(List.of("domestic-jeju-a", "domestic-jeju-b", "domestic-jeju-c"),
+                result.tours().stream().map(Tour::id).toList());
     }
 
     /** 직접 입력 투어를 등록하고 비교 화면에서 미확인 비용을 표시하는지 검증합니다. */
@@ -340,13 +352,21 @@ class TravelPlannerTest {
                 .filter(tour -> tour.details().name().equals("직접 등록")).findFirst().orElseThrow();
         assertEquals(Source.MANUAL, tours.get(saved.id()).source());
         var result = comparison.compare(new CompareRequest(saved.id(), DATE, PARTY, null, null, null, null, null));
-        assertEquals(List.of("숙소 → 집합 장소 가격"), result.guided().cost().missing());
+        assertEquals(List.of("숙소 → 집합 장소 가격", "성산일출봉 입장료 가격"), result.guided().cost().missing());
         assertTrue(result.guided().items().stream().anyMatch(item -> item.label().equals("성산일출봉 입장료")));
     }
 
-    /** 비용 비교 테스트에서 공통으로 쓰는 샘플 투어, 여행 날짜, 교통 변경 조건을 구성합니다. */
-    private static CompareRequest request(LocalDate date, Map<String, Leg> legs) {
-        return new CompareRequest("jeju-day", date, PARTY, null, legs, null, null, Pricing.free());
+    /** 날짜별 요금이 필요한 비용 비교 테스트의 상품을 인메모리 DB에 등록합니다. */
+    private Tour registerDatedTour() {
+        return tours.register(new TourInput("jeju", Platform.OTHER, "날짜별 요금 검증", null, "https://example.com/tour",
+                java.time.LocalTime.of(9, 0), java.time.LocalTime.of(17, 0), "제주시 중심", "제주시 중심", null, Mode.CITY_BUS,
+                true, true, false, true, List.of("dongmun", "doldam", "gimnyeong", "seongsan"),
+                List.of(new Price(DATE, DATE.plusDays(3), fare(65000, 49000)),
+                        new Price(LocalDate.of(2027, 4, 1), LocalDate.of(2027, 4, 30), fare(72000, 52000))), Pricing.free(), null));
+    }
+
+    private static CompareRequest request(String id, LocalDate date, Map<String, Leg> legs) {
+        return new CompareRequest(id, date, PARTY, null, legs, null, null, Pricing.free());
     }
 
     /** 요금 테스트용 성인·아동 금액을 원화 Fare 객체로 만듭니다. */

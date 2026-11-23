@@ -32,11 +32,6 @@ public class CatalogService {
                 .toList();
     }
 
-    public List<String> suggestedStops(String destination) {
-        return catalog.suggestedAttractions().stream().filter(sight -> sight.destinationId().equals(destination))
-                .map(Attraction::id).toList();
-    }
-
     /**
      * 도시 ID나 이름을 카탈로그의 한 도시로 확정합니다. 후보가 여러 개면 입력 오류를 반환합니다.
      *
@@ -85,6 +80,7 @@ public class CatalogService {
                 trip.originPlace(), trip.destinationPlace());
     }
 
+    /** 카카오 검색 결과를 선택하면 입력란의 이름 대신 선택한 장소의 주소로 시·도를 확정합니다. */
     private Destination region(String city, SearchedPlace place) {
         if (place == null) return destination(city);
         if (!validCoordinates(place) || !place.id().matches(SearchedPlace.ID_PATTERN)) {
@@ -94,6 +90,7 @@ public class CatalogService {
                 .orElseThrow(() -> new IllegalArgumentException("검색한 장소의 국내 주소를 확인할 수 없습니다."));
     }
 
+    /** 구체 장소를 선택한 경로는 그 좌표를 쓰고, 시·도만 선택한 경로는 지역 대표 지점을 사용합니다. */
     public Place point(String region, SearchedPlace selected) {
         return selected == null ? center(region)
                 : new Place(selected.id(), selected.name(), selected.latitude(), selected.longitude());
@@ -121,7 +118,7 @@ public class CatalogService {
                         || !matchesAddress(city, place.address()) || !validCoordinates(place)) {
                     throw new IllegalArgumentException("검색한 장소의 주소와 좌표가 여행 일정에 맞는지 확인해 주세요.");
                 }
-                Attraction stop = new Attraction(place.id(), city.id(), place.name(), place.address(), 0, null,
+                Attraction stop = new Attraction(place.id(), city.id(), place.name(), place.address(), null, null,
                         place.latitude(), place.longitude());
                 if (selected.putIfAbsent(place.id(), stop) != null) {
                     throw new IllegalArgumentException("같은 장소가 두 번 등록되었습니다.");

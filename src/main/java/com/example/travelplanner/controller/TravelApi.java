@@ -3,6 +3,7 @@ package com.example.travelplanner.controller;
 import com.example.travelplanner.dto.Travel.*;
 import com.example.travelplanner.integration.OdsayRoutes;
 import com.example.travelplanner.integration.KakaoPlaceSearch;
+import com.example.travelplanner.integration.KakaoMapRoutes;
 import com.example.travelplanner.service.*;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,10 +22,12 @@ public class TravelApi {
     private final ComparisonService comparison;
     private final OdsayRoutes odsay;
     private final KakaoPlaceSearch places;
+    private final KakaoMapRoutes mapRoutes;
 
     /** Spring이 전달한 서비스들을 REST 요청 처리에 사용할 수 있도록 연결합니다. */
     public TravelApi(CatalogService catalog, JourneyService journeys, PlanService plans,
-                     TourService tours, ComparisonService comparison, OdsayRoutes odsay, KakaoPlaceSearch places) {
+                     TourService tours, ComparisonService comparison, OdsayRoutes odsay, KakaoPlaceSearch places,
+                     KakaoMapRoutes mapRoutes) {
         this.catalog = catalog;
         this.journeys = journeys;
         this.plans = plans;
@@ -32,6 +35,7 @@ public class TravelApi {
         this.comparison = comparison;
         this.odsay = odsay;
         this.places = places;
+        this.mapRoutes = mapRoutes;
     }
 
     /** 홈 검색 폼의 도시 목록과 검색어를 CatalogService에 연결합니다. */
@@ -83,6 +87,13 @@ public class TravelApi {
     @GetMapping("/routes/geometry")
     public List<List<OdsayRoutes.Point>> geometry(@RequestParam String mapObject) {
         return odsay.geometry(mapObject);
+    }
+
+    /** 대중교통 응답에 누락된 도보 연결을 지도가 표시할 때 조회합니다. */
+    @GetMapping("/routes/walking-geometry")
+    public List<List<RoutePoint>> walkingGeometry(@RequestParam double fromLat, @RequestParam double fromLng,
+                                                  @RequestParam double toLat, @RequestParam double toLng) {
+        return mapRoutes.walkingGeometry(new RoutePoint(fromLat, fromLng), new RoutePoint(toLat, toLng));
     }
 
     /**

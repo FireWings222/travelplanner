@@ -25,7 +25,7 @@ public class JourneyService {
     }
 
     public record Section(String key, List<Segment> options, Segment chosen, Item cost) {}
-    public record Journey(List<Section> sections, Total cost, BigDecimal kilometers, int minutes, int transfers) {}
+    public record Journey(List<Section> sections, Total cost, BigDecimal kilometers, Integer minutes, Integer transfers) {}
     public record RouteOption(String id, List<Mode> modes, Journey journey, BigDecimal roundTripKrw) {}
     public record RouteResults(Trip trip, Journey selected, BigDecimal roundTripKrw, List<RouteOption> alternatives,
                                Map<String, Recommendations.RoutePick> recommendations) {}
@@ -44,6 +44,7 @@ public class JourneyService {
         List<List<Segment>> options = routes.options(trip.origin(), trip.destination(), from, to);
         Journey selected = resolve(options, request.legs(), trip.preferredMode(), trip.party());
         List<RouteOption> alternatives = new ArrayList<>();
+        // 화면은 첫 번째 후보를 현재 선택으로 사용합니다. 동일한 교통수단 조합은 대안 목록에 다시 넣지 않습니다.
         alternatives.add(option("selected", selected));
         List<Map<String, Leg>> combinations = List.of(Map.of());
         for (Section section : selected.sections()) {
@@ -123,7 +124,7 @@ public class JourneyService {
      *
      * options의 바깥 목록은 이동 순서이고 안쪽 목록은 해당 구간의 교통수단 후보입니다. overrides의 키는 출발지ID~도착지ID입니다.
      *
-     * 직접 선택한 교통수단, 여행 전체의 선호 교통수단, 첫 번째 후보 순으로 선택합니다. 명시적으로 지정한 구간이나 수단이 후보에 없으면 API의 입력 오류로 처리합니다.
+     * 조회 가능한 교통수단이 바뀌면 첫 후보를 사용합니다. 이전 수단에 직접 입력한 요금은 새 수단에 적용하지 않습니다.
      *
      * 직접 요금을 입력해도 기존 거리·시간·노선 코드는 이어받습니다. 반환값에는 각 구간의 선택 결과와 일행 전체 합계가 함께 들어갑니다.
      */
@@ -139,17 +140,10 @@ public class JourneyService {
             Mode requestedMode = choice == null ? preferred : choice.mode();
             Segment chosen = legs.stream().filter(leg -> leg.mode() == requestedMode)
                     .findFirst().orElse(first);
-            // 공급자 경로가 달라져 저장한 혼합 경로가 사라지면 현재 첫 후보로 계산합니다.
-            if (choice != null && choice.mode() == Mode.BUS_SUBWAY && chosen.mode() != choice.mode()) choice = null;
-            if (choice != null) {
-                if (chosen.mode() != choice.mode()) {
-                    throw new IllegalArgumentException("선택할 수 없는 교통수단입니다: " + key);
-                }
-                if (choice.override() != null) {
-                    chosen = new Segment(chosen.from(), chosen.to(), chosen.mode(), chosen.kilometers(),
-                            chosen.minutes(), chosen.transfers(), choice.override(), Source.MANUAL, Instant.now(),
-                            chosen.mapObject(), chosen.boardings());
-                }
+            if (choice != null && chosen.mode() == choice.mode() && choice.override() != null) {
+                chosen = new Segment(chosen.from(), chosen.to(), chosen.mode(), chosen.kilometers(),
+                        chosen.minutes(), chosen.transfers(), choice.override(), Source.MANUAL, Instant.now(),
+                        chosen.mapObject(), chosen.boardings(), chosen.geometry());
             }
             Item cost = pricing.item(chosen.from().name() + " → " + chosen.to().name(),
                     chosen.fare(), chosen.source(), party);
@@ -158,9 +152,15 @@ public class JourneyService {
         if (!sections.stream().map(Section::key).toList().containsAll(choices.keySet())) {
             throw new IllegalArgumentException("현재 경로에 없는 이동 구간입니다.");
         }
+        List<Segment> chosen = sections.stream().map(Section::chosen).toList();
+        // 일부 구간이 미확인이면 확인된 값만 더한 수치를 전체 거리나 전체 시간처럼 표시하지 않습니다.
+        var kilometers = chosen.stream().anyMatch(s -> s.kilometers() == null) ? null
+                : chosen.stream().map(Segment::kilometers).reduce(BigDecimal.ZERO, BigDecimal::add);
+        Integer minutes = chosen.stream().anyMatch(s -> s.minutes() == null) ? null
+                : chosen.stream().mapToInt(Segment::minutes).sum();
+        Integer transfers = chosen.stream().anyMatch(s -> s.transfers() == null) ? null
+                : chosen.stream().mapToInt(Segment::transfers).sum();
         return new Journey(List.copyOf(sections), pricing.total(sections.stream().map(Section::cost).toList(), party),
-                sections.stream().map(s -> s.chosen().kilometers()).reduce(BigDecimal.ZERO, BigDecimal::add),
-                sections.stream().mapToInt(s -> s.chosen().minutes()).sum(),
-                sections.stream().mapToInt(s -> s.chosen().transfers()).sum());
+                kilometers, minutes, transfers);
     }
 }

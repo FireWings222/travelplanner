@@ -9,13 +9,15 @@
       <div class="sheethandle" aria-hidden="true"></div>
       <div class="listhead">
         <h1 id="plan-title">현지 일정</h1>
-        <p>장소 왼쪽 손잡이를 끌어서 순서를 바꾸세요. 도착 시각은 09:00 출발로 가정한 값입니다.</p>
+        <p>장소 왼쪽 손잡이를 끌어서 순서를 바꾸세요.</p>
       </div>
       <div id="status" class="status" role="status" aria-live="polite"></div>
+      <!-- plan.js가 날짜 버튼과 선택한 날짜의 타임라인을 그립니다. 이동 구간은 서버 견적의 방문 순서를 따릅니다. -->
       <div id="plan-days" class="days" role="group" aria-label="날짜"></div>
       <div id="plan-day"></div>
       <div class="list-foot">
         <p id="plan-note" class="fine"></p>
+        <p id="plan-geometry-note" class="fine" role="status" hidden></p>
         <a class="textbtn" href="/search">경로 비교로 돌아가기</a>
         <button id="save-plan" class="primary" type="button" hidden>일정 저장</button>
       </div>

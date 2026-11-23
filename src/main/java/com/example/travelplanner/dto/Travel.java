@@ -23,11 +23,11 @@ public final class Travel {
 
     public enum TripType { SOLO, COUPLE, FAMILY, FRIENDS, OTHER }
     public enum Platform { KLOOK, MYREALTRIP, NOL, KKDAY, OTHER }
-    public enum Source { SAMPLE, MANUAL, PROVIDER, ODSAY, KAKAO_MOBILITY, KAKAO_MAP, PUBLISHED, ESTIMATED }
+    public enum Source { UNCONFIRMED, CATALOG, MANUAL, PROVIDER, ODSAY, KAKAO_MOBILITY, KAKAO_MAP, KAKAO_ROUTING, PUBLISHED, ESTIMATED }
 
     public record Destination(String id, String name, String keywords) {}
     public record Attraction(String id, String destinationId, String name, String description,
-                             int visitMinutes, Fare admission, double latitude, double longitude) {}
+                             Integer visitMinutes, Fare admission, double latitude, double longitude) {}
     public record Place(String id, String name, double latitude, double longitude) {}
 
     public record Party(@Min(1) @Max(30) int adults, @Min(0) @Max(30) int children) {
@@ -62,16 +62,40 @@ public final class Travel {
     }
 
     public record Price(@NotNull LocalDate from, @NotNull LocalDate to, @Valid @NotNull Fare fare) {}
-    /** ODsay의 승차 순서를 화면에 보여줄 노선과 승하차 지점입니다. */
-    public record Boarding(Mode mode, List<String> lines, String start, String end, Integer minutes) {}
+    /** 대중교통 여정의 도보 또는 탑승 단계입니다. path는 해당 단계에 속한 좌표만 담습니다. */
+    public record Boarding(Mode mode, List<String> lines, String start, String end, Integer minutes,
+                           Integer meters, List<RoutePoint> path, RoutePoint walkFrom, RoutePoint walkTo) {
+        public Boarding(Mode mode, List<String> lines, String start, String end, Integer minutes,
+                        Integer meters, List<RoutePoint> path) {
+            this(mode, lines, start, end, minutes, meters, path, null, null);
+        }
 
-    public record Segment(Place from, Place to, Mode mode, BigDecimal kilometers, int minutes,
-                          int transfers, Fare fare, Source source, Instant checkedAt, String mapObject,
-                          List<Boarding> boardings) {
-        /** 노선 상세가 없는 샘플 및 도로 이동 구간을 구성합니다. */
-        public Segment(Place from, Place to, Mode mode, BigDecimal kilometers, int minutes,
-                       int transfers, Fare fare, Source source, Instant checkedAt) {
-            this(from, to, mode, kilometers, minutes, transfers, fare, source, checkedAt, null, List.of());
+        public Boarding(Mode mode, List<String> lines, String start, String end, Integer minutes) {
+            this(mode, lines, start, end, minutes, null, List.of());
+        }
+    }
+
+    /** API 공급자에서 받은 경로 좌표를 지도에서 쓰는 위도, 경도 순서로 표현합니다. */
+    public record RoutePoint(double latitude, double longitude) {
+        public boolean valid() {
+            return Double.isFinite(latitude) && Double.isFinite(longitude)
+                    && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
+        }
+    }
+
+    /** geometry는 독립된 선들의 목록입니다. ODsay는 mapObject를 이용해 별도로 좌표를 읽습니다. */
+    public record Segment(Place from, Place to, Mode mode, BigDecimal kilometers, Integer minutes,
+                          Integer transfers, Fare fare, Source source, Instant checkedAt, String mapObject,
+                          List<Boarding> boardings, List<List<RoutePoint>> geometry) {
+        public Segment(Place from, Place to, Mode mode, BigDecimal kilometers, Integer minutes,
+                       Integer transfers, Fare fare, Source source, Instant checkedAt, String mapObject,
+                       List<Boarding> boardings) {
+            this(from, to, mode, kilometers, minutes, transfers, fare, source, checkedAt, mapObject, boardings, List.of());
+        }
+        /** 상세 노선이 없는 구간을 구성합니다. 확인하지 못한 거리, 시간, 환승은 null로 둡니다. */
+        public Segment(Place from, Place to, Mode mode, BigDecimal kilometers, Integer minutes,
+                       Integer transfers, Fare fare, Source source, Instant checkedAt) {
+            this(from, to, mode, kilometers, minutes, transfers, fare, source, checkedAt, null, List.of(), List.of());
         }
     }
 
@@ -116,6 +140,7 @@ public final class Travel {
                             @Valid Fare requiredExtras,
                             @Valid Fare excludedTransport) {}
 
+    /** 차량, 기사 등 일행 공통 비용과 인원수에 따라 달라지는 비용으로 1인 예상가를 계산합니다. */
     public record GroupEstimate(int fixedKrw, int perPersonKrw) {
         public static final int MIN_PEOPLE = 6;
         public static final int MAX_PEOPLE = 20;
@@ -129,6 +154,7 @@ public final class Travel {
         @JsonProperty(value = "maximumPartyPrice", access = JsonProperty.Access.READ_ONLY)
         public BigDecimal maximumPartyPrice() { return perPerson(MAX_PEOPLE); }
 
+        /** 일행 전체 비용을 인원으로 나누고, 1,000원 단위로 올림한 뒤 30,000~120,000원 범위를 적용합니다. */
         public BigDecimal perPerson(int people) {
             if (!supports(people)) throw new IllegalArgumentException("예상 투어는 6~20인 기준입니다.");
             long unit = people * 1_000L;
@@ -140,6 +166,7 @@ public final class Travel {
 
     public record GroupDiscount(int minimumPeople, int adultKrw) {}
 
+    /** 카탈로그 투어의 출처와 요금 조건입니다. 포함 입장료는 방문지 ID로 기록해 비용 비교에서 중복 합산을 막습니다. */
     public record TourReference(String sourceUrl, String priceUrl, String notes, boolean fromPrice,
                                 Integer durationMinutes, GroupEstimate estimate, GroupDiscount discount,
                                 List<String> coveredAdmissionStops) {}

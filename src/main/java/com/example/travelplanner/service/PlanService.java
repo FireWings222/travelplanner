@@ -26,7 +26,7 @@ public class PlanService {
     private final ObjectMapper json;
 
     public record DayQuote(LocalDate date, List<Attraction> stops, Journey journey,
-                           List<Item> admissions, Total total, int visitMinutes) {}
+                           List<Item> admissions, Total total, Integer visitMinutes) {}
     public record PlanQuote(Plan plan, List<DayQuote> days, Total total) {}
     public record StoredPlan(UUID id, Plan plan, Instant updatedAt) {}
     public record PlanSummary(UUID id, Trip trip, Instant updatedAt) {}
@@ -42,29 +42,18 @@ public class PlanService {
     }
 
     /**
-     * 여행 날짜별로 목적지 관광지를 나누어 기본 일정을 만들고 견적을 계산합니다.
-     *
-     * TravelApi의 일정 생성 API가 홈에서 입력한 여행 조건을 넘깁니다. 도시 ID와 기간을 확인한 뒤 관광지를 날짜별로 나누고 quote로 견적을 계산합니다.
-     *
-     * 관광지가 배정되지 않는 날도 날짜 목록에 남습니다. 이 시점의 일정은 화면 편집에 사용되며 저장은 save에서 처리합니다.
+     * 여행 기간으로 빈 일정을 만들고, 홈에서 사용자가 선택한 세부 목적지가 있으면 첫날의 방문지로 넣습니다.
      */
     public PlanQuote generate(Trip rawTrip) {
         Trip trip = catalog.validateTrip(rawTrip);
-        List<String> sights = catalog.suggestedStops(trip.destination());
         List<LocalDate> dates = dates(trip);
         List<Day> days = new ArrayList<>();
-        int perDay = Math.max(1, (sights.size() + dates.size() - 1) / dates.size());
         for (int i = 0; i < dates.size(); i++) {
-            int from = Math.min(sights.size(), i * perDay);
-            int to = Math.min(sights.size(), from + perDay);
-            List<String> stops = sights.subList(from, to);
             if (i == 0 && trip.destinationPlace() != null) {
-                List<String> firstDayStops = new ArrayList<>();
-                firstDayStops.add(trip.destinationPlace().id());
-                firstDayStops.addAll(stops);
-                days.add(new Day(dates.get(i), firstDayStops, Map.of(), List.of(trip.destinationPlace())));
+                var place = trip.destinationPlace();
+                days.add(new Day(dates.get(i), List.of(place.id()), Map.of(), List.of(place)));
             } else {
-                days.add(new Day(dates.get(i), stops, Map.of()));
+                days.add(new Day(dates.get(i), List.of(), Map.of()));
             }
         }
         return quote(new Plan(trip, days));
@@ -96,7 +85,7 @@ public class PlanService {
             costs.addAll(journey.sections().stream().map(JourneyService.Section::cost).toList());
             all.addAll(costs);
             days.add(new DayQuote(day.date(), stops, journey, admissions, pricing.total(costs, trip.party()),
-                    stops.stream().mapToInt(Attraction::visitMinutes).sum()));
+                    visitMinutes(stops)));
         }
         return new PlanQuote(new Plan(trip, List.copyOf(normalizedDays)), List.copyOf(days), pricing.total(all, trip.party()));
     }
@@ -108,7 +97,13 @@ public class PlanService {
      */
     public List<Item> admissions(List<Attraction> stops, Party party) {
         return stops.stream().map(stop -> pricing.item(stop.name() + " 입장료", stop.admission(),
-                stop.id().startsWith("kakao-") ? Source.KAKAO_MAP : Source.SAMPLE, party)).toList();
+                stop.id().startsWith("kakao-") ? Source.KAKAO_MAP : Source.CATALOG, party)).toList();
+    }
+
+    /** 체류 시간을 모르는 방문지가 있으면 일정 전체의 체류 시간도 미확인입니다. */
+    static Integer visitMinutes(List<Attraction> stops) {
+        if (stops.stream().anyMatch(stop -> stop.visitMinutes() == null)) return null;
+        return stops.stream().mapToInt(Attraction::visitMinutes).sum();
     }
 
     /**
