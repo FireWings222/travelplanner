@@ -17,6 +17,7 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 작성 �
 | 0005 | [AI가 만든 것처럼 보이는 디자인을 피함](decisions/0005-avoid-generated-look.md) | 결정 | 2026-11-23 |
 | 0006 | [디자인 참고 서비스와 트렌드 기준](decisions/0006-design-references.md) | 결정 | 2026-11-23 |
 | 0007 | [UI 시안 선택](decisions/0007-draft-selection.md) | 제안 | |
+| 0008 | [지도는 카카오맵으로 구현](decisions/0008-kakao-map.md) | 결정 | 2026-11-23 |
 
 ## 시안 목록
 
