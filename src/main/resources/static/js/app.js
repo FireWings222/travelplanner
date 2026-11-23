@@ -24,6 +24,11 @@ function tripPlaceField(field, previous) {
         results.hidden = true;
     }
     input.addEventListener('input', () => set(null));
+    input.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229 || event.defaultPrevented) return;
+        event.preventDefault();
+        if (!event.repeat) find.click();
+    });
     find.addEventListener('click', async () => {
         const term = input.value.trim();
         if (!term) {
