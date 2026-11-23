@@ -19,6 +19,7 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 화면�
 | 0007 | [UI 시안 선택(시안 A, 원본 초록)](decisions/0007-draft-selection.md) | 결정 | 2026-11-23 |
 | 0008 | [지도는 카카오맵으로 구현](decisions/0008-kakao-map.md) | 결정 | 2026-11-23 |
 | 0009 | [디자인 규칙을 DESIGN.md로 정리](decisions/0009-design-md.md) | 결정 | 2026-11-23 |
+| 0010 | [새 디자인은 화면 단위로 옮김](decisions/0010-css-migration.md) | 결정 | 2026-11-23 |
 
 ## 시안 목록
 
@@ -34,13 +35,26 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 화면�
   3. 브라우저에서 `http://localhost:8080/drafts/kakao-preview.html`을 연다.
 - 두 파일에는 구현할 때 참고할 코드가 들어 있다: 금액 숫자 전환, 끌어서 옮기기(놓일 자리 표시, FLIP 이동), 카카오맵 `Polyline`과 `CustomOverlay`로 그린 경로 선, 이름표, 날짜 핀. 화면 문구는 시안용 반말이라 구현할 때는 DESIGN.md의 문구 규칙("~하세요", "~합니다")으로 바꾼다.
 
+## 화면별 적용 상태
+
+새 디자인으로 옮기는 방법은 DESIGN.md의 "새 디자인으로 옮기는 방법"에 있다.
+
+| 화면 | 파일 | 상태 |
+|---|---|---|
+| 경로 비교 | `search.html`, `routes.js` | 적용(2026-11-23) |
+| 여행 일정 | `itinerary.html`, `plan.js` | 남음 |
+| 공통 머리글 | `layout.html` | 남음 |
+| 홈 | `index.html`, `app.js` | 남음 |
+| 일일투어 | `tours.html`, `tours.js` | 남음(시안 먼저) |
+| 비용 비교 | `compare.html`, `compare.js` | 남음(시안 먼저) |
+
 ## 다음 할 일
 
 | 순서 | 할 일 | 참고 |
 |---|---|---|
-| 1 | 경로 비교 화면을 DESIGN.md대로 구현(`search.html`, `routes.js`, `common.js`의 구간 카드, `site.css`) | 시안 A 이동 경로 화면, 진단 1~4번 |
-| 2 | 여행 일정 화면 구현(`itinerary.html`, `plan.js`, `route-map.js`) | 시안 A 현지 일정 화면, 진단 5번 |
-| 3 | 공통 머리글과 단계 탭, 여행 견적 카드(`layout.html`, `common.js`) | 진단 1, 2번 |
+| 1 | ~~경로 비교 화면을 DESIGN.md대로 구현~~ 완료(2026-11-23). 공통 조각 `estimateCard`, `animateValues`, `modeIcon`(`common.js`)과 `createMap`, `drawJourney`(`route-map.js`)를 만듦 | 시안 A 이동 경로 화면, 진단 1~4번 |
+| 2 | 여행 일정 화면 구현(`itinerary.html`, `plan.js`, `route-map.js`). 경로 비교 화면과 같은 `split` 배치와 견적 카드를 쓰고, 일정 합계가 바뀌면 경로 비교 화면의 견적에도 반영되는지 확인 | 시안 A 현지 일정 화면, 진단 5번 |
+| 3 | 공통 머리글과 단계 탭, 여행 조건 묶음(`layout.html`). 머리글을 옮긴 뒤 다크 테마 적용(0010) | 진단 1, 2번 |
 | 4 | 구현하면서 DESIGN.md와 실제 코드가 다른 곳을 고치고, 결정 0007, 0008, 0009의 후속 확인 항목 처리 | 각 결정 기록 |
 | 5 | 일일투어, 비용 비교 화면 시안 만들기 | 0007 영향 |
 

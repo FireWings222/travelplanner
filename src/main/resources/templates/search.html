@@ -1,19 +1,36 @@
 <!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('경로 비교')}"></head>
-<body data-page="routes">
+<body data-page="routes" class="redesign map-screen">
 <header th:replace="~{layout :: header('routes')}"></header>
 <main id="main">
-
-  <div class="container workspace">
-    <div id="trip-summary" class="trip-summary" hidden></div>
-    <div class="page-title"><span class="eyebrow">목적지까지 이동</span><h1>교통 경로 비교</h1><p>이동 구간마다 교통수단을 선택하고 예상 운임과 시간을 비교하세요.</p></div>
-    <div id="status" class="status" role="status" aria-live="polite"></div>
-    
-    <div class="actions page-actions"><a class="soft" href="/">여행 조건 수정</a><a class="primary" href="/itinerary">여행 일정 만들기</a></div>
-    <div id="route-summary"></div><div id="route-controls"></div><div id="route-results"></div>
+  <div class="split">
+    <section class="listpane" aria-label="이동 경로 목록">
+      <div class="sheethandle" aria-hidden="true"></div>
+      <div class="listhead">
+        <p id="trip-line" class="tripline"></p>
+        <h1 id="route-title">이동 경로</h1>
+        <p>카드를 누르면 지도와 견적이 바로 바뀝니다. 금액은 일행 편도 기준입니다.</p>
+        <div id="route-sort" class="sort" role="group" aria-label="정렬" hidden>
+          <button type="button" data-sort="rec" aria-pressed="true">추천순</button>
+          <button type="button" data-sort="price" aria-pressed="false">최저가</button>
+          <button type="button" data-sort="time" aria-pressed="false">최단 시간</button>
+        </div>
+      </div>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <div id="route-summary"></div>
+      <div id="route-list" class="route-list"></div>
+      <div class="list-foot">
+        <p id="route-note" class="fine"></p>
+        <a class="textbtn" href="/">여행 조건 수정</a>
+        <a class="primary" href="/itinerary">여행 일정 만들기</a>
+      </div>
+    </section>
+    <section class="mappane" aria-label="이동 경로 지도">
+      <div id="route-map" class="mapslot"></div>
+    </section>
+    <aside id="estimate" class="estimate" aria-label="여행 견적" hidden></aside>
   </div>
 </main>
-<footer th:replace="~{layout :: footer}"></footer>
 </body>
 </html>
