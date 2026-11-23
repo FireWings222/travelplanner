@@ -16,6 +16,7 @@
   - `src/main/resources/templates/*.html`: Thymeleaf 템플릿(`layout.html`이 공통 head, header, footer)
   - `src/main/resources/static/css/site.css`: 공통 스타일(Bootstrap 5.3.8 webjar 위에 덮어씀)
   - `src/main/resources/static/js/*.js`: ES 모듈. `app.js`가 `body[data-page]`로 화면 모듈을 불러오고, `common.js`에 API 호출, 세션 저장소, 공통 렌더링 함수가 있다.
+- 화면을 만들거나 고칠 때는 저장소 루트의 `DESIGN.md`(색, 글꼴, 간격, 컴포넌트, 움직임, 문구 규칙)를 따른다. 규칙에 없는 값이 필요하면 코드에 바로 쓰지 말고 DESIGN.md에 먼저 추가한다.
 - 화면 HTML 대부분은 JS 문자열로 만들어진다. 마크업을 바꿀 때는 템플릿과 JS를 함께 본다. 동적 값은 `e()`로 이스케이프한다.
 - REST API(`/api/...`) 요청과 응답 형식은 바꾸지 않는다. 형식은 `dto/Travel.java`를 읽어서 확인만 한다.
 

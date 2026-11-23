@@ -1,6 +1,6 @@
 # TravelPlanner 디자인 문서
 
-TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 작성 규칙은 [0004 디자인 문서 관리](decisions/0004-design-docs.md)를 따른다.
+TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 화면을 만들 때 따르는 규칙은 저장소 루트의 [DESIGN.md](../../DESIGN.md)에 있다. 작성 규칙은 [0004 디자인 문서 관리](decisions/0004-design-docs.md)를 따른다.
 
 - 조사 기록: `research/YYYY-MM-DD-주제.md` ([템플릿](research/_template.md))
 - 결정 기록: `decisions/NNNN-주제.md` ([템플릿](decisions/_template.md))
@@ -18,6 +18,7 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 작성 �
 | 0006 | [디자인 참고 서비스와 트렌드 기준](decisions/0006-design-references.md) | 결정 | 2026-11-23 |
 | 0007 | [UI 시안 선택(시안 A, 원본 초록)](decisions/0007-draft-selection.md) | 결정 | 2026-11-23 |
 | 0008 | [지도는 카카오맵으로 구현](decisions/0008-kakao-map.md) | 결정 | 2026-11-23 |
+| 0009 | [디자인 규칙을 DESIGN.md로 정리](decisions/0009-design-md.md) | 결정 | 2026-11-23 |
 
 ## 시안 목록
 
