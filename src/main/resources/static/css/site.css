@@ -221,3 +221,305 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
 }
 .leg-map-panel { margin-top:12px; }
 .leg-map { width:100%; height:clamp(240px,45vh,420px); border-radius:12px; overflow:hidden; background:#edf4ef; }
+
+/* ======================================================================
+   새 디자인 (DESIGN.md, 결정 0010)
+   body에 redesign 클래스가 붙은 화면만 아래 변수와 규칙을 쓴다.
+   값을 바꾸거나 새 값을 쓰려면 DESIGN.md에 먼저 적는다.
+   ====================================================================== */
+.redesign {
+    --brand: #146748;
+    --brand-on: #ffffff;
+    --ink: #15171c;
+    --ink-2: #454a54;
+    --ink-3: #6a707c;
+    --paper: #ffffff;
+    --field: #f0f1f4;
+    --field-2: #e2e4e9;
+    --rule: #d0d3d9;
+    --sel: #15171c;
+    --flash: #dcefe3;
+    --warn: #a14a00;
+    --over: #c92a2a;
+    --m-rail: #0d6fc4;
+    --m-air: #146748;
+    --m-bus: #d43d2a;
+    --m-road: #a87900;
+    --d1: #146748;
+    --d2: #0d6fc4;
+    --d3: #c2410c;
+    --float-shadow: 0 2px 10px rgb(18 24 38 / 18%), 0 1px 2px rgb(18 24 38 / 12%);
+    --callout-shadow: 0 1px 3px rgb(18 24 38 / 30%);
+    --lift-shadow: 0 1px 2px rgb(18 24 38 / 16%);
+    --sheet-shadow: 0 -4px 14px rgb(18 24 38 / 16%);
+    --font: "Pretendard Variable", Pretendard, Inter, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    --bs-body-font-family: var(--font);
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--field);
+    word-break: keep-all;
+}
+.redesign .num { font-variant-numeric: tabular-nums; }
+.redesign :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.redesign .mi { flex: none; display: inline-block; vertical-align: -3px; }
+.redesign .icons { display: inline-flex; gap: 3px; align-items: center; }
+.redesign .tag { display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.3; padding: 2px 6px; border-radius: 4px;
+    background: var(--ink); color: var(--paper); white-space: nowrap; }
+.redesign .tag.low { background: var(--brand); color: var(--brand-on); }
+.redesign .warntext { color: var(--warn); font-weight: 600; }
+.redesign .primary { background: var(--brand); color: var(--brand-on); border-radius: 10px; padding: 9px 15px; font-size: 15px; font-weight: 700; }
+.redesign .outline { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--ink);
+    background: var(--paper); color: var(--ink); border-radius: 8px; padding: 9px 12px; font-size: 14.5px; font-weight: 700;
+    text-decoration: none; cursor: pointer; line-height: 1.35; }
+.redesign .outline:hover { background: var(--field); }
+.redesign .textbtn { border: 0; background: transparent; padding: 0; color: var(--brand); font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; }
+.redesign .status:not(:empty) { margin: 0; color: var(--ink-2); font-weight: 600; font-size: 14.5px; }
+.redesign .status.error:not(:empty) { color: var(--over); background: var(--paper); border-radius: 8px; padding: 9px 12px; }
+.redesign input:not([type="checkbox"]), .redesign select { border: 1px solid var(--ink-3); border-radius: 8px; background: var(--paper); color: var(--ink); min-height: 38px; padding: 7px 10px; }
+.redesign label { color: var(--ink-2); font-size: 13.5px; font-weight: 700; }
+
+/* 지도 분할 화면: 머리글 아래를 목록과 지도가 채움 */
+.map-screen { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.map-screen .site-header { flex: none; }
+.map-screen > main { flex: 1; min-height: 0; }
+.redesign .split { position: relative; height: 100%; display: grid; grid-template-columns: minmax(380px, 440px) minmax(0, 1fr); background: var(--field); }
+.redesign .listpane { min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding: 0 12px 16px 16px; }
+.redesign .sheethandle { display: none; }
+.redesign .listhead { padding: 20px 4px 6px; }
+.redesign .listhead h1 { font-size: 21px; font-weight: 800; margin: 0 0 2px; line-height: 1.3; letter-spacing: 0; }
+.redesign .listhead p { margin: 0 0 14px; color: var(--ink-2); font-size: 14.5px; }
+.redesign .sort { display: inline-flex; background: var(--field-2); border-radius: 9px; padding: 3px; gap: 2px; }
+.redesign .sort button { border: 0; background: transparent; border-radius: 7px; padding: 6px 14px; font-size: 14.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.redesign .sort button[aria-pressed="true"] { background: var(--paper); color: var(--ink); font-weight: 700; box-shadow: var(--lift-shadow); }
+.redesign .list-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 4px 0; }
+.redesign .fine { display: block; font-size: 13px; color: var(--ink-3); margin: 0; }
+
+/* 경로 카드 */
+.redesign .routecard { background: var(--paper); border-radius: 12px; flex: none; }
+.redesign .routecard:hover { box-shadow: inset 0 0 0 1px var(--ink-3); }
+.redesign .routecard.on { box-shadow: inset 0 0 0 2px var(--sel); }
+.redesign .rc-main { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 14px; width: 100%; padding: 14px 16px; border: 0;
+    background: transparent; color: var(--ink); text-align: left; cursor: pointer; border-radius: 12px; font: inherit; }
+.redesign .rc-main:disabled { opacity: 1; cursor: default; }
+.redesign .rc-title { font-size: 16px; font-weight: 600; line-height: 1.45; }
+.redesign .routecard.on .rc-title { font-weight: 800; }
+.redesign .rc-price { font-size: 17px; font-weight: 700; color: var(--brand); text-align: right; white-space: nowrap; }
+.redesign .rc-price.none { color: var(--ink-3); font-size: 15px; font-weight: 600; }
+.redesign .rc-meta { display: flex; align-items: center; gap: 9px; font-size: 15px; flex-wrap: wrap; }
+.redesign .rc-sub { font-size: 13.5px; color: var(--ink-2); text-align: right; white-space: nowrap; align-self: center; }
+.redesign .rc-legs { display: grid; gap: 12px; margin: 0 16px; padding: 12px 0 14px; border-top: 1px solid var(--rule); }
+.redesign .leg { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 0 10px; font-size: 14.5px; align-items: start; border: 0; padding: 0; }
+.redesign .leg .mi { margin-top: 1px; }
+.redesign .leg b { font-weight: 700; }
+.redesign .leg small { display: block; font-size: 13.5px; color: var(--ink-2); }
+.redesign .leg > .num { font-weight: 600; white-space: nowrap; }
+.redesign .leg-extra { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-size: 13.5px; }
+.redesign .leg-extra details { margin: 0; width: 100%; }
+.redesign .leg-extra summary { color: var(--brand); font-size: 13.5px; font-weight: 700; }
+.redesign .leg-extra .fare-fields { margin: 8px 0; }
+.redesign .leg-extra form p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); }
+.redesign .boardings { grid-column: 2 / -1; margin: 4px 0 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--ink-2); }
+.redesign .rc-note { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+
+/* 지도 칸과 지도 위 요소 */
+.redesign .mappane { position: relative; min-height: 0; margin: 12px 12px 12px 0; border-radius: 14px; overflow: hidden; background: var(--field-2); }
+.redesign .mapslot { position: absolute; inset: 0; }
+.redesign .mapfail { position: absolute; inset: 0; margin: 0; display: grid; place-items: center; text-align: center; padding: 20px;
+    font-size: 14.5px; font-weight: 600; color: var(--ink-2); }
+.redesign .mapfocus { position: absolute; left: 12px; top: 12px; z-index: 2; display: inline-flex; background: var(--paper); border-radius: 9px;
+    padding: 3px; gap: 2px; box-shadow: var(--float-shadow); }
+.redesign .mapfocus button { border: 0; background: transparent; border-radius: 7px; padding: 6px 12px; font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.redesign .mapfocus button[aria-pressed="true"] { background: var(--ink); color: var(--paper); font-weight: 700; }
+.redesign .kc { background: var(--paper); color: var(--ink); border-radius: 7px; padding: 5px 10px 6px; box-shadow: var(--callout-shadow);
+    font: 700 13px/1.35 var(--font); white-space: nowrap; }
+.redesign .kc small { display: block; font-size: 12px; font-weight: 500; color: var(--ink-2); }
+.redesign .kc.l { margin-left: 14px; }
+.redesign .kc.r { margin-right: 22px; }
+.redesign .kc.b { margin-top: 12px; }
+.redesign .knode { width: 15px; height: 15px; border-radius: 50%; background: var(--paper); border: 3.5px solid var(--ink); }
+.redesign .knode.sm { width: 11px; height: 11px; border-width: 2.5px; }
+.redesign .kplane { width: 30px; height: 30px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; box-shadow: var(--callout-shadow); }
+.redesign .kpin svg { display: block; filter: drop-shadow(var(--callout-shadow)); }
+
+/* 여행 견적 카드 */
+.redesign .estimate { position: absolute; right: 26px; bottom: 26px; width: 292px; background: var(--paper); border-radius: 12px;
+    box-shadow: var(--float-shadow); padding: 16px 18px; z-index: 3; }
+.redesign .est-main { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; align-items: baseline; position: relative; }
+.redesign .est-label { font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.redesign .est-pct { font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.redesign .est-sum { grid-column: 1 / -1; font-size: 31px; font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; }
+.redesign .est-sum small { font-size: 13.5px; font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-left: 4px; }
+.redesign .budgetbar { grid-column: 1 / -1; margin: 8px 0 6px; height: 8px; background: var(--field-2); border-radius: 2px; overflow: hidden; }
+.redesign .budgetbar i { display: block; height: 100%; background: var(--brand); }
+.redesign .budgetbar.over i { background: var(--over); }
+.redesign .est-left { grid-column: 1 / -1; margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.redesign .est-left b { color: var(--ink); font-weight: 700; }
+.redesign .est-left.over b { color: var(--over); }
+.redesign .est-toggle { display: none; border: 0; background: transparent; padding: 0; font-size: 13.5px; font-weight: 700; color: var(--brand); cursor: pointer; }
+.redesign .detail { margin-top: 12px; border-top: 1px solid var(--rule); padding-top: 8px; }
+.redesign .detail .est-row { display: flex; justify-content: space-between; gap: 10px; font-size: 14.5px; padding: 4px 6px; margin-inline: -6px; border-radius: 4px; }
+.redesign .detail .est-row span:first-child { color: var(--ink-2); min-width: 0; }
+.redesign .detail .est-row span:last-child { font-weight: 600; white-space: nowrap; }
+.redesign .detail .outline { width: 100%; margin-top: 10px; }
+.redesign .detail .fine { margin-top: 8px; }
+
+/* 움직임: 금액 차이 표시, 바뀐 줄 강조, 다시 계산 중 */
+@keyframes rd-flash { from { background-color: var(--flash); } to { background-color: transparent; } }
+@keyframes rd-delta { 0% { opacity: 0; transform: translateY(6px); } 12% { opacity: 1; transform: translateY(0); }
+    72% { opacity: 1; transform: translateY(-4px); } 100% { opacity: 0; transform: translateY(-12px); } }
+@keyframes rd-calc { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.redesign .flash { animation: rd-flash 1200ms ease-out both; }
+.redesign .delta { position: absolute; right: 0; top: 26px; opacity: 0; pointer-events: none; font-size: 14px; font-weight: 800; line-height: 1.3;
+    padding: 2px 8px; border-radius: 4px; background: var(--brand); color: var(--brand-on); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.redesign .delta.show { animation: rd-delta 1800ms ease-out both; }
+.redesign .calcbar { display: block; height: 2px; background: var(--field-2); overflow: hidden; border-radius: 0 0 12px 12px; margin-top: -2px; }
+.redesign .calcbar::after { content: ""; display: block; height: 100%; background: var(--sel); transform-origin: left center; animation: rd-calc 900ms linear both; }
+@media (prefers-reduced-motion: reduce) {
+    .redesign *, .redesign *::after { animation: none !important; transition: none !important; }
+}
+
+/* 모바일: 위 지도, 아래 끌어 올리는 목록, 맨 아래 견적 막대 */
+@media (max-width: 860px) {
+    .redesign .split { display: flex; flex-direction: column; position: relative; }
+    .redesign .mappane { flex: none; height: 300px; order: -1; margin: 0; border-radius: 0; }
+    .redesign .mappane .mapslot { bottom: 18px; }
+    .redesign .listpane { flex: 1; padding: 0 14px; border-radius: 18px 18px 0 0; margin-top: -18px; position: relative; z-index: 2;
+        background: var(--field); box-shadow: var(--sheet-shadow); }
+    .redesign .listhead { padding-top: 6px; }
+    .redesign .sheethandle { display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--ink-3); margin: 9px auto 0; flex: none; }
+    .redesign .mapfocus { display: none; }
+    .redesign .estimate { position: relative; right: auto; bottom: auto; width: auto; margin: 0; border-radius: 0; z-index: 3;
+        box-shadow: 0 -1px 0 var(--rule), var(--sheet-shadow); padding: 12px 16px 14px; flex: none; }
+    .redesign .est-main { grid-template-columns: auto 1fr auto; align-items: center; }
+    .redesign .est-sum { grid-column: auto; font-size: 23px; text-align: right; }
+    .redesign .est-sum small { display: none; }
+    .redesign .est-pct { display: none; }
+    .redesign .est-toggle { display: inline; }
+    .redesign .delta { right: auto; left: 76px; top: 3px; }
+    .redesign .detail { display: none; }
+    .redesign .estimate.open .detail { display: block; }
+}
+.redesign .route-list { display: flex; flex-direction: column; gap: 8px; }
+.redesign .list-foot .fine { flex: 1 0 100%; }
+.redesign .emptynote { background: var(--paper); border-radius: 12px; padding: 16px; display: grid; gap: 6px; justify-items: start; }
+.redesign .emptynote p { margin: 0; color: var(--ink-2); }
+.redesign .textbtn.danger { color: var(--over); }
+
+/* 여행 일정: 날짜 버튼, 장소 카드, 이동 구간 줄 */
+.redesign .days { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; flex: none; }
+.redesign .daybtn { border: 0; background: var(--paper); padding: 9px 12px; border-radius: 10px; cursor: pointer; font-size: 13.5px;
+    text-align: left; line-height: 1.35; color: var(--ink-2); }
+.redesign .daybtn b { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; color: var(--ink); }
+.redesign .daybtn b i { width: 10px; height: 10px; border-radius: 50%; }
+.redesign .daybtn[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--sel); }
+.redesign .timeline { display: flex; flex-direction: column; padding: 6px 0 4px; }
+.redesign .dayfacts { margin: 0; padding: 4px 4px 8px; font-size: 14px; color: var(--ink-2); }
+.redesign .dayfacts b { color: var(--ink); font-weight: 700; }
+.redesign .stop-row.lifted .stop { box-shadow: var(--float-shadow); }
+.redesign .stop { display: grid; grid-template-columns: 24px 26px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    padding: 13px 14px 13px 6px; background: var(--paper); border-radius: 12px; }
+.redesign .drag { border: 0; background: transparent; padding: 0; width: 24px; height: 40px; display: grid; place-items: center;
+    color: var(--ink-3); cursor: grab; touch-action: none; border-radius: 4px; }
+.redesign .drag:active { cursor: grabbing; }
+.redesign .pinsvg { display: block; flex: none; }
+.redesign .stop-body { min-width: 0; }
+.redesign .stop .arr { display: block; font-size: 13.5px; font-weight: 800; color: var(--ink-2); }
+.redesign .stop .arr.none { font-weight: 600; color: var(--ink-3); }
+.redesign .stop h2 { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.45; letter-spacing: 0; }
+.redesign .stop p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.redesign .stop-side { display: grid; justify-items: end; gap: 4px; }
+.redesign .stop .fee { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.redesign .stop-side .textbtn { font-size: 13px; }
+.redesign .between { margin-left: 42px; border-left: 2px dotted var(--ink-3); padding: 9px 0 9px 18px; font-size: 14px; color: var(--ink-2);
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.redesign .between select { width: auto; min-height: 0; font-size: 14px; font-weight: 600; border: 1px solid var(--ink-3); border-radius: 8px;
+    padding: 3px 26px 3px 6px; background-color: var(--paper); color: var(--ink); }
+.redesign .between .amt { font-weight: 700; color: var(--ink); }
+.redesign .hop-extra { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13.5px; }
+.redesign .hop-extra details { margin: 0; width: 100%; }
+.redesign .hop-extra summary { color: var(--brand); font-size: 13.5px; font-weight: 700; }
+.redesign .hop-extra .fare-fields { margin: 8px 0; }
+.redesign .hop-extra form p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); }
+.redesign .between .boardings { flex: 1 0 100%; grid-column: auto; margin: 0; }
+.redesign .endrow { margin-left: 42px; padding: 9px 0 2px 20px; font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.redesign .emptyday { padding: 18px 4px; color: var(--ink-2); font-size: 15px; margin: 0; }
+.redesign .dropslot { margin-block: 6px; border: 2px dashed var(--sel); border-radius: 12px; background: var(--flash); display: grid;
+    place-items: center; font-size: 13.5px; font-weight: 700; color: var(--ink); animation: rd-fade 160ms ease-out both; }
+.redesign .addplace { width: 100%; margin-top: 10px; border: 0; background: var(--field-2); border-radius: 10px; padding: 12px 14px;
+    color: var(--ink-2); cursor: pointer; font-size: 15px; font-weight: 600; text-align: left; display: flex; gap: 8px; align-items: center; }
+.redesign .addform { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 8px; align-items: end; margin-top: 8px; }
+.redesign .addform[hidden] { display: none; }
+.redesign #place-status:not(:empty) { margin-top: 8px; }
+.redesign .place-results { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 6px; }
+.redesign .place-results li { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--paper);
+    border-radius: 10px; padding: 10px 12px; }
+.redesign .place-results b { display: block; font-size: 15px; }
+.redesign .place-results small { display: block; font-size: 13px; color: var(--ink-2); }
+.redesign .saved { margin: 8px 0 0; background: var(--paper); border-radius: 12px; padding: 12px 16px; flex: none; scroll-margin-top: 12px; }
+.redesign .saved summary { color: var(--ink); font-weight: 700; font-size: 15px; }
+.redesign .saved-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 0;
+    border-top: 1px solid var(--rule); }
+.redesign .saved-item:first-child { margin-top: 10px; }
+.redesign .saved-item small { display: block; font-size: 13.5px; color: var(--ink-2); }
+.redesign #saved-plans > .fine { margin-top: 10px; }
+.redesign .kdim { width: 13px; height: 13px; border-radius: 50%; background: var(--paper); border: 2.5px solid var(--ink-2); }
+.redesign .kpin text { font-family: var(--font); }
+.redesign .kpinlabel { margin-top: 3px; font: 800 13px/1.2 var(--font); color: var(--ink); white-space: nowrap;
+    text-shadow: 0 0 2px var(--paper), 0 0 2px var(--paper), 0 0 3px var(--paper), 0 0 3px var(--paper); }
+/* 움직임: 옮긴 카드 테두리, 놓을 자리, 다시 계산 중 */
+@keyframes rd-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rd-moved { 0%, 35% { box-shadow: 0 0 0 3px var(--sel); background-color: var(--flash); } 100% { box-shadow: 0 0 0 3px transparent; background-color: var(--paper); } }
+@keyframes rd-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.redesign .stop.moved { animation: rd-moved 1600ms ease-out both; }
+.redesign .calc { display: inline-grid; gap: 3px; font-weight: 700; color: var(--ink); animation: rd-pulse 900ms ease-in-out both; }
+.redesign .calc i { display: block; width: 110px; height: 2px; background: var(--field-2); position: relative; overflow: hidden; }
+.redesign .calc i::after { content: ""; position: absolute; inset: 0; background: var(--sel); transform-origin: left center; animation: rd-calc 900ms linear both; }
+@media (max-width: 860px) {
+    .redesign .addform { grid-template-columns: 1fr; }
+    .redesign .saved { margin-bottom: 8px; }
+}
+
+/* 공통 머리글: 로고, 여행 조건 묶음, 단계 탭, 저장한 여행 링크. 모든 화면에서 쓰므로 머리글 자체에 redesign 클래스를 붙임 */
+.site-header.redesign { position: relative; z-index: 4; display: flex; align-items: stretch; gap: 20px; padding: 0 20px; min-height: 62px;
+    background: var(--paper); border: 0; flex: none; }
+.site-header.redesign .logo { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 19px; letter-spacing: -0.02em;
+    white-space: nowrap; color: var(--ink); text-decoration: none; }
+.site-header.redesign .logo em { font-style: normal; color: var(--brand); }
+.site-header.redesign .logo .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--brand); display: grid; place-items: center; }
+.site-header.redesign .logo .mark i { width: 14px; height: 14px; border: 1.5px solid var(--brand-on); border-radius: 50%; display: grid; place-items: center; }
+.site-header.redesign .logo .mark i::before { content: ""; width: 5px; height: 8px; background: var(--brand-on);
+    clip-path: polygon(50% 0, 100% 100%, 50% 79%, 0 100%); transform: rotate(35deg); }
+.site-header.redesign .tripbox { display: flex; align-items: stretch; align-self: center; flex: none; min-width: 0; background: var(--field);
+    border-radius: 10px; overflow: hidden; }
+.site-header.redesign .tripbox[hidden] { display: none; }
+.site-header.redesign .tf { display: flex; flex-direction: column; justify-content: center; padding: 5px 14px; min-width: 0; white-space: nowrap; }
+.site-header.redesign .tf + .tf { box-shadow: inset 1px 0 0 var(--rule); }
+.site-header.redesign .tf small { font-size: 11.5px; font-weight: 700; color: var(--ink-3); line-height: 1.3; }
+.site-header.redesign .tf b { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.site-header.redesign .tedit { display: flex; align-items: center; padding: 0 14px; font-size: 14px; font-weight: 700; color: var(--brand);
+    text-decoration: none; box-shadow: inset 1px 0 0 var(--rule); }
+.site-header.redesign .steps { display: flex; gap: 22px; margin-left: auto; flex: none; }
+.site-header.redesign .step { display: inline-flex; align-items: center; gap: 7px; padding: 0; font-size: 15px; font-weight: 600; color: var(--ink-3);
+    white-space: nowrap; text-decoration: none; border-top: 3px solid transparent; border-bottom: 3px solid transparent; box-shadow: none; }
+.site-header.redesign .step:hover { color: var(--ink); box-shadow: none; }
+.site-header.redesign .step i { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+.site-header.redesign .step.done { color: var(--ink-2); }
+.site-header.redesign .step.done i, .site-header.redesign .step[aria-current] i { color: var(--brand); }
+.site-header.redesign .step[aria-current] { color: var(--ink); font-weight: 800; border-bottom-color: var(--brand); }
+.site-header.redesign .saved-link { align-self: center; padding: 0; border: 0; border-radius: 0; font-size: 14px; font-weight: 700;
+    color: var(--ink-2); text-decoration: none; white-space: nowrap; }
+.site-header.redesign .saved-link:hover { background: transparent; color: var(--ink); }
+@media (max-width: 860px) {
+    .site-header.redesign { flex-wrap: wrap; gap: 0 10px; padding: 10px 14px 0; min-height: 0; }
+    .site-header.redesign .logo > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .site-header.redesign .logo .mark { width: 34px; height: 34px; border-radius: 9px; }
+    .site-header.redesign .tripbox { flex: 1 1 0; }
+    .site-header.redesign .tf { padding: 4px 9px; }
+    .site-header.redesign .tf.extra { display: none; }
+    .site-header.redesign .tf b { font-size: 14px; }
+    .site-header.redesign .tedit { margin-left: auto; padding: 0 10px; }
+    .site-header.redesign .steps { margin-left: 0; width: 100%; gap: 18px; height: 40px; margin-top: 6px; }
+    .site-header.redesign .step span { display: none; }
+    .site-header.redesign .step[aria-current] span { display: inline; }
+    .site-header.redesign .saved-link { display: none; }
+}

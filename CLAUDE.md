@@ -1,0 +1,45 @@
+# TravelPlanner 작업 지침
+
+- 이 문서와 전역 지침(`~/.claude/CLAUDE.md`)이 다르면 이 문서를 따른다. 이 문서에 없는 내용(커밋 메시지 형식, 한국어 문체 규칙, 문서 서식 등)은 전역 지침을 따른다.
+- 이 문서는 지도 교사 작업용이다. 학생이 쓰는 Codex용 지침은 `AGENTS.md`에 따로 있다. 화면 구조나 문서 규칙을 바꾸면 `AGENTS.md`도 함께 고친다.
+
+국내여행(서울, 부산, 제주) 교통편, 일정, 일일투어 비용을 비교하는 Spring Boot 웹 앱이다. 폴리텍 분당융합기술원 학생의 포트폴리오 프로젝트다.
+
+## 브랜치 규칙
+
+- `main`은 학생이 작업한다. 지도 목적의 작업은 항상 `feature/*` 브랜치를 새로 만들어서 한다. `main`에 직접 커밋하지 않는다.
+- push와 병합은 사용자가 한다.
+
+## 수정 범위
+
+- UI 개선 작업은 프론트엔드만 고친다. Java 코드(`src/main/java`), DB 마이그레이션, 설정 파일은 건드리지 않는다. Java 수정이 필요해 보이면 먼저 사용자에게 묻는다.
+- 프론트엔드 파일
+  - `src/main/resources/templates/*.html`: Thymeleaf 템플릿(`layout.html`이 공통 head, header, footer)
+  - `src/main/resources/static/css/site.css`: 공통 스타일(Bootstrap 5.3.8 webjar 위에 덮어씀)
+  - `src/main/resources/static/js/*.js`: ES 모듈. `app.js`가 `body[data-page]`로 화면 모듈을 불러오고, `common.js`에 API 호출, 세션 저장소, 공통 렌더링 함수가 있다.
+- 화면을 만들거나 고칠 때는 저장소 루트의 `DESIGN.md`(색, 글꼴, 간격, 컴포넌트, 움직임, 문구 규칙)를 따른다. 규칙에 없는 값이 필요하면 코드에 바로 쓰지 말고 DESIGN.md에 먼저 추가한다.
+- 화면 HTML 대부분은 JS 문자열로 만들어진다. 마크업을 바꿀 때는 템플릿과 JS를 함께 본다. 동적 값은 `e()`로 이스케이프한다.
+- REST API(`/api/...`) 요청과 응답 형식은 바꾸지 않는다. 형식은 `dto/Travel.java`를 읽어서 확인만 한다.
+
+## 실행과 테스트
+
+- 실행: `.\gradlew.bat bootRun` 후 http://localhost:8080 (JDK 17). 앱 실행은 사용자에게 먼저 묻는다.
+- 카카오맵: 사용자가 PowerShell 창에서 `$env:KAKAO_MAP_JS_KEY`를 넣고 같은 창에서 `bootRun`을 실행해야 키가 앱에 들어간다. 키 값은 묻거나 출력하거나 파일에 쓰지 않는다. 키가 들어갔는지는 화면 HTML의 `kakao-map-key` 메타 태그 유무와 길이로만 확인한다. 학생 카카오 앱에 `http://localhost:8080`이 JavaScript SDK 도메인으로 등록돼 있다(2026-11-23 확인).
+- 8080 포트를 다른 프로세스가 쓰고 있으면 사용자의 `bootRun`이 실패한다. 직접 띄운 앱은 작업이 끝나면 끈다.
+- 테스트: `.\gradlew.bat test`
+- OS 전역에 프로그램이나 패키지를 설치하지 않는다(`npm -g`, `pip install`(가상환경 밖), winget 등 금지). 도구가 필요하면 프로젝트 폴더 안(커밋하지 않는 폴더)에 설치하고, 설치 전에 사용자에게 묻는다.
+
+## 문서화
+
+- 디자인 관련 조사와 의사결정은 `doc/design/`에 남긴다. 목록은 `doc/design/README.md`에서 관리한다.
+  - 조사: `research/YYYY-MM-DD-주제.md`, `research/_template.md` 형식
+  - 결정: `decisions/NNNN-주제.md`, `decisions/_template.md` 형식, 결정 하나에 파일 하나
+  - 시안: `drafts/YYYY-MM-DD-주제.html`, 외부 파일 없이 열리는 단일 HTML
+- 결정을 바꿀 때는 기존 파일을 지우지 않고 상태를 "대체됨"으로 바꾼 뒤 새 번호의 결정과 서로 링크한다.
+- 파일 이름은 영문 소문자와 하이픈으로 쓴다(Windows git에서 한글 파일 이름이 깨져 보이는 것을 피하려고).
+
+## 사용자와 일하는 방식
+
+- 인터뷰나 확인 질문은 선택지 도구 대신 대화로 묻는다. 열린 질문을 한 번에 하나씩 하고, 답을 듣고 다음 질문으로 넘어간다. 추천안이 있으면 질문 뒤에 짧게 덧붙인다.
+- 결정할 일이 생기면 혼자 정하지 않고 먼저 묻는다.
+- 지시를 받으면 바로 도구를 실행하지 않는다. 무엇을 어떻게 할지 먼저 답한 뒤 작업을 시작한다.

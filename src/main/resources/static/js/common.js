@@ -203,7 +203,7 @@ export function legCards(sections, choices = {}, day = '') {
 }
 
 // 선택한 교통수단과 출발·도착 좌표를 넘겨 카카오맵이 새 경로를 검색하도록 합니다.
-function kakaoDirectionsUrl(segment) {
+export function kakaoDirectionsUrl(segment) {
     const mode = {
         CITY_BUS: 'traffic', SUBWAY: 'traffic', BUS_SUBWAY: 'traffic', AIRPORT_RAIL: 'traffic',
         AIRPORT_BUS: 'traffic', TRAIN: 'traffic', CAR: 'car', TAXI: 'car', RENTAL_CAR: 'car', WALK: 'walk'
@@ -275,4 +275,148 @@ export function busy(node, action) {
     const items = $$('input, select, button', node).filter(element => !element.disabled);
     items.forEach(item => item.disabled = true);
     return Promise.resolve().then(action).finally(() => items.forEach(item => item.disabled = false));
+}
+
+// ---------- 새 디자인 공통 조각 (DESIGN.md, 결정 0010) ----------
+
+// 교통수단을 DESIGN.md의 교통수단 색 4가지(철도, 항공, 버스, 도로) 가운데 하나로 묶습니다.
+export function modeKind(mode) {
+    if (['KTX', 'SRT', 'TRAIN', 'SUBWAY', 'AIRPORT_RAIL'].includes(mode)) return 'rail';
+    if (mode === 'FLIGHT') return 'air';
+    if (['EXPRESS_BUS', 'INTERCITY_BUS', 'CITY_BUS', 'AIRPORT_BUS', 'BUS_SUBWAY'].includes(mode)) return 'bus';
+    return 'road';
+}
+export const PLANE_PATH = 'M10 1.5c.7 0 1.2.9 1.2 2v3.6l6.3 3.9v1.7l-6.3-2v3.7l1.8 1.4v1.3L10 16.3l-3 .8v-1.3l1.8-1.4v-3.7l-6.3 2V11l6.3-3.9V3.5c0-1.1.5-2 1.2-2z';
+const MODE_ICON = {
+    rail: '<path fill-rule="evenodd" d="M7 2h6a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3zm-.5 3v3.5h7V5zM7.3 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm5.4 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><path d="M7 15.4 5.6 18M13 15.4l1.4 2.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+    bus: '<path fill-rule="evenodd" d="M5.5 3h9A2.5 2.5 0 0 1 17 5.5v8a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 13.5v-8A2.5 2.5 0 0 1 5.5 3zM5 5.5V9h10V5.5zM6.3 11.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm7.4 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><path d="M6 15.4v1.8M14 15.4v1.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    road: '<path fill-rule="evenodd" d="M6.2 4.5h7.6a1.5 1.5 0 0 1 1.4 1l1.4 3.8a2 2 0 0 1 1.4 1.9V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2.8a2 2 0 0 1 1.4-1.9l1.4-3.8a1.5 1.5 0 0 1 1.4-1zm.4 1.8L5.6 9h8.8l-1-2.7zM5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><path d="M4.5 15.4v1.4M15.5 15.4v1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    air: '<path transform="rotate(45 10 10)" d="' + PLANE_PATH + '"/>'
+};
+// 경로 카드와 구간 줄에 쓰는 교통수단 아이콘(SVG)을 교통수단 색으로 그립니다.
+export function modeIcon(mode, size = 19) {
+    const kind = modeKind(mode);
+    return '<svg class="mi" viewBox="0 0 20 20" width="' + size + '" height="' + size + '" fill="currentColor" style="color:var(--m-'
+        + kind + ')" role="img" aria-label="' + e(modes[mode] ?? mode) + '">' + MODE_ICON[kind] + '</svg>';
+}
+
+// 숫자 전환에 쓰는 표시 형식입니다. data-fmt 값으로 고릅니다.
+const ROLL_FORMAT = {
+    won: value => won(Math.round(value)),
+    pct: value => '예산의 ' + Math.round(value) + '%',
+    left: value => value >= 0 ? won(Math.round(value)) + ' 남음' : won(Math.round(-value)) + ' 초과',
+    bar: () => ''
+};
+// 값이 바뀌면 숫자가 굴러가며 바뀌는 칸을 만듭니다. key가 같은 칸끼리 이전 값을 기억합니다.
+export const rollValue = (key, value, format = 'won', tag = 'span', className = 'num') => '<' + tag + ' class="' + className
+    + '" data-roll="' + e(key) + '" data-val="' + value + '" data-fmt="' + format + '">' + ROLL_FORMAT[format](value) + '</' + tag + '>';
+
+const rolled = {};
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+// 화면을 다시 그린 뒤 호출해 바뀐 금액에 숫자 전환, 차이 표시, 바뀐 줄 강조를 적용합니다(DESIGN.md Motion).
+// data-roll 칸은 이전 값에서 새 값으로 620ms 동안 바뀝니다. data-flash 줄은 같은 key 값이 바뀌었을 때 1200ms 동안 칠합니다.
+// key가 sum인 칸이 바뀌면 같은 영역의 .delta에 차이를 1800ms 동안 보여 줍니다. 움직임 줄이기 설정이면 최종 값만 보여 줍니다.
+export function animateValues(root) {
+    const changed = new Set();
+    $$('[data-roll]', root).forEach(node => {
+        const key = node.dataset.roll;
+        const to = Number(node.dataset.val);
+        const from = rolled[key];
+        rolled[key] = to;
+        if (from === undefined || from === to) return;
+        changed.add(key);
+        if (reduceMotion.matches) return;
+        if (key === 'sum') {
+            const delta = $('.delta', root);
+            if (delta) {
+                delta.textContent = (to > from ? '+' : '-') + won(Math.abs(Math.round(to - from)));
+                delta.classList.remove('show');
+                void delta.offsetWidth;
+                delta.classList.add('show');
+            }
+        }
+        const format = ROLL_FORMAT[node.dataset.fmt] ?? ROLL_FORMAT.won;
+        const start = performance.now();
+        // 전환 중인 값을 칸에 씁니다. 예산 막대는 글자 대신 폭을 바꿉니다.
+        const paint = value => {
+            if (node.dataset.fmt === 'bar') node.style.width = value.toFixed(2) + '%';
+            else node.textContent = format(value);
+        };
+        paint(from);
+        // 다음 화면 갱신마다 easeOutCubic 곡선으로 값을 옮깁니다.
+        const step = now => {
+            if (!node.isConnected) return;
+            const t = Math.min(1, (now - start) / 620);
+            paint(from + (to - from) * (1 - Math.pow(1 - t, 3)));
+            if (t < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    });
+    if (reduceMotion.matches) return;
+    $$('[data-flash]', root).forEach(row => {
+        if (!changed.has(row.dataset.flash)) return;
+        row.classList.remove('flash');
+        void row.offsetWidth;
+        row.classList.add('flash');
+    });
+}
+
+// 여행 견적 카드(DESIGN.md estimate-card)를 그립니다.
+// rows는 {key, label, value, text, partial} 목록입니다. value가 null이면 text를 보여 주고 합계에서 뺍니다.
+// partial이 true인 줄이 있으면 합계에 "(부분 합계)"를 붙입니다. budget이 없으면 예산 막대를 그리지 않습니다.
+// action은 내역 아래에 넣을 버튼이나 링크 HTML입니다. 모바일에서는 open이 true일 때만 내역이 펼쳐집니다.
+export function estimateCard({rows, budget, action = '', open = false}) {
+    const sum = rows.reduce((total, row) => total + (row.value == null ? 0 : Number(row.value)), 0);
+    const partial = rows.some(row => row.partial);
+    const hasBudget = budget != null && Number(budget) > 0;
+    const ratio = hasBudget ? Math.min(100, sum / Number(budget) * 100) : 0;
+    const left = hasBudget ? Number(budget) - sum : 0;
+    return '<div class="est-main"><span class="est-label">여행 견적</span>'
+        + (hasBudget ? rollValue('pct', sum / Number(budget) * 100, 'pct', 'span', 'est-pct num') : '<span class="est-pct">예산 미입력</span>')
+        + '<strong class="est-sum num">' + rollValue('sum', sum) + (partial ? '<small>(부분 합계)</small>' : '') + '</strong>'
+        + '<button type="button" class="est-toggle" aria-expanded="' + open + '">' + (open ? '접기' : '내역') + '</button>'
+        + '<span class="delta" aria-hidden="true"></span>'
+        + (hasBudget ? '<div class="budgetbar' + (left < 0 ? ' over' : '') + '"><i data-roll="bar" data-val="' + ratio.toFixed(2)
+            + '" data-fmt="bar" style="width:' + ratio.toFixed(2) + '%"></i></div>'
+            + '<p class="est-left num' + (left < 0 ? ' over' : '') + '">예산 ' + won(budget) + ' 중 ' + rollValue('left', left, 'left', 'b', '') + '</p>' : '')
+        + '</div><div class="detail">'
+        + rows.map(row => '<div class="est-row" data-flash="' + e(row.key) + '"><span>' + e(row.label) + '</span>'
+            + (row.value == null ? '<span>' + e(row.text ?? '미확인') + '</span>' : rollValue(row.key, Number(row.value)))
+            + '</div>').join('')
+        + action + '<small class="fine">숙박비와 식비는 포함하지 않습니다.</small></div>';
+}
+// 모바일 견적 막대의 "내역" 버튼으로 내역을 펼치고 접습니다. 펼친 상태는 카드 바깥 요소의 open 클래스로 남아 다시 그려도 유지됩니다.
+export function connectEstimate(node) {
+    const toggle = $('.est-toggle', node);
+    if (!toggle) return;
+    toggle.addEventListener('click', () => {
+        const open = node.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', String(open));
+        toggle.textContent = open ? '접기' : '내역';
+    });
+}
+
+// 공통 머리글의 여행 조건 묶음과 단계 탭 완료 표시를 세션 상태로 채웁니다(DESIGN.md 단계 탭, 여행 조건 묶음).
+// 여행 조건이 있으면 출발, 도착, 일정, 인원과 "수정" 링크를 보여 줍니다. 홈에서는 검색 폼이 조건을 보여 주므로 묶음을 숨깁니다.
+// 완료 표시: 1단계는 여행 조건, 2단계는 계산한 경로 선택(legs), 3단계는 만든 일정(plan)이 세션에 있을 때 ✓로 바꿉니다.
+// 경로 비교, 여행 일정 화면처럼 세션 상태를 바꾸는 화면은 바꾼 뒤 이 함수를 다시 부릅니다.
+export function renderHeader(cities) {
+    const box = $('#tripbox');
+    if (!box) return;
+    const trip = read('trip');
+    const city = id => cities.find(item => item.id === id)?.name ?? id;
+    const day = value => Number(value.slice(5, 7)) + '.' + Number(value.slice(8, 10));
+    const field = (label, value, extra = '') => '<span class="tf' + extra + '"><small>' + label + '</small><b>' + value + '</b></span>';
+    box.hidden = !trip || document.body.dataset.page === 'home';
+    box.innerHTML = trip ? field('출발', e(city(trip.origin))) + field('도착', e(city(trip.destination)))
+        + field('일정', '<span class="num">' + e(day(trip.start)) + ' ~ ' + e(day(trip.end)) + '</span>')
+        + field('인원', '성인 ' + trip.party.adults + (trip.party.children ? ', 아동 ' + trip.party.children : ''), ' extra')
+        + '<a class="tedit" href="/">수정</a>' : '';
+    const done = {trip: Boolean(trip), legs: Boolean(read('legs')), plan: Boolean(read('plan')), tour: false};
+    $$('.steps [data-step]').forEach((step, index) => {
+        const finished = done[step.dataset.step] && !step.hasAttribute('aria-current');
+        step.classList.toggle('done', finished);
+        $('i', step).textContent = finished ? '✓' : String(index + 1);
+        $('i', step).setAttribute('aria-label', finished ? (index + 1) + '단계 완료' : (index + 1) + '단계');
+    });
 }

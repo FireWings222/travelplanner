@@ -1,4 +1,4 @@
-import {$, $$, api, read, write, e, modeOptions, dateAfter, status, showError} from './common.js';
+import {$, $$, api, read, write, e, modeOptions, dateAfter, status, showError, renderHeader} from './common.js';
 
 const loaders = {
     routes: () => import('./routes.js'),
@@ -136,6 +136,7 @@ try {
     if (trip && ![trip.origin, trip.destination].every(id => cities.some(city => city.id === id))) {
         ['trip', 'legs', 'plan', 'planId', 'comparison'].forEach(key => write(key, null));
     }
+    renderHeader(cities);
     const current = document.body.dataset.page;
     if (current === 'home') await home(cities);
     else if (loaders[current]) await (await loaders[current]()).init(cities);
