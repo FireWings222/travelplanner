@@ -4,6 +4,7 @@ import com.example.travelplanner.dto.Travel.*;
 import com.example.travelplanner.integration.OdsayRoutes;
 import com.example.travelplanner.integration.KakaoPlaceSearch;
 import com.example.travelplanner.integration.KakaoMapRoutes;
+import com.example.travelplanner.integration.RouteLookup;
 import com.example.travelplanner.service.*;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -23,11 +24,12 @@ public class TravelApi {
     private final OdsayRoutes odsay;
     private final KakaoPlaceSearch places;
     private final KakaoMapRoutes mapRoutes;
+    private final RouteLookup routeLookup;
 
     /** Spring이 전달한 서비스들을 REST 요청 처리에 사용할 수 있도록 연결합니다. */
     public TravelApi(CatalogService catalog, JourneyService journeys, PlanService plans,
                      TourService tours, ComparisonService comparison, OdsayRoutes odsay, KakaoPlaceSearch places,
-                     KakaoMapRoutes mapRoutes) {
+                     KakaoMapRoutes mapRoutes, RouteLookup routeLookup) {
         this.catalog = catalog;
         this.journeys = journeys;
         this.plans = plans;
@@ -36,6 +38,7 @@ public class TravelApi {
         this.odsay = odsay;
         this.places = places;
         this.mapRoutes = mapRoutes;
+        this.routeLookup = routeLookup;
     }
 
     /** 홈 검색 폼의 도시 목록과 검색어를 CatalogService에 연결합니다. */
@@ -96,6 +99,13 @@ public class TravelApi {
         return mapRoutes.walkingGeometry(new RoutePoint(fromLat, fromLng), new RoutePoint(toLat, toLng));
     }
 
+    /** 선택한 시외버스의 터미널과 실제 여행지 사이에 지도에 그릴 수 있는 연결 경로를 조회합니다. */
+    @GetMapping("/routes/terminal-access")
+    public List<Segment> terminalAccess(@RequestParam double fromLat, @RequestParam double fromLng,
+                                        @RequestParam double toLat, @RequestParam double toLng) {
+        return routeLookup.terminalAccess(new RoutePoint(fromLat, fromLng), new RoutePoint(toLat, toLng));
+    }
+
     /**
      * 여행 일정 화면에 여행 조건을 바탕으로 만든 기본 일정과 견적을 반환합니다.
      *
@@ -111,6 +121,12 @@ public class TravelApi {
      */
     @PostMapping("/itineraries/quote")
     public PlanService.PlanQuote quote(@Valid @RequestBody Plan plan) { return plans.quote(plan); }
+
+    /** 선택한 날짜의 의견 코스 한 건을 검증하고 견적과 지도에 필요한 구간을 반환합니다. */
+    @PostMapping("/itineraries/opinions/quote")
+    public PlanService.OpinionQuote quoteOpinion(@Valid @RequestBody OpinionRequest request) {
+        return plans.quoteOpinion(request);
+    }
 
     /** 일정 화면의 저장 목록에 계획 요약을 최근 수정 순으로 반환합니다. */
     @GetMapping("/travel-plans")

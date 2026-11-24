@@ -27,10 +27,11 @@ class OdsayRoutesTest {
                 {"result":{"searchType":1,"path":[
                   {"pathType":12,"info":{"totalTime":150,"totalPayment":21000,"totalDistance":200000},
                    "subPath":[{"trafficType":5,"startName":"서울고속버스터미널","endName":"강릉고속버스터미널",
-                    "sectionTime":150,"distance":200000}]},
+                    "sectionTime":150,"distance":200000,"startX":0,"startY":37.5}]},
                   {"pathType":12,"info":{"totalTime":165,"totalPayment":19500,"totalDistance":205000},
                    "subPath":[{"trafficType":6,"startName":"동서울터미널","endName":"강릉시외버스터미널",
-                    "sectionTime":165,"distance":205000}]},
+                    "sectionTime":165,"distance":205000,"startX":"127.09","startY":37.54,
+                    "endX":128.89,"endY":37.75}]},
                   {"pathType":11,"info":{"totalTime":110,"totalPayment":28000,"totalDistance":220000}}]}}
                 """);
         var buses = OdsayRoutes.readIntercityBuses(from, to, response, checkedAt);
@@ -41,6 +42,10 @@ class OdsayRoutesTest {
         assertNull(intercity.fare().child());
         assertEquals("동서울터미널", intercity.boardings().get(0).start());
         assertEquals("강릉시외버스터미널", intercity.boardings().get(0).end());
+        assertEquals(new RoutePoint(37.54, 127.09), intercity.boardings().get(0).terminalFrom());
+        assertEquals(new RoutePoint(37.75, 128.89), intercity.boardings().get(0).terminalTo());
+        assertNull(buses.get(0).boardings().get(0).terminalFrom());
+        assertNull(buses.get(0).boardings().get(0).terminalTo());
         assertTrue(intercity.geometry().isEmpty());
 
         var odsay = mock(OdsayRoutes.class);
@@ -55,6 +60,32 @@ class OdsayRoutesTest {
         assertEquals(List.of(Mode.CITY_BUS, Mode.CAR, Mode.TAXI, Mode.EXPRESS_BUS, Mode.INTERCITY_BUS),
                 options.stream().map(Segment::mode).toList());
         verify(odsay, never()).enrich(anyList());
+    }
+
+    /** 터미널 접근은 지도 좌표를 가진 도보·대중교통 후보를 시간 순으로 반환합니다. */
+    @Test
+    void usesDrawableRoutesToTheTerminal() {
+        var odsay = mock(OdsayRoutes.class);
+        var kakao = mock(KakaoMapRoutes.class);
+        var road = mock(KakaoRoadRoutes.class);
+        var from = new RoutePoint(37.38, 127.12);
+        var terminal = new RoutePoint(37.41, 127.13);
+        var start = new Place("access-start", "출발", from.latitude(), from.longitude());
+        var end = new Place("access-end", "도착", terminal.latitude(), terminal.longitude());
+        var geometry = List.of(List.of(from, new RoutePoint(37.4, 127.13), terminal));
+        var walk = new Segment(start, end, Mode.WALK, BigDecimal.TEN, 36, 0, null,
+                Source.KAKAO_ROUTING, checkedAt, null, List.of(), geometry);
+        var bus = new Segment(start, end, Mode.CITY_BUS, BigDecimal.TEN, 22, 0, null,
+                Source.KAKAO_ROUTING, checkedAt, null, List.of(), geometry);
+        var withoutGeometry = new Segment(start, end, Mode.SUBWAY, BigDecimal.TEN, 12, 0, null,
+                Source.KAKAO_ROUTING, checkedAt);
+        when(kakao.walk(start, end)).thenReturn(java.util.Optional.of(walk));
+        when(kakao.transit(start, end)).thenReturn(List.of(withoutGeometry, bus));
+
+        var lookup = new RouteLookup(odsay, road, kakao);
+        assertEquals(List.of(bus, walk), lookup.terminalAccess(from, terminal));
+        assertEquals(List.of(), lookup.terminalAccess(terminal, terminal));
+        verifyNoInteractions(road, odsay);
     }
 
     /** ODsay 응답에서 요금·시간·지도 코드를 읽고 제공되지 않은 아동 운임을 비워 두는지 검증합니다. */

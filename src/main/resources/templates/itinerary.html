@@ -14,6 +14,18 @@
       <div id="status" class="status" role="status" aria-live="polite"></div>
       <!-- plan.js가 날짜 버튼과 선택한 날짜의 타임라인을 그립니다. 이동 구간은 서버 견적의 방문 순서를 따릅니다. -->
       <div id="plan-days" class="days" role="group" aria-label="날짜"></div>
+      <section id="plan-opinions" aria-label="날짜별 의견" hidden>
+        <div id="opinion-tabs" role="group" aria-label="일정 선택"></div>
+        <form id="opinion-name" hidden>
+          <label>의견 이름<input name="opinionName" maxlength="40" required></label>
+          <button class="primary" type="submit">확인</button>
+          <button class="textbtn" id="cancel-opinion-name" type="button">취소</button>
+        </form>
+        <div id="opinion-tools" hidden>
+          <label><input id="compare-opinion" type="checkbox" checked> 기본 일정과 겹쳐 보기</label>
+          <button class="textbtn" id="rename-opinion" type="button">이름 변경</button>
+        </div>
+      </section>
       <div id="plan-day"></div>
       <section id="related-tours" aria-labelledby="related-tours-heading" hidden>
         <h2 id="related-tours-heading">이 관광지를 방문하는 일일투어</h2>

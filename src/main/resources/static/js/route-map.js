@@ -1,4 +1,4 @@
-import {$, api, e, modes, won, minutes, distance, modeKind, PLANE_PATH, transitStepKind} from './common.js';
+import {$, api, e, modes, won, minutes, distance, modeKind, PLANE_PATH, transitStepKind, isIntercityBus} from './common.js';
 
 let sdk;
 
@@ -73,8 +73,40 @@ async function routeParts(segment, includeWalkConnections = true) {
     return lines.map(points => ({points, kind: segment.mode === 'WALK' ? 'walk' : null}));
 }
 
+// 터미널 접근은 승차·하차 위치가 실제 여행지와 다를 때만 조회합니다.
+// 첫 번째 후보의 상세 좌표 조회에 실패하면 다음 후보를 확인합니다.
+async function terminalAccess(from, to) {
+    if (!from || !to) return {lines: [], missing: true};
+    if (distanceKm(from, to) < 0.005) return {lines: []};
+    const query = new URLSearchParams({fromLat: from.latitude, fromLng: from.longitude,
+        toLat: to.latitude, toLng: to.longitude});
+    const routes = await api('/routes/terminal-access?' + query).catch(() => []);
+    for (const route of routes) {
+        const lines = await routeParts(route).catch(() => []);
+        if (lines.length) {
+            return {mode: route.mode, lines: lines.map(part => ({...part, kind: part.kind ?? modeKind(route.mode)}))};
+        }
+    }
+    return {lines: [], missing: true};
+}
+
+async function intercityShape(segment) {
+    const steps = segment.boardings ?? [];
+    const departure = steps[0]?.terminalFrom;
+    const arrival = steps.at(-1)?.terminalTo;
+    const [access, onward] = await Promise.all([
+        terminalAccess(segment.from, departure), terminalAccess(arrival, segment.to)
+    ]);
+    // 각 버스 탑승 구간의 두 터미널끼리만 연결합니다. 실제 버스 도로 좌표로 해석하지 않습니다.
+    const connections = steps.filter(step => step.terminalFrom && step.terminalTo)
+        .map(step => ({points: [step.terminalFrom, step.terminalTo], terminalLink: true}));
+    return {lines: [...connections, ...access.lines, ...onward.lines], connections, steps, access, onward,
+        missing: access.missing || onward.missing || connections.length !== steps.length};
+}
+
 /** 단계별 색과 선 모양을 정합니다. 수단을 모르는 선은 원래 지도 화면의 색을 유지합니다. */
 function appearance(container, part, fallback) {
+    if (part.terminalLink) return {color: fallback, style: 'shortdash'};
     if (part.kind === 'walk') {
         return {color: cssValue(container, '--ink-2') || cssValue(container, '--muted'), style: 'shortdot'};
     }
@@ -200,7 +232,7 @@ function distanceKm(a, b) {
 }
 
 // 경로 비교 응답의 구간(sections)을 교통수단 색 선, 환승 점, 도착 핀, 이름표로 그립니다.
-// 항공 구간의 곡선은 공항 간 연결 안내입니다. 지상 이동은 조회한 경로만 그리며, 좌표를 얻지 못하면 출발·도착 위치만 남깁니다.
+// 항공 곡선과 시외버스 점선은 연결 안내입니다. 터미널 접근을 포함한 그 밖의 지상 이동은 조회한 좌표로 그립니다.
 // 반환하는 fit(focus)는 전체(all), 출발지 주변(start), 도착지 주변(end) 범위로 지도를 맞춥니다. focuses는 고를 수 있는 범위 목록입니다.
 // rightPad는 지도 오른쪽을 가리는 견적 카드 폭을 돌려주는 함수입니다.
 export async function drawJourney(view, sections, rightPad = () => 0) {
@@ -212,6 +244,7 @@ export async function drawJourney(view, sections, rightPad = () => 0) {
     const segments = sections.map(section => section.chosen);
     const shapes = await Promise.all(segments.map(async segment => {
         if (segment.mode === 'FLIGHT') return {arc: arcPoints(segment.from, segment.to)};
+        if (isIntercityBus(segment.mode)) return intercityShape(segment);
         return {lines: await routeParts(segment).catch(() => [])};
     }));
     if (token !== view.drawing) return null;
@@ -227,17 +260,43 @@ export async function drawJourney(view, sections, rightPad = () => 0) {
         lines.forEach(part => {
             all.push(...part.points);
             const {color: lineColor, style} = appearance(view.container, part, color);
-            casedLine(view, part.points.map(position), lineColor, 5, shape.arc ? 10 : 12, style);
+            casedLine(view, part.points.map(position), lineColor, 5, shape.arc || part.terminalLink ? 10 : 12, style);
         });
-        if (!lines.length) return;
-        const middleLine = lines[Math.floor(lines.length / 2)].points;
-        const middle = position(middleLine[Math.floor(middleLine.length / 2)]);
+        if (shape.steps) {
+            const terminals = new Map();
+            shape.steps.forEach((step, index) => {
+                const access = shape.access.mode ? '승차, 터미널까지 ' + modes[shape.access.mode] : '승차';
+                const onward = shape.onward.mode ? '하차, 목적지까지 ' + modes[shape.onward.mode] : '하차';
+                for (const [point, name, label] of [
+                    [step.terminalFrom, step.start, index === 0 ? access : '환승 버스 승차'],
+                    [step.terminalTo, step.end, index === shape.steps.length - 1 ? onward : '환승 버스 하차']
+                ]) {
+                    if (point) terminals.set(point.latitude + ',' + point.longitude, {point, name, label});
+                }
+            });
+            for (const {point, name, label} of terminals.values()) {
+                all.push(point);
+                const at = position(point);
+                if ([segment.from, segment.to].some(stop => distanceKm(stop, point) < 0.005)) continue;
+                put(view, at, overlayNode('knode sm', ''), 'c', 32);
+                put(view, at, callout(name, label, 'r'), 'r', 40,
+                    () => [segment.from, segment.to].every(stop => pixelGap(view, at, position(stop)) >= 70));
+            }
+        }
+        const labeledLines = shape.connections ?? lines;
+        if (!labeledLines.length) return;
+        const middleLine = labeledLines[Math.floor(labeledLines.length / 2)].points;
+        const [a, b] = middleLine;
+        const middle = position(shape.connections
+            ? {latitude: (a.latitude + b.latitude) / 2, longitude: (a.longitude + b.longitude) / 2}
+            : middleLine[Math.floor(middleLine.length / 2)]);
         if (shape.arc) {
             put(view, middle, overlayNode('kplane', '<svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true" style="color:'
                 + color + ';transform:rotate(' + shape.arc.angle.toFixed(1) + 'deg)"><path d="' + PLANE_PATH + '"/></svg>'), 'c', 31);
         }
         // 구간 이름표는 선이 화면에서 140px 이상일 때만 보여 줍니다.
-        const from = position(segment.from), to = position(segment.to);
+        const from = position(shape.connections ? a : segment.from);
+        const to = position(shape.connections ? b : segment.to);
         const cost = sections[i].cost;
         const amount = cost.missing.length && Number(cost.totalKrw) === 0
             ? '요금 미확인' : won(cost.totalKrw) + (cost.missing.length ? ' (부분 합계)' : '');
@@ -277,7 +336,7 @@ export async function drawJourney(view, sections, rightPad = () => 0) {
         view.map.setBounds(bounds, pad, Math.max(pad, rightPad()), pad, pad);
         applyRules(view);
     };
-    return {fit, focuses, hasMissingGeometry: shapes.some(shape => shape.lines?.length === 0)};
+    return {fit, focuses, hasMissingGeometry: shapes.some(shape => shape.missing || shape.lines?.length === 0)};
 }
 
 // 날짜 색 물방울 핀 안에 흰 번호를 넣은 SVG입니다. 장소 카드와 지도 핀이 같은 모양을 씁니다.
@@ -292,21 +351,23 @@ export const dayColor = index => '--d' + (index % 3 + 1);
 // 여행 일정 화면의 지도: 고른 날짜(focus)는 날짜 색 동선과 번호 핀, 다른 날짜는 흐린 회색 점선과 점으로 그립니다.
 // days는 /api/itineraries/quote 응답의 days입니다. 경로를 얻지 못한 구간은 번호 핀만 표시합니다.
 // 반환하는 fit()에는 장소뿐 아니라 조회한 선의 좌표도 포함해 굽은 경로가 화면 밖으로 잘리지 않게 합니다.
-export async function drawDays(view, days, focus, rightPad = () => 0) {
+export async function drawDays(view, days, focus, rightPad = () => 0, comparison = null) {
     // 현지 일정 지도와 투어 미리보기 지도의 요청 번호는 각각 관리합니다.
     const token = (view.drawing ?? 0) + 1;
     view.drawing = token;
     const {maps} = view;
     const position = point => new maps.LatLng(point.latitude, point.longitude);
-    // 배경으로 보이는 다른 날짜는 기존 좌표만 그립니다. 새 도보 조회는 선택한 날짜의 구간에만 요청합니다.
-    const shapes = await Promise.all(days.map((day, index) => Promise.all(day.journey.sections.map(section =>
-        routeParts(section.chosen, index === focus).catch(() => [])))));
+    // 의견과 기본 일정을 비교할 때는 같은 날짜의 두 경로만 표시합니다. 기존 배경 날짜에는 새 도보 조회를 요청하지 않습니다.
+    const layers = comparison
+        ? [{day: comparison, index: focus, active: false}, {day: days[focus], index: focus, active: true}]
+        : days.map((day, index) => ({day, index, active: index === focus}));
+    const shapes = await Promise.all(layers.map(({day, active}) => Promise.all(day.journey.sections.map(section =>
+        routeParts(section.chosen, active || Boolean(comparison)).catch(() => [])))));
     if (token !== view.drawing) return null;
     clear(view);
     const ink2 = cssValue(view.container, '--ink-2');
-    days.forEach((day, i) => {
-        const on = i === focus;
-        const color = cssValue(view.container, dayColor(i));
+    layers.forEach(({day, index, active: on}, i) => {
+        const color = cssValue(view.container, dayColor(index));
         shapes[i].flat().forEach(part => {
             const path = part.points.map(position);
             const style = appearance(view.container, part, color);
@@ -327,10 +388,12 @@ export async function drawDays(view, days, focus, rightPad = () => 0) {
             put(view, at, overlayNode('kpinlabel', e(stop.name + suffix)), 'b', 34);
         });
     });
+    const activeIndex = layers.findIndex(layer => layer.active);
+    const layerPoints = i => [...layers[i].day.stops, ...shapes[i].flat().flatMap(part => part.points)];
     const fit = () => {
-        const points = days[focus]?.stops.length
-            ? [...days[focus].stops, ...shapes[focus].flat().flatMap(part => part.points)]
-            : [...days.flatMap(day => day.stops), ...shapes.flat(2).flatMap(part => part.points)];
+        const points = comparison || !days[focus]?.stops.length
+            ? layers.flatMap((_, index) => layerPoints(index))
+            : layerPoints(activeIndex);
         if (!points.length) return;
         const bounds = new maps.LatLngBounds();
         points.forEach(point => bounds.extend(position(point)));
@@ -339,7 +402,7 @@ export async function drawDays(view, days, focus, rightPad = () => 0) {
         // 장소가 한 곳이거나 서로 가까워도 지도가 지나치게 확대되지 않도록 조정합니다.
         if (view.map.getLevel() < 6) view.map.setLevel(6);
     };
-    const hasMissingGeometry = days[focus]?.journey.sections.some(({chosen}, index) =>
-        chosen.from.id !== chosen.to.id && !shapes[focus][index].length);
+    const hasMissingGeometry = layers.some(({day, active}, i) => (active || comparison) && day.journey.sections.some(
+        ({chosen}, index) => chosen.from.id !== chosen.to.id && !shapes[i][index].length));
     return {fit, hasMissingGeometry};
 }

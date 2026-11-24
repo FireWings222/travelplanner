@@ -26,6 +26,8 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 화면�
 | 0014 | [홈 여행 조건 폼의 폭과 입력 줄 정리](decisions/0014-compact-trip-form.md) | 대체됨(0015) | 2026-11-24 |
 | 0015 | [홈 여행 조건 폼을 가운데에 배치](decisions/0015-center-trip-form.md) | 대체됨(0016) | 2026-11-24 |
 | 0016 | [여행 조건을 오른쪽 상단에 확대 배치](decisions/0016-home-trip-panel.md) | 결정 | 2026-11-24 |
+| 0017 | [시외버스 터미널 연결과 접근 경로 표시](decisions/0017-intercity-terminal-paths.md) | 결정 | 2026-11-24 |
+| 0018 | [날짜별 의견 코스를 독립 편집](decisions/0018-daily-route-opinions.md) | 결정 | 2026-11-24 |
 
 ## 시안 목록
 

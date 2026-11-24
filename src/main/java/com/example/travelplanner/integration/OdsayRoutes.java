@@ -90,7 +90,8 @@ public class OdsayRoutes {
                 int minutes = leg.path("sectionTime").asInt(-1);
                 int meters = leg.path("distance").asInt(-1);
                 boardings.add(new Boarding(mode, List.of(), departure, arrival,
-                        minutes < 0 ? null : minutes, meters < 0 ? null : meters, List.of()));
+                        minutes < 0 ? null : minutes, meters < 0 ? null : meters, List.of(), null, null,
+                        terminalPoint(leg, "start"), terminalPoint(leg, "end")));
             }
             if (boardings.isEmpty()) continue;
             Mode mode = boardings.stream().anyMatch(boarding -> boarding.mode() == Mode.INTERCITY_BUS)
@@ -105,6 +106,13 @@ public class OdsayRoutes {
                     boardings.size() - 1, fare, Source.ODSAY, checkedAt, null, List.copyOf(boardings)));
         }
         return List.copyOf(choices.values());
+    }
+
+    /** ODsay의 X는 경도, Y는 위도입니다. 누락되거나 0으로 채워진 좌표로 터미널을 표시하지 않습니다. */
+    private static RoutePoint terminalPoint(JsonNode leg, String prefix) {
+        RoutePoint point = new RoutePoint(leg.path(prefix + "Y").asDouble(Double.NaN),
+                leg.path(prefix + "X").asDouble(Double.NaN));
+        return point.valid() && point.latitude() != 0 && point.longitude() != 0 ? point : null;
     }
 
     /**

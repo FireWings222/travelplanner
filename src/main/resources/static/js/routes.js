@@ -122,7 +122,7 @@ export async function init(cities) {
             + '</button>'
             + (on ? '<div class="rc-legs">' + legRows(result.selected.sections)
                 + '<p class="rc-note">' + e(costNote(result.selected.cost)) + '</p>'
-                + (terminalRoute ? '<p class="rc-note">터미널까지의 이동 시간과 교통비는 별도입니다.</p>' : '') + '</div>' : '')
+                + (terminalRoute ? '<p class="rc-note">점선은 터미널 간 연결을 표시합니다. 터미널과 여행지 사이의 이동 시간과 교통비는 별도입니다.</p>' : '') + '</div>' : '')
             + '</article>';
     }
 

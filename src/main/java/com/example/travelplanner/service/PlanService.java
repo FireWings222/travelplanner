@@ -27,6 +27,7 @@ public class PlanService {
 
     public record DayQuote(LocalDate date, List<Attraction> stops, Journey journey, Total total, Integer visitMinutes) {}
     public record PlanQuote(Plan plan, List<DayQuote> days, Total total) {}
+    public record OpinionQuote(Opinion opinion, DayQuote day) {}
     public record StoredPlan(UUID id, Plan plan, Instant updatedAt) {}
     public record PlanSummary(UUID id, Trip trip, Instant updatedAt) {}
 
@@ -77,12 +78,57 @@ public class PlanService {
         for (Day day : plan.days()) {
             List<Attraction> stops = catalog.stops(trip.destination(), day.stops(), day.places());
             var legs = journeys.visitLegs(trip.destination(), stops, day.legs());
-            Journey journey = journeys.visits(stops, legs, trip.preferredMode(), trip.party());
-            normalizedDays.add(new Day(day.date(), day.stops(), legs, day.places()));
-            journey.sections().forEach(section -> all.add(section.cost()));
-            days.add(new DayQuote(day.date(), stops, journey, journey.cost(), visitMinutes(stops)));
+            List<Opinion> opinions = normalizeOpinions(trip, day.opinions());
+            DayQuote quoted = quoteDay(trip, day.date(), stops, legs);
+            normalizedDays.add(new Day(day.date(), day.stops(), legs, day.places(), opinions));
+            quoted.journey().sections().forEach(section -> all.add(section.cost()));
+            days.add(quoted);
         }
         return new PlanQuote(new Plan(trip, List.copyOf(normalizedDays)), List.copyOf(days), pricing.total(all, trip.party()));
+    }
+
+    /** 선택한 의견만 길찾기로 조회합니다. 의견의 비용은 여행 전체 견적에 합산하지 않습니다. */
+    public OpinionQuote quoteOpinion(OpinionRequest request) {
+        Trip trip = catalog.validateTrip(request.trip());
+        if (request.date().isBefore(trip.start()) || request.date().isAfter(trip.end())) {
+            throw new IllegalArgumentException("의견 날짜를 여행 기간 안에서 선택하세요.");
+        }
+        Opinion opinion = request.opinion();
+        List<Attraction> stops = catalog.stops(trip.destination(), opinion.stops(), opinion.places());
+        Opinion normalized = normalizeOpinion(trip, opinion, stops);
+        return new OpinionQuote(normalized, quoteDay(trip, request.date(), stops, normalized.legs()));
+    }
+
+    /** 전체 일정에서는 저장 가능한 장소와 구간 설정만 검증해 모든 의견의 길찾기를 되풀이하지 않습니다. */
+    private List<Opinion> normalizeOpinions(Trip trip, List<Opinion> opinions) {
+        Set<UUID> ids = new HashSet<>();
+        Set<String> names = new HashSet<>();
+        List<Opinion> normalized = new ArrayList<>();
+        for (Opinion opinion : opinions) {
+            List<Attraction> stops = catalog.stops(trip.destination(), opinion.stops(), opinion.places());
+            Opinion item = normalizeOpinion(trip, opinion, stops);
+            if (!ids.add(item.id()) || !names.add(item.name())) {
+                throw new IllegalArgumentException("같은 날짜의 의견은 서로 다른 이름을 사용하세요.");
+            }
+            normalized.add(item);
+        }
+        return List.copyOf(normalized);
+    }
+
+    private Opinion normalizeOpinion(Trip trip, Opinion opinion, List<Attraction> stops) {
+        String name = opinion.name().strip();
+        if (name.isBlank() || name.equals("기본 일정")) {
+            throw new IllegalArgumentException("기본 일정과 다른 의견 이름을 입력하세요.");
+        }
+        UUID id = opinion.id() == null ? UUID.randomUUID() : opinion.id();
+        return new Opinion(id, name, opinion.stops(),
+                journeys.visitLegs(trip.destination(), stops, opinion.legs()), opinion.places());
+    }
+
+    /** 기본 일정과 의견에서 같은 방문 순서, 시간, 요금 계산을 사용합니다. */
+    private DayQuote quoteDay(Trip trip, LocalDate date, List<Attraction> stops, Map<String, Leg> legs) {
+        Journey journey = journeys.visits(stops, legs, trip.preferredMode(), trip.party());
+        return new DayQuote(date, stops, journey, journey.cost(), visitMinutes(stops));
     }
 
     /** 체류 시간을 모르는 방문지가 있으면 일정 전체의 체류 시간도 미확인입니다. */

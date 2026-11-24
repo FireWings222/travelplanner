@@ -29,6 +29,10 @@ export async function init(cities) {
     const save = $('#save-plan');
     const estimate = $('#estimate');
     const mapSlot = $('#plan-map');
+    const opinionTabs = $('#opinion-tabs');
+    const opinionNameForm = $('#opinion-name');
+    const opinionNameInput = opinionNameForm.elements.opinionName;
+    const compareOpinion = $('#compare-opinion');
     const renderRelatedTours = connectPlanTours();
     // plan은 편집 중인 계획, quote는 그 계획의 견적 응답입니다. id가 있을 때만 저장된 DB 일정을 갱신합니다.
     let plan = read('plan');
@@ -40,6 +44,13 @@ export async function init(cities) {
     let moved = null;
     let drawn = null;
     let drawnKey = '';
+    // 날짜를 바꿔도 탭 선택을 기억하고, 확인한 의견 견적은 현재 여행을 편집하는 동안 재사용합니다.
+    const selections = new Map();
+    const opinionQuotes = new Map();
+    const dayIndex = () => plan.days.findIndex(day => day.date === date);
+    const selectedOpinionId = () => selections.get(date) ?? '';
+    const opinionKey = (dayDate, opinionId) => dayDate + '/' + opinionId;
+    let naming;
     // 도시 ID를 화면에 보여 줄 이름으로 바꿉니다.
     const city = cityId => cities.find(item => item.id === cityId)?.name ?? cityId;
 
@@ -59,14 +70,19 @@ export async function init(cities) {
     // 저장 목록에서 받은 계획을 현재 작업 상태로 열고 해당 일정 견적을 불러옵니다.
     // 저장 API가 반환한 계획과 ID를 편집 대상으로 삼고 시작일을 선택합니다. 이전 여행의 경로 선택과 투어 비교 상태는 초기화합니다.
     async function open(stored) {
-        plan = stored.plan;
+        const result = await api('/itineraries/quote', stored.plan);
         id = stored.id;
-        date = plan.trip.start;
-        write('trip', plan.trip);
+        date = result.plan.trip.start;
+        selections.clear();
+        opinionQuotes.clear();
+        closeOpinionName();
+        compareOpinion.checked = true;
+        write('trip', result.plan.trip);
         write('legs', null);
         write('comparison', null);
         transport = undefined;
-        await load(plan.trip);
+        accept(result);
+        loadTransport(plan.trip);
     }
 
     // 일정 목록 API를 호출해 저장한 여행을 표시하고 열기, 삭제 버튼을 연결합니다.
@@ -81,10 +97,11 @@ export async function init(cities) {
                 + e(record.id) + '">삭제</button></div>';
         }).join('') : '<p class="fine">저장한 여행이 없습니다.</p>';
         // 저장한 계획 상세를 조회하고 현재 일정으로 엽니다.
-        $$('[data-open]', root).forEach(button => button.onclick = () => busy(root, async () =>
-            open(await api('/travel-plans/' + button.dataset.open))).catch(showError));
+        $$('[data-open]', root).forEach(button => button.onclick = () => edit(() => busy(root, async () =>
+            open(await api('/travel-plans/' + button.dataset.open)))));
         // 삭제 확인 뒤 저장 일정 API와 화면의 저장 목록을 갱신합니다.
         $$('[data-delete]', root).forEach(button => button.onclick = () => {
+            if (pending) return;
             if (!window.confirm('저장한 여행을 삭제할까요?')) return;
             busy(root, async () => {
                 await api('/travel-plans/' + button.dataset.delete, undefined, 'DELETE');
@@ -138,20 +155,103 @@ export async function init(cities) {
         render();
     }
 
-    // 한 날짜의 변경 내용을 전체 계획에 반영해 서버에 다시 계산을 요청합니다.
-    async function change(day) {
-        if (pending) return;
+    // 견적 요청 중에는 날짜, 의견과 저장 대상을 잠가 늦게 도착한 응답이 다른 코스에 적용되는 것을 막습니다.
+    async function edit(action) {
+        if (pending) return false;
         pending = true;
+        save.disabled = true;
         status('일정을 다시 계산하는 중입니다.');
         try {
-            const next = {...plan, days: plan.days.map(item => item.date === day.date ? day : item)};
-            accept(await api('/itineraries/quote', next));
+            await action();
+            status('');
+            return true;
         } catch (error) {
-            render();
+            if (plan && quote) render();
             showError(error);
+            return false;
         } finally {
             pending = false;
+            save.disabled = false;
         }
+    }
+
+    // 기본 일정은 전체 견적에 반영합니다. 의견은 해당 탭의 견적과 저장 데이터만 바꿉니다.
+    function change(day) {
+        return edit(async () => {
+            if (day.id) {
+                await updateOpinion(day.date, day);
+                return;
+            }
+            const next = {...plan, days: plan.days.map(item => item.date === day.date ? day : item)};
+            accept(await api('/itineraries/quote', next));
+        });
+    }
+
+    async function updateOpinion(dayDate, draft) {
+        const {date: _, ...opinion} = draft;
+        const result = await api('/itineraries/opinions/quote', {trip: plan.trip, date: dayDate, opinion});
+        plan = {...plan, days: plan.days.map(day => {
+            if (day.date !== dayDate) return day;
+            const opinions = day.opinions ?? [];
+            return {...day, opinions: opinion.id
+                ? opinions.map(item => item.id === opinion.id ? result.opinion : item)
+                : [...opinions, result.opinion]};
+        })};
+        opinionQuotes.set(opinionKey(dayDate, result.opinion.id), result.day);
+        selections.set(dayDate, result.opinion.id);
+        write('plan', plan);
+        closeOpinionName();
+        render();
+    }
+
+    function renderOpinions() {
+        const opinions = plan.days[dayIndex()].opinions ?? [];
+        const selected = selectedOpinionId();
+        const tab = (id, name) => '<button class="outline" type="button" data-opinion="' + e(id)
+            + '" aria-pressed="' + (id === selected) + '">' + e(name) + '</button>';
+        $('#plan-opinions').hidden = false;
+        opinionTabs.innerHTML = tab('', '기본 일정') + opinions.map(item => tab(item.id, item.name)).join('')
+            + '<button class="outline" id="add-opinion" type="button">＋ 의견 추가</button>';
+        $('#opinion-tools').hidden = !selected;
+        compareOpinion.disabled = !quote.days[dayIndex()].stops.length;
+    }
+
+    function closeOpinionName() {
+        naming = undefined;
+        opinionNameForm.hidden = true;
+        opinionNameInput.setCustomValidity('');
+    }
+
+    function showOpinionName(opinion) {
+        naming = opinion ?? {};
+        opinionNameForm.hidden = false;
+        opinionNameInput.value = opinion?.name ?? '';
+        opinionNameInput.setCustomValidity('');
+        opinionNameInput.select();
+        opinionNameInput.focus();
+    }
+
+    function focusOpinionTab() {
+        $('[data-opinion][aria-pressed="true"]', opinionTabs)?.focus();
+    }
+
+    async function selectOpinion(id) {
+        if (pending || id === selectedOpinionId()) return;
+        closeOpinionName();
+        const key = opinionKey(date, id);
+        if (id && !opinionQuotes.has(key)) {
+            const opinion = plan.days[dayIndex()].opinions.find(item => item.id === id);
+            if (!await edit(async () => {
+                const result = await api('/itineraries/opinions/quote', {trip: plan.trip, date, opinion});
+                opinionQuotes.set(key, result.day);
+                selections.set(date, id);
+                render();
+            })) return;
+        } else {
+            selections.set(date, id);
+            render();
+        }
+        focusOpinionTab();
     }
 
     // order의 숫자는 기존 방문 순번이고 문자열은 새 장소 ID입니다. 서로 이웃한 상태로 남은 방문 사이의 설정만 옮깁니다.
@@ -185,7 +285,8 @@ export async function init(cities) {
                 {key: 'transport', label: transport?.terminalRoute ? '터미널 간 왕복 (편도의 2배)' : '왕복 교통 (편도의 2배)',
                     value: transport?.value ?? null, partial: Boolean(transport?.partial),
                     text: transport === undefined ? '계산 중' : '미확인'},
-                {key: 'local', label: '현지 일정 ' + plan.days.length + '일', partial: localUnknown,
+                {key: 'local', label: (plan.days.some(day => day.opinions?.length) ? '기본 현지 일정 ' : '현지 일정 ')
+                    + plan.days.length + '일', partial: localUnknown,
                     value: !hasStops || (localUnknown && Number(local.totalKrw) === 0) ? null : local.totalKrw,
                     text: hasStops ? '미확인' : '장소 추가 전'},
                 {key: 'tour', label: '일일투어', value: null, text: '선택 안 함'}
@@ -222,9 +323,11 @@ export async function init(cities) {
 
     // 고른 날짜의 타임라인에 요약과 방문 순서, 이동 구간, 장소 추가 기능을 표시합니다.
     function renderDay() {
-        const index = plan.days.findIndex(item => item.date === date);
-        const day = plan.days[index];
-        const summary = quote.days[index];
+        const index = dayIndex();
+        const base = plan.days[index];
+        const opinion = base.opinions?.find(item => item.id === selectedOpinionId());
+        const day = opinion ? {...opinion, date} : base;
+        const summary = opinion ? opinionQuotes.get(opinionKey(date, opinion.id)) : quote.days[index];
         const color = 'var(' + dayColor(index) + ')';
         const travel = summary.journey.minutes;
         const facts = summary.stops.length ? '<p class="dayfacts num">머무름 ' + minutes(summary.visitMinutes)
@@ -250,7 +353,7 @@ export async function init(cities) {
                     + '<button type="submit" class="outline">검색</button></form><p id="place-status" class="fine" role="status"></p>'
                     + '<ul id="catalog-place-results" class="place-results" aria-label="저장된 관광지" hidden></ul>'
                     + '<ul id="place-results" class="place-results" aria-label="카카오맵 검색 결과" hidden></ul></div>'
-                : '<p class="fine">하루에 최대 15곳까지 추가할 수 있습니다.</p>');
+                : '<p class="fine">코스마다 최대 15곳까지 추가할 수 있습니다.</p>');
         connectDay(day);
         renderRelatedTours(day, plan.trip);
         if (moved) {
@@ -265,6 +368,7 @@ export async function init(cities) {
         $('#plan-title').textContent = city(plan.trip.destination) + ' 현지 일정';
         $('#plan-note').textContent = '이동 요금은 일행 전체 금액입니다.';
         renderDays();
+        renderOpinions();
         renderDay();
         renderEstimate();
         renderMap().catch(error => mapFail(error.message));
@@ -274,13 +378,19 @@ export async function init(cities) {
     async function renderMap() {
         const view = await getMap();
         if (!view) return;
-        const focus = plan.days.findIndex(item => item.date === date);
+        const focus = dayIndex();
+        const selected = selectedOpinionId();
+        const base = quote.days[focus];
+        const days = [...quote.days];
+        if (selected) days[focus] = opinionQuotes.get(opinionKey(date, selected));
+        const comparison = selected && compareOpinion.checked && base.stops.length ? base : null;
         // 선택 날짜나 방문 순서가 바뀌거나 공급자 경로가 새로 조회되면 지도를 다시 그립니다.
-        const key = JSON.stringify([focus, quote.days.map(day => day.stops.map(stop => stop.id)),
-            quote.days.map(day => day.journey.sections.map(({chosen}) => [chosen.mode, chosen.checkedAt, chosen.mapObject]))]);
+        const shapes = comparison ? [...days, comparison] : days;
+        const key = JSON.stringify([focus, selected, Boolean(comparison), shapes.map(day => day.stops.map(stop => stop.id)),
+            shapes.map(day => day.journey.sections.map(({chosen}) => [chosen.mode, chosen.checkedAt, chosen.mapObject]))]);
         if (key === drawnKey) return;
         drawnKey = key;
-        const next = await drawDays(view, quote.days, focus, rightPad);
+        const next = await drawDays(view, days, focus, rightPad, comparison);
         if (!next) return;
         drawn = next;
         const note = $('#plan-geometry-note');
@@ -297,6 +407,7 @@ export async function init(cities) {
             changeStops(day, [...day.stops.keys()].filter(index => index !== +button.dataset.remove)));
         // 구간 교통수단 변경: 이전 수단의 직접 입력 요금은 지웁니다.
         $$('.hop-mode', list).forEach(select => select.onchange = () => {
+            if (pending) return;
             showCalc(select.closest('.between'));
             change({...day, legs: {...day.legs, [select.dataset.key]: {mode: select.value, override: null}}});
         });
@@ -494,15 +605,50 @@ export async function init(cities) {
     // 날짜 버튼을 누르면 그날 타임라인과 지도만 바꿉니다.
     $('#plan-days').addEventListener('click', event => {
         const button = event.target.closest('[data-date]');
-        if (!button || button.dataset.date === date) return;
+        if (pending || !button || button.dataset.date === date) return;
+        closeOpinionName();
         date = button.dataset.date;
         renderDays();
+        renderOpinions();
         renderDay();
         renderMap().catch(error => mapFail(error.message));
     });
 
+    opinionTabs.onclick = event => {
+        if (pending) return;
+        const button = event.target.closest('button');
+        if (button?.id === 'add-opinion') showOpinionName();
+        else if (button?.hasAttribute('data-opinion')) selectOpinion(button.dataset.opinion);
+    };
+    $('#rename-opinion').onclick = () => {
+        if (!pending) showOpinionName(plan.days[dayIndex()].opinions.find(item => item.id === selectedOpinionId()));
+    };
+    $('#cancel-opinion-name').onclick = () => {
+        if (pending) return;
+        const target = naming?.id ? $('#rename-opinion') : $('#add-opinion');
+        closeOpinionName();
+        target?.focus();
+    };
+    opinionNameInput.oninput = () => opinionNameInput.setCustomValidity('');
+    opinionNameForm.onsubmit = async event => {
+        event.preventDefault();
+        if (pending || !naming) return;
+        const name = opinionNameInput.value.trim();
+        const opinions = plan.days[dayIndex()].opinions ?? [];
+        if (!name || name === '기본 일정' || opinions.some(item => item.id !== naming.id && item.name === name)) {
+            opinionNameInput.setCustomValidity('같은 날짜의 다른 일정과 겹치지 않는 이름을 입력하세요.');
+            opinionNameInput.reportValidity();
+            return;
+        }
+        const draft = {...(naming.id ? naming : {stops: [], legs: {}, places: []}), name};
+        if (await edit(() => updateOpinion(date, draft))) focusOpinionTab();
+    };
+    compareOpinion.onchange = () => renderMap().catch(error => mapFail(error.message));
+
     // 현재 일정이 새 일정인지 확인해 등록 또는 수정 API를 호출합니다.
     save.onclick = async () => {
+        if (pending) return;
+        pending = true;
         save.disabled = true;
         try {
             const stored = await api(id ? '/travel-plans/' + id : '/travel-plans', plan, id ? 'PUT' : 'POST');
@@ -512,7 +658,7 @@ export async function init(cities) {
             await listSaved();
             status('여행 일정을 저장했습니다.');
         } catch (error) { showError(error); }
-        finally { save.disabled = false; }
+        finally { pending = false; save.disabled = false; }
     };
 
     const trip = read('trip');

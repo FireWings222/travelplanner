@@ -64,6 +64,36 @@ public class RouteLookup implements TravelProviders.Routes {
                 .toList();
     }
 
+    /**
+     * 시외버스를 선택했을 때 터미널 접근에 사용할 지도 경로를 따로 조회합니다.
+     * 조회한 도보와 대중교통 중 더 짧은 경로를 먼저 반환합니다. 둘 다 없으면 택시 경로를 조회합니다.
+     * 이 경로는 지도에만 사용하며 버스 운임과 소요 시간은 터미널 간 기준으로 비교합니다.
+     */
+    public List<Segment> terminalAccess(RoutePoint start, RoutePoint end) {
+        if (!start.valid() || !end.valid()) throw new IllegalArgumentException("터미널 연결 좌표를 확인하세요.");
+        Place from = new Place("access-start", "출발", start.latitude(), start.longitude());
+        Place to = new Place("access-end", "도착", end.latitude(), end.longitude());
+        if (samePoint(from, to)) return List.of();
+
+        List<Segment> routes = new ArrayList<>(mapRoutes.transit(from, to).stream().filter(RouteLookup::hasGeometry).toList());
+        if (routes.isEmpty()) {
+            odsay.enrich(List.of(unconfirmed(from, to, Mode.CAR))).stream()
+                    .filter(RouteLookup::hasGeometry).forEach(routes::add);
+        }
+        mapRoutes.walk(from, to).filter(RouteLookup::hasGeometry).ifPresent(routes::add);
+        if (routes.isEmpty()) {
+            return road.enrich(List.of(unconfirmed(from, to, Mode.TAXI))).stream()
+                    .filter(RouteLookup::hasGeometry).toList();
+        }
+        return routes.stream().sorted(Comparator.comparing(Segment::minutes,
+                Comparator.nullsLast(Comparator.naturalOrder()))).toList();
+    }
+
+    private static boolean hasGeometry(Segment segment) {
+        return !segment.geometry().isEmpty() || segment.mapObject() != null && !segment.mapObject().isBlank()
+                || segment.boardings().stream().anyMatch(step -> step.path().size() >= 2);
+    }
+
     /** 두 지점과 수단만 표시하고 외부에서 확인하지 못한 운임, 거리, 시간과 환승은 비워 둡니다. */
     private static Segment unconfirmed(Place from, Place to, Mode mode) {
         return new Segment(from, to, mode, null, null, null, null, Source.UNCONFIRMED, null);

@@ -41,6 +41,7 @@ class TravelPlannerTest {
     @Autowired TourService tours;
     @Autowired ComparisonService comparison;
     @Autowired MockMvc http;
+    @Autowired ObjectMapper mapper;
     @MockitoBean KakaoPlaceSearch placeSearch;
 
     @Test
@@ -230,6 +231,48 @@ class TravelPlannerTest {
         assertEquals(update, plans.get(saved.id()).plan());
         plans.delete(saved.id());
         assertThrows(com.example.travelplanner.exception.NotFound.class, () -> plans.get(saved.id()));
+    }
+
+    /** 의견의 순서와 교통수단은 기본 일정과 별도로 저장하고, 견적 합계는 기본 일정으로 유지합니다. */
+    @Test
+    void quotesAndStoresOpinionsSeparatelyFromTheMainItinerary() throws Exception {
+        var trip = new Trip("seoul", "jeju", DATE, DATE.plusDays(1), PARTY, null, null, TripType.OTHER);
+        var base = List.of(new Day(DATE, List.of("gimnyeong"), Map.of()),
+                new Day(DATE.plusDays(1), List.of(), Map.of()));
+        var place = new SearchedPlace("kakao-321", "제주목 관아", "제주특별자치도 제주시 관덕로 25", 33.513, 126.522);
+        var stops = List.of("seongsan", place.id(), "seongsan");
+        var legs = Map.of("seongsan~kakao-321", new Leg(Mode.TAXI, null));
+        var draft = new Opinion(null, "바다 코스", stops, legs, List.of(place));
+        var request = new OpinionRequest(trip, DATE, draft);
+        var response = http.perform(post("/api/itineraries/opinions/quote").contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.opinion.id").isString())
+                .andExpect(jsonPath("$.day.stops[1].id").value(place.id()))
+                .andExpect(jsonPath("$.day.journey.sections[0].chosen.mode").value("TAXI"))
+                .andReturn().getResponse().getContentAsByteArray();
+        var opinion = mapper.treeToValue(mapper.readTree(response).path("opinion"), Opinion.class);
+        var another = plans.quoteOpinion(new OpinionRequest(trip, DATE,
+                new Opinion(null, "시장 코스", List.of("dongmun"), Map.of(), List.of()))).opinion();
+        var plan = new Plan(trip, List.of(new Day(DATE, base.get(0).stops(), Map.of(),
+                List.of(), List.of(opinion, another)), base.get(1)));
+
+        assertEquals(plans.quote(new Plan(trip, base)).total(), plans.quote(plan).total());
+        var saved = plans.save(null, plan);
+        try {
+            var restored = plans.get(saved.id()).plan();
+            assertEquals(base.get(0).stops(), restored.days().get(0).stops());
+            assertEquals(List.of(opinion, another), restored.days().get(0).opinions());
+            assertTrue(restored.days().get(1).opinions().isEmpty());
+            assertEquals(stops, plans.quoteOpinion(new OpinionRequest(trip, DATE, opinion))
+                    .day().stops().stream().map(Attraction::id).toList());
+            assertThrows(IllegalArgumentException.class,
+                    () -> plans.quoteOpinion(new OpinionRequest(trip, DATE.minusDays(1), opinion)));
+        } finally {
+            plans.delete(saved.id());
+        }
+        assertTrue(mapper.readValue("{\"date\":\"2027-03-10\",\"stops\":[],\"legs\":{}}", Day.class)
+                .opinions().isEmpty());
     }
 
     @Test

@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public final class Travel {
     /** 요청·응답 자료형을 모아 둔 클래스의 직접 생성을 막습니다. */
@@ -62,9 +63,15 @@ public final class Travel {
     }
 
     public record Price(@NotNull LocalDate from, @NotNull LocalDate to, @Valid @NotNull Fare fare) {}
-    /** 대중교통 여정의 도보 또는 탑승 단계입니다. path는 해당 단계에 속한 좌표만 담습니다. */
+    /** path는 실제 경로 좌표입니다. 시외버스는 별도의 승차·하차 터미널 좌표를 제공합니다. */
     public record Boarding(Mode mode, List<String> lines, String start, String end, Integer minutes,
-                           Integer meters, List<RoutePoint> path, RoutePoint walkFrom, RoutePoint walkTo) {
+                           Integer meters, List<RoutePoint> path, RoutePoint walkFrom, RoutePoint walkTo,
+                           RoutePoint terminalFrom, RoutePoint terminalTo) {
+        public Boarding(Mode mode, List<String> lines, String start, String end, Integer minutes,
+                        Integer meters, List<RoutePoint> path, RoutePoint walkFrom, RoutePoint walkTo) {
+            this(mode, lines, start, end, minutes, meters, path, walkFrom, walkTo, null, null);
+        }
+
         public Boarding(Mode mode, List<String> lines, String start, String end, Integer minutes,
                         Integer meters, List<RoutePoint> path) {
             this(mode, lines, start, end, minutes, meters, path, null, null);
@@ -115,15 +122,34 @@ public final class Travel {
 
     public record Day(@NotNull LocalDate date, @NotNull @Size(max = 15) List<@NotBlank String> stops,
                       @Size(max = 16) Map<String, @Valid @NotNull Leg> legs,
-                      @Size(max = 15) List<@Valid @NotNull SearchedPlace> places) {
+                      @Size(max = 15) List<@Valid @NotNull SearchedPlace> places,
+                      List<@Valid @NotNull Opinion> opinions) {
         public Day {
             places = places == null ? List.of() : List.copyOf(places);
+            opinions = opinions == null ? List.of() : List.copyOf(opinions);
+        }
+
+        public Day(LocalDate date, List<String> stops, Map<String, Leg> legs, List<SearchedPlace> places) {
+            this(date, stops, legs, places, List.of());
         }
 
         public Day(LocalDate date, List<String> stops, Map<String, Leg> legs) {
             this(date, stops, legs, List.of());
         }
     }
+
+    /** 같은 날짜 안의 대안 코스입니다. 새 의견의 ID는 최초 견적에서 발급합니다. */
+    public record Opinion(UUID id, @NotBlank @Size(max = 40) String name,
+                          @NotNull @Size(max = 15) List<@NotBlank String> stops,
+                          @Size(max = 16) Map<String, @Valid @NotNull Leg> legs,
+                          @Size(max = 15) List<@Valid @NotNull SearchedPlace> places) {
+        public Opinion {
+            places = places == null ? List.of() : List.copyOf(places);
+        }
+    }
+
+    public record OpinionRequest(@Valid @NotNull Trip trip, @NotNull LocalDate date,
+                                 @Valid @NotNull Opinion opinion) {}
 
     public record TourInput(@NotBlank @Size(max = 40) String destination,
                             @NotNull Platform platform, @NotBlank @Size(max = 150) String name,
