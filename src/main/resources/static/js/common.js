@@ -36,7 +36,7 @@ export function checked(value) {
         dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Seoul'
     }).format(new Date(value)) : '미확인';
 }
-// 홈과 투어 등록 폼에 사용할 기본 날짜를 YYYY-MM-DD 형식으로 만듭니다.
+// 투어 검색과 비용 비교 화면에 사용할 기본 날짜를 YYYY-MM-DD 형식으로 만듭니다.
 export function dateAfter(days, base = new Date()) {
     const shifted = new Date(base.getTime());
     shifted.setDate(shifted.getDate() + days);
@@ -48,12 +48,10 @@ export function options(entries, selected) {
     return entries.map(([value, label]) =>
         '<option value="' + e(value) + '"' + (value === selected ? ' selected' : '') + '>' + e(label) + '</option>').join('');
 }
-// 도시 목록을 투어 검색·등록 폼에서 쓰는 드롭다운 옵션으로 바꿉니다.
+// 도시 목록을 여행지 선택 메뉴의 옵션으로 바꿉니다.
 export function cityOptions(cities, selected) {
     return options(cities.map(city => [city.id, city.name]), selected);
 }
-// 홈 검색 폼에서 사용할 교통수단 드롭다운 옵션을 만듭니다.
-export const modeOptions = (value, first = []) => options([...first, ...Object.entries(modes)], value);
 // 투어 카드의 이미지·예약 링크에 사용할 자격 증명 없는 HTTPS 주소인지 확인합니다.
 export function safeUrl(value) {
     if (!value) return '';
@@ -392,8 +390,7 @@ export function estimateCard({rows, budget, action = '', open = false}) {
     const ratio = hasBudget ? Math.min(100, sum / Number(budget) * 100) : 0;
     const left = hasBudget ? Number(budget) - sum : 0;
     return '<div class="est-main"><span class="est-label">여행 견적</span>'
-        + (hasBudget ? (hasTotal ? rollValue('pct', sum / Number(budget) * 100, 'pct', 'span', 'est-pct num') : '')
-            : '<span class="est-pct">예산 미입력</span>')
+        + (hasBudget && hasTotal ? rollValue('pct', sum / Number(budget) * 100, 'pct', 'span', 'est-pct num') : '')
         + '<strong class="est-sum num">' + (hasTotal ? rollValue('sum', sum) + (partial ? '<small>(부분 합계)</small>' : '') : '미확인') + '</strong>'
         + '<button type="button" class="est-toggle" aria-expanded="' + open + '">' + (open ? '접기' : '내역') + '</button>'
         + '<span class="delta" aria-hidden="true"></span>'

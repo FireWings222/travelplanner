@@ -1,17 +1,15 @@
-import {$, $$, api, read, write, e, panel, empty, cityOptions, modeOptions, modes, platforms, inclusions, inclusionTags,
-    won, priceType, status, showError, showTrip, safeUrl, fareFields, readFare, dateAfter, busy, minutes,
+import {$, $$, api, read, write, e, panel, empty, cityOptions, modes, platforms, inclusionTags,
+    won, priceType, status, showError, showTrip, safeUrl, dateAfter, minutes,
     tourReferenceLinks} from './common.js';
 
 // 투어 출발·도착 시각을 카드에 표시할 시·분 형식으로 바꿉니다.
 const time = value => e(value?.slice(0, 5));
 
-// 투어 화면에서 검색, 직접 등록, 비교 목록의 초기 상태와 이벤트를 설정합니다.
-// 도시·관광지 목록으로 투어 검색과 등록 폼을 준비합니다. 선택한 투어를 비용 비교로 넘길 때는 현재 탭의 여행 날짜와 인원을 사용합니다.
+// 투어 검색과 비교 목록을 준비합니다. 비용 비교에는 현재 탭의 여행 날짜와 인원을 사용합니다.
 export async function init(cities) {
     const trip = read('trip');
     showTrip(trip, cities);
     const search = $('#tour-search');
-    const form = $('#tour-form');
     const selected = trip?.destination ?? 'jeju';
     search.elements.destination.innerHTML = cityOptions(cities, selected);
     search.elements.date.value = trip?.start ?? '';
@@ -19,61 +17,11 @@ export async function init(cities) {
         search.elements.date.min = trip.start;
         search.elements.date.max = trip.end;
     }
-    form.elements.destination.innerHTML = cityOptions(cities, selected);
-    form.elements.mode.innerHTML = modeOptions('CITY_BUS');
     const sights = await api('/attractions');
     // 카드와 비교 목록에 표시할 관광지 이름을 ID로 찾습니다.
     const nameOf = id => sights.find(sight => sight.id === id)?.name ?? id;
-    const selectedStops = [];
     let shortlist = (read('tourShortlist') ?? []).filter(tour => tour.id !== 'jeju-day');
-    let nextPrice = 0;
     let latestSearch = 0;
-
-    // 직접 등록 폼의 선택 도시에 맞는 관광지 목록을 그리고 선택 순서를 관리합니다.
-    // 등록 폼에서 선택한 도시의 관광지만 보여줍니다. 체크 상태에서 구성한 순서를 등록 요청의 stops 배열로 사용합니다.
-    function renderStops() {
-        selectedStops.length = 0;
-        const city = form.elements.destination.value;
-        $('#tour-stops').innerHTML = sights.filter(sight => sight.destinationId === city)
-            .map(sight => '<label><input type="checkbox" value="' + e(sight.id) + '"> ' + e(sight.name) + '</label>').join('');
-        $('#tour-stop-order').textContent = '체크한 순서로 방문 장소를 등록합니다.';
-        // 투어에 포함할 관광지를 체크한 순서대로 보관합니다.
-        $$('#tour-stops input').forEach(input => input.onchange = () => {
-            if (input.checked) selectedStops.push(input.value);
-            else selectedStops.splice(selectedStops.indexOf(input.value), 1);
-            $('#tour-stop-order').textContent = selectedStops.map(nameOf).join(' → ') || '체크한 순서로 방문 장소를 등록합니다.';
-        });
-    }
-
-    // 투어 등록 폼에 적용 시작일·종료일과 성인·아동 요금을 입력할 행을 추가합니다.
-    // 동적으로 추가한 각 가격 행에 고유한 입력 이름 접두사를 붙입니다. 제출할 때 각 행의 가격을 readFare가 읽습니다.
-    function addPrice(from, to) {
-        const index = nextPrice++;
-        const node = document.createElement('div');
-        node.className = 'price-period';
-        node.dataset.index = index;
-        node.innerHTML = '<div class="date-pair"><label>시작일<input type="date" name="from" value="' + e(from)
-            + '" required></label><label>종료일<input type="date" name="to" value="' + e(to)
-            + '" required></label></div>' + fareFields(null, 'price-' + index + '-', true)
-            + '<button type="button" class="danger">삭제</button>';
-        // 등록 폼에서 삭제할 가격 행을 제거하되 최소 한 행을 유지합니다.
-        $('button', node).onclick = () => {
-            if ($$('.price-period').length > 1) node.remove();
-        };
-        $('#tour-prices').append(node);
-    }
-    renderStops();
-    form.elements.destination.onchange = renderStops;
-    addPrice(trip?.start ?? dateAfter(0), trip?.end ?? dateAfter(30));
-    // 사용자가 기간별 요금을 입력할 빈 행을 추가합니다.
-    $('#add-price').onclick = () => addPrice('', '');
-    $('#tour-extras').innerHTML = '<fieldset><legend>기타 필수 비용</legend><p class="muted">없으면 0원을 입력하세요. 빈 가격은 미확인으로 표시됩니다.</p>'
-        + fareFields(null, 'extras-') + '</fieldset><fieldset id="excluded-transport" hidden><legend>불포함 관광지 이동비</legend>'
-        + fareFields(null, 'transport-') + '</fieldset>';
-    // 투어 교통비 포함 여부에 따라 별도 교통비 입력란을 표시합니다.
-    form.elements.transportIncluded.onchange = () => {
-        $('#excluded-transport').hidden = form.elements.transportIncluded.checked;
-    };
 
     // 선택한 투어와 여행 인원을 세션에 기록하고 비용 비교 화면을 엽니다.
     // 투어 ID와 날짜를 세션의 comparison에 저장해 compare.js가 비교 API 요청을 만들 수 있게 합니다.
@@ -171,7 +119,7 @@ export async function init(cities) {
         if (token !== latestSearch) return;
         status(result.notices.join(' '));
         $('#tour-list').innerHTML = result.tours.length ? result.tours.map(tour => tourCard(tour, date)).join('')
-            : empty('조건에 맞는 투어가 없습니다. 날짜 필터를 지우거나 상품을 직접 등록할 수 있습니다.');
+            : empty('조건에 맞는 투어가 없습니다. 날짜나 플랫폼 조건을 바꿔 보세요.');
         // 검색 카드에서 선택한 상품과 날짜를 비용 비교 화면으로 넘깁니다.
         $$('[data-tour]').forEach(button => button.onclick = () => {
             const id = button.dataset.tour;
@@ -193,29 +141,6 @@ export async function init(cities) {
 
     // 검색 폼의 브라우저 이동을 막고 투어 목록을 다시 조회합니다.
     search.onsubmit = event => { event.preventDefault(); find().catch(showError); };
-    // 직접 등록 폼의 관광지와 가격 정보를 모아 투어 등록 API에 전달합니다.
-    form.onsubmit = event => {
-        event.preventDefault();
-        const fields = form.elements;
-        const tour = Object.fromEntries(['destination', 'platform', 'name', 'bookingUrl', 'imageUrl',
-            'departure', 'arrival', 'meetingPlace', 'endPlace', 'cancellation', 'mode'].map(key => [key, fields[key].value]));
-        Object.keys(inclusions).forEach(key => tour[key] = fields[key].checked);
-        tour.stops = [...selectedStops];
-        tour.prices = $$('.price-period').map(row => ({
-            from: $('[name="from"]', row).value, to: $('[name="to"]', row).value,
-            fare: readFare(row, 'price-' + row.dataset.index + '-')
-        }));
-        tour.requiredExtras = readFare(form, 'extras-');
-        tour.excludedTransport = tour.transportIncluded ? null : readFare(form, 'transport-');
-        busy(form, async () => {
-            const saved = await api('/tours', tour);
-            status('등록했습니다 · ' + saved.details.name, 'info', '#register-status');
-            search.elements.destination.value = saved.details.destination;
-            search.elements.date.value = '';
-            search.elements.platform.value = '';
-            await find();
-        }).catch(error => status(error.message, 'error', '#register-status'));
-    };
     renderShortlist();
     await find();
 }

@@ -58,6 +58,18 @@ public class TourService {
                 .filter(tour -> date == null || fare(tour, date) != null).toList(), List.copyOf(notices));
     }
 
+    /** 방문지가 겹치는 투어를 많이 겹치는 순으로 반환합니다. 날짜 요금과 인원별 추정에는 기존 비교 계산을 사용합니다. */
+    public List<TourRecommendation> recommend(TourRecommendationRequest request) {
+        Set<String> planned = new HashSet<>(request.stops());
+        return search(request.destination(), request.date(), null).tours().stream()
+                .filter(tour -> tour.details().stops().stream().anyMatch(planned::contains))
+                .sorted(Comparator.<Tour>comparingLong(tour ->
+                        tour.details().stops().stream().distinct().filter(planned::contains).count()).reversed())
+                .map(tour -> new TourRecommendation(tour, catalog.stops(tour.details().destination(), tour.details().stops()),
+                        fare(tour, request.date(), request.party())))
+                .toList();
+    }
+
     /**
      * 비용 비교나 상세 조회에 사용할 투어 ID를 직접 등록 상품과 제공자 상품에서 찾습니다.
      *

@@ -1,4 +1,4 @@
-import {$, $$, api, read, write, e, modeOptions, status, showError, renderHeader} from './common.js';
+import {$, $$, api, read, write, e, status, showError, renderHeader} from './common.js';
 
 const loaders = {
     routes: () => import('./routes.js'),
@@ -12,7 +12,6 @@ function tripPlaceField(field, previous) {
     const input = $('#trip-' + field);
     const results = $('#' + field + '-place-results');
     const message = $('#' + field + '-place-status');
-    const find = $('#find-' + field);
     let selected;
     let request = 0;
 
@@ -26,13 +25,11 @@ function tripPlaceField(field, previous) {
         results.hidden = true;
     }
     input.addEventListener('input', () => set(null));
-    // 한글 조합을 확정하는 Enter는 그대로 둡니다. 검색용 Enter는 폼 제출을 막고 장소 찾기 버튼과 같은 동작을 실행합니다.
-    input.addEventListener('keydown', event => {
+    // 한글 조합에 쓰이는 Enter는 건드리지 않습니다. 검색용 Enter에서는 여행 폼 제출을 막고 해당 장소만 찾습니다.
+    input.addEventListener('keydown', async event => {
         if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229 || event.defaultPrevented) return;
         event.preventDefault();
-        if (!event.repeat) find.click();
-    });
-    find.addEventListener('click', async () => {
+        if (event.repeat) return;
         const term = input.value.trim();
         if (!term) {
             message.textContent = '주소나 장소 이름을 입력해 주세요.';
@@ -65,7 +62,7 @@ function tripPlaceField(field, previous) {
         }
     });
     set(previous ?? null);
-    return {clear: () => set(null), selected: () => selected};
+    return () => selected;
 }
 
 // 홈 화면에서 여행 조건을 입력받고, 검색이 성공하면 경로 비교 화면으로 이동합니다.
@@ -85,36 +82,26 @@ async function home(cities) {
         fields.end.min = fields.start.value;
         if (fields.end.value && fields.end.value < fields.start.value) fields.end.value = fields.start.value;
     });
-    $('#preferred-mode').innerHTML = modeOptions(previous?.preferredMode ?? '', [['', '선호 없음']]);
     $('#city-list').innerHTML = cities.map(city => '<option value="' + e(city.name) + '"></option>').join('');
     if (previous) {
         fields.origin.value = cityName(previous.origin);
         fields.destination.value = cityName(previous.destination);
         fields.adults.value = previous.party.adults;
         fields.children.value = previous.party.children;
-        fields.budget.value = previous.budget ?? '';
-        fields.type.value = previous.type;
     }
-    const originField = tripPlaceField('origin', previous?.originPlace);
-    const destinationField = tripPlaceField('destination', previous?.destinationPlace);
-    $('#catalog').innerHTML = cities.map(city => '<button type="button" class="city-tile" data-city="' + e(city.id)
-        + '"><strong>' + e(city.name) + '</strong><span class="tile-plus" aria-hidden="true">+</span></button>').join('');
-    // 홈의 추천 도시 버튼을 누르면 목적지 입력란에 해당 도시를 채웁니다.
-    $$('.city-tile').forEach(tile => tile.addEventListener('click', () => {
-        destinationField.clear();
-        fields.destination.value = cityName(tile.dataset.city);
-        fields.destination.focus();
-    }));
+    const originPlace = tripPlaceField('origin', previous?.originPlace);
+    const destinationPlace = tripPlaceField('destination', previous?.destinationPlace);
     // 검색 폼을 경로 API에 보내고 승인된 여행 조건을 다음 화면에 전달합니다.
     form.addEventListener('submit', async event => {
         event.preventDefault();
         const button = $('.search-submit');
         button.disabled = true;
         status('여행 조건을 확인하는 중입니다.');
+        // 예산과 선호 교통수단은 비워 두고, API 필수 항목인 여행 유형에는 기본값 OTHER를 보냅니다.
         const trip = {origin: fields.origin.value, destination: fields.destination.value,
-            originPlace: originField.selected(), destinationPlace: destinationField.selected(),
+            originPlace: originPlace(), destinationPlace: destinationPlace(),
             start: fields.start.value, end: fields.end.value, party: {adults: +fields.adults.value, children: +fields.children.value},
-            budget: fields.budget.value ? +fields.budget.value : null, preferredMode: fields.preferredMode.value || null, type: fields.type.value};
+            budget: null, preferredMode: null, type: 'OTHER'};
         try {
             const result = await api('/routes/compare', {trip});
             write('trip', result.trip);

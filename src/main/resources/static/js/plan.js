@@ -1,6 +1,7 @@
 import {$, $$, api, read, write, e, busy, status, showError, modes, won, minutes, distance, fareFields, readFare,
     kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader, transitSteps} from './common.js';
 import {createMap, drawDays, dayPin, dayColor} from './route-map.js';
+import {connectPlanTours} from './plan-tours.js';
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const GRIP = '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="2.5" cy="3" r="1.5"/>'
@@ -17,6 +18,7 @@ export async function init(cities) {
     const save = $('#save-plan');
     const estimate = $('#estimate');
     const mapSlot = $('#plan-map');
+    const renderRelatedTours = connectPlanTours();
     // plan은 편집 중인 계획, quote는 그 계획의 견적 응답입니다. id가 있을 때만 저장된 DB 일정을 갱신합니다.
     let plan = read('plan');
     let id = read('planId');
@@ -228,12 +230,15 @@ export async function init(cities) {
                 + '<div class="endrow">일정 끝</div>'
             : '<p class="emptyday">아직 장소가 없습니다. 아래에서 장소를 검색해 추가하세요.</p>') + '</div>'
             + (day.stops.length < 15
-                ? '<button type="button" class="addplace" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>장소 검색해서 추가</button>'
-                    + '<form id="add-stop" class="addform" hidden><label>검색 방법<select name="searchType"><option value="name">장소명</option>'
-                    + '<option value="address">주소</option></select></label><label>카카오맵 검색<input name="query" type="search" maxlength="80" required placeholder="관광지 또는 숙소 이름"></label>'
-                    + '<button type="submit" class="outline">검색</button></form><p id="place-status" class="fine" role="status"></p><ul id="place-results" class="place-results"></ul>'
+                ? '<button type="button" class="addplace" aria-expanded="false" aria-controls="place-search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>장소 검색해서 추가</button>'
+                    + '<div id="place-search" hidden><form id="add-stop" class="addform"><label>검색 방법<select name="searchType"><option value="name">장소명</option>'
+                    + '<option value="address">주소</option></select></label><label>장소 검색<input name="query" type="search" maxlength="80" required placeholder="관광지 또는 숙소 이름"></label>'
+                    + '<button type="submit" class="outline">검색</button></form><p id="place-status" class="fine" role="status"></p>'
+                    + '<ul id="catalog-place-results" class="place-results" aria-label="저장된 관광지" hidden></ul>'
+                    + '<ul id="place-results" class="place-results" aria-label="카카오맵 검색 결과" hidden></ul></div>'
                 : '<p class="fine">하루에 최대 15곳까지 추가할 수 있습니다.</p>');
         connectDay(day);
+        renderRelatedTours(day, plan.trip);
         if (moved) {
             const card = $('[data-stop="' + CSS.escape(moved) + '"]', list);
             if (card && !reduceMotion.matches) card.classList.add('moved');
@@ -290,50 +295,77 @@ export async function init(cities) {
         connectDrag(day);
     }
 
-    // "장소 검색해서 추가"를 누르면 카카오맵 검색 폼을 열고, 고른 장소를 그날 마지막에 더합니다.
+    // 저장된 관광지와 카카오맵 검색을 따로 표시합니다. 관광지 결과는 투어의 방문지와 같은 ID를 사용합니다.
     function connectSearch(day) {
         const toggle = $('.addplace', list);
         const add = $('#add-stop', list);
         if (!add) return;
+        const search = $('#place-search', list);
+        const catalogResults = $('#catalog-place-results', list);
+        const kakaoResults = $('#place-results', list);
+        const message = $('#place-status', list);
+        let request = 0;
+        function reset() {
+            request++;
+            for (const results of [catalogResults, kakaoResults]) {
+                results.replaceChildren();
+                results.hidden = true;
+            }
+            message.textContent = '';
+        }
         toggle.onclick = () => {
-            add.hidden = !add.hidden;
-            toggle.setAttribute('aria-expanded', String(!add.hidden));
-            if (!add.hidden) add.elements.query.focus();
+            search.hidden = !search.hidden;
+            toggle.setAttribute('aria-expanded', String(!search.hidden));
+            if (!search.hidden) add.elements.query.focus();
         };
         add.elements.searchType.onchange = () => {
             const address = add.elements.searchType.value === 'address';
             add.elements.query.maxLength = address ? 160 : 80;
             add.elements.query.placeholder = address ? '도로명 주소 또는 지번 주소' : '관광지 또는 숙소 이름';
-            $('#place-results', list).replaceChildren();
-            $('#place-status', list).textContent = '';
+            reset();
         };
-        // 카카오맵 검색 결과 중 한 장소를 고르면 현재 날짜의 방문 순서 끝에 추가합니다.
+        add.elements.query.oninput = reset;
+        function showPlaces(places, results, catalog) {
+            results.innerHTML = places.map((place, index) => '<li><div><b>' + e(place.name) + '</b><small>'
+                + (catalog ? '저장된 관광지' : e(place.address)) + '</small></div>'
+                + '<button type="button" class="outline" data-place="' + index + '"'
+                + (day.stops.includes(place.id) ? ' disabled>추가됨' : '>추가') + '</button></li>').join('');
+            results.hidden = !places.length;
+            $$('[data-place]', results).forEach(button => button.onclick = () => {
+                if (pending) return;
+                const place = places[Number(button.dataset.place)];
+                moved = place.id;
+                const extraPlaces = day.places ?? [];
+                changeStops(day, [...day.stops, place.id], catalog ? extraPlaces : [...extraPlaces, place]);
+            });
+        }
         add.onsubmit = async event => {
             event.preventDefault();
-            const results = $('#place-results', list);
-            const message = $('#place-status', list);
-            const address = add.elements.searchType.value === 'address';
-            const params = new URLSearchParams({destination: plan.trip.destination, q: add.elements.query.value.trim(), address});
-            results.replaceChildren();
-            message.textContent = '카카오맵에서 장소를 검색하는 중입니다.';
-            try {
-                const places = await busy(add, () => api('/itineraries/places?' + params));
-                // 검색 도중 날짜를 바꾸면 기존 폼이 교체됩니다. 이전 날짜의 결과를 새 타임라인에 붙이지 않습니다.
-                if (!add.isConnected) return;
-                message.textContent = places.length ? '카카오맵 검색 결과' : address
-                    ? '주소를 찾지 못했습니다. 건물 번호나 지번까지 입력하세요.'
-                    : '장소를 찾지 못했습니다. 숙소가 검색되지 않으면 주소로 검색하세요.';
-                results.innerHTML = places.map((place, index) => '<li><div><b>' + e(place.name) + '</b><small>' + e(place.address)
-                    + '</small></div><button type="button" class="outline" data-place="' + index + '"'
-                    + (day.stops.includes(place.id) ? ' disabled>추가됨' : '>추가') + '</button></li>').join('');
-                $$('[data-place]', results).forEach(button => button.onclick = () => {
-                    const place = places[Number(button.dataset.place)];
-                    moved = place.id;
-                    changeStops(day, [...day.stops, place.id], [...(day.places ?? []), place]);
-                });
-            } catch (error) {
-                message.textContent = error.message;
+            reset();
+            const token = request;
+            const q = add.elements.query.value.trim();
+            if (!q) {
+                message.textContent = '장소 이름이나 주소를 입력하세요.';
+                return;
             }
+            const address = add.elements.searchType.value === 'address';
+            const params = new URLSearchParams({destination: plan.trip.destination, q});
+            const current = () => add.isConnected && token === request;
+            message.textContent = '장소를 검색하는 중입니다.';
+            // 카카오맵 응답을 기다리지 않고 저장된 관광지를 먼저 표시합니다.
+            const catalog = address ? Promise.resolve() : api('/attractions?' + params)
+                .then(places => { if (current()) showPlaces(places, catalogResults, true); });
+            params.set('address', address);
+            const kakao = api('/itineraries/places?' + params)
+                .then(places => { if (current()) showPlaces(places, kakaoResults, false); });
+            const [stored, external] = await Promise.allSettled([catalog, kakao]);
+            if (!current()) return;
+            if (external.status === 'rejected') message.textContent = external.reason.message;
+            else if (stored.status === 'rejected') message.textContent = '저장된 관광지를 검색하지 못했습니다.';
+            else if (catalogResults.hidden && kakaoResults.hidden) message.textContent = address
+                ? '주소를 찾지 못했습니다. 건물 번호나 지번까지 입력하세요.'
+                : '장소를 찾지 못했습니다. 숙소가 검색되지 않으면 주소로 검색하세요.';
+            else message.textContent = '';
         };
     }
 

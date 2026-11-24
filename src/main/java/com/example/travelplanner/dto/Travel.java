@@ -177,6 +177,14 @@ public final class Travel {
         }
     }
 
+    /** 현지 일정에서 선택한 날짜, 일행, 방문지로 일일투어를 찾습니다. */
+    public record TourRecommendationRequest(@NotBlank String destination, @NotNull LocalDate date,
+                                            @Valid @NotNull Party party,
+                                            @NotEmpty @Size(max = 15) List<@NotBlank String> stops) {}
+
+    /** 투어 방문 순서와 선택 날짜 및 인원에 적용되는 기본 요금을 담습니다. */
+    public record TourRecommendation(Tour tour, List<Attraction> stops, Fare fare) {}
+
     @JsonIgnoreProperties("lodgingCity")
     public record CompareRequest(@NotBlank String tourId, @NotNull LocalDate date,
                                  @Valid @NotNull Party party,

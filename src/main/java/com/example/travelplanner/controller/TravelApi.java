@@ -50,7 +50,7 @@ public class TravelApi {
         return places.searchNationwide(q, address);
     }
 
-    /** 일정 편집 및 투어 등록 화면에 도시와 검색어로 필터링한 관광지를 반환합니다. */
+    /** 일정 편집과 투어 목록에서 사용하는 저장된 관광지를 도시와 검색어로 필터링합니다. */
     @GetMapping("/attractions")
     public List<Attraction> attractions(@RequestParam(required = false) String destination,
                                         @RequestParam(defaultValue = "") String q) {
@@ -144,10 +144,16 @@ public class TravelApi {
         return tours.search(destination, date, platform);
     }
 
-    /** 일일투어 화면의 직접 등록 폼을 받아 상품을 저장합니다. */
+    /** 기존 상품 등록 API 요청을 받아 상품을 저장합니다. */
     @PostMapping("/tours")
     @ResponseStatus(HttpStatus.CREATED)
     public Tour register(@Valid @RequestBody TourInput tour) { return tours.register(tour); }
+
+    /** 선택한 하루의 방문지와 겹치는 일일투어를 찾아 방문 순서와 요금을 반환합니다. */
+    @PostMapping("/tours/recommend")
+    public List<TourRecommendation> recommendTours(@Valid @RequestBody TourRecommendationRequest request) {
+        return tours.recommend(request);
+    }
 
     /** 투어 상세 화면과 비용 비교 화면에 지정한 상품 정보를 반환합니다. */
     @GetMapping("/tours/{id}")

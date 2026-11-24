@@ -15,6 +15,11 @@
       <!-- plan.js가 날짜 버튼과 선택한 날짜의 타임라인을 그립니다. 이동 구간은 서버 견적의 방문 순서를 따릅니다. -->
       <div id="plan-days" class="days" role="group" aria-label="날짜"></div>
       <div id="plan-day"></div>
+      <section id="related-tours" aria-labelledby="related-tours-heading" hidden>
+        <h2 id="related-tours-heading">이 관광지를 방문하는 일일투어</h2>
+        <p id="related-tours-status" class="fine" role="status"></p>
+        <div id="related-tours-list"></div>
+      </section>
       <div class="list-foot">
         <p id="plan-note" class="fine"></p>
         <p id="plan-geometry-note" class="fine" role="status" hidden></p>
@@ -31,6 +36,15 @@
     </section>
     <aside id="estimate" class="estimate" aria-label="여행 견적" hidden></aside>
   </div>
+  <dialog id="tour-preview" aria-labelledby="tour-preview-title">
+    <div class="tour-preview-heading">
+      <h2 id="tour-preview-title"></h2>
+      <form method="dialog"><button class="outline" type="submit" autofocus>닫기</button></form>
+    </div>
+    <ol id="tour-preview-stops"></ol>
+    <p id="tour-preview-note" class="fine" role="status"></p>
+    <div id="tour-preview-map" aria-label="투어 관광지 방문 순서" hidden></div>
+  </dialog>
 </main>
 </body>
 </html>

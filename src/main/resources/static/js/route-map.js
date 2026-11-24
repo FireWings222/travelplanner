@@ -199,14 +199,14 @@ function distanceKm(a, b) {
     return 12742 * Math.asin(Math.sqrt(h));
 }
 
-// 경로와 일정 지도가 공유하는 요청 번호입니다. 노선 좌표 조회가 늦게 끝나도 최신 그리기 요청만 지도 요소를 바꿉니다.
-let drawing = 0;
 // 경로 비교 응답의 구간(sections)을 교통수단 색 선, 환승 점, 도착 핀, 이름표로 그립니다.
 // 항공 구간의 곡선은 공항 간 연결 안내입니다. 지상 이동은 조회한 경로만 그리며, 좌표를 얻지 못하면 출발·도착 위치만 남깁니다.
 // 반환하는 fit(focus)는 전체(all), 출발지 주변(start), 도착지 주변(end) 범위로 지도를 맞춥니다. focuses는 고를 수 있는 범위 목록입니다.
 // rightPad는 지도 오른쪽을 가리는 견적 카드 폭을 돌려주는 함수입니다.
 export async function drawJourney(view, sections, rightPad = () => 0) {
-    const token = ++drawing;
+    // 노선 좌표 조회가 늦게 끝나도 같은 지도의 최신 요청만 요소를 바꿉니다.
+    const token = (view.drawing ?? 0) + 1;
+    view.drawing = token;
     const {maps} = view;
     const position = point => new maps.LatLng(point.latitude, point.longitude);
     const segments = sections.map(section => section.chosen);
@@ -214,7 +214,7 @@ export async function drawJourney(view, sections, rightPad = () => 0) {
         if (segment.mode === 'FLIGHT') return {arc: arcPoints(segment.from, segment.to)};
         return {lines: await routeParts(segment).catch(() => [])};
     }));
-    if (token !== drawing) return null;
+    if (token !== view.drawing) return null;
     // 좌표 조회가 끝날 때까지 이전 선을 유지한 뒤, 최신 결과의 선과 마커를 한 번에 교체합니다.
     clear(view);
     // 경로 좌표가 없어도 지도 범위에 양쪽 마커가 포함되도록 출발점과 도착점을 먼저 넣습니다.
@@ -293,13 +293,15 @@ export const dayColor = index => '--d' + (index % 3 + 1);
 // days는 /api/itineraries/quote 응답의 days입니다. 경로를 얻지 못한 구간은 번호 핀만 표시합니다.
 // 반환하는 fit()에는 장소뿐 아니라 조회한 선의 좌표도 포함해 굽은 경로가 화면 밖으로 잘리지 않게 합니다.
 export async function drawDays(view, days, focus, rightPad = () => 0) {
-    const token = ++drawing;
+    // 현지 일정 지도와 투어 미리보기 지도의 요청 번호는 각각 관리합니다.
+    const token = (view.drawing ?? 0) + 1;
+    view.drawing = token;
     const {maps} = view;
     const position = point => new maps.LatLng(point.latitude, point.longitude);
     // 배경으로 보이는 다른 날짜는 기존 좌표만 그립니다. 새 도보 조회는 선택한 날짜의 구간에만 요청합니다.
     const shapes = await Promise.all(days.map((day, index) => Promise.all(day.journey.sections.map(section =>
         routeParts(section.chosen, index === focus).catch(() => [])))));
-    if (token !== drawing) return null;
+    if (token !== view.drawing) return null;
     clear(view);
     const ink2 = cssValue(view.container, '--ink-2');
     days.forEach((day, i) => {

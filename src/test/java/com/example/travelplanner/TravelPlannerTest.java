@@ -190,12 +190,18 @@ class TravelPlannerTest {
         assertNull(result.tourMinusIndependentKrw());
         var april = comparison.compare(request(tour.id(), LocalDate.of(2027, 4, 1), Map.of()));
         amount("196000", april.guided().cost().totalKrw());
+        var recommendations = tours.recommend(new TourRecommendationRequest("jeju", LocalDate.of(2027, 4, 1),
+                PARTY, List.of("dongmun")));
+        var registered = recommendations.stream().filter(item -> item.tour().id().equals(tour.id())).findFirst().orElseThrow();
+        amount("72000", registered.fare().adult());
         var unmatched = comparison.compare(new CompareRequest(tour.id(), DATE, PARTY,
                 List.of("dongmun"), Map.of(), null, null, null));
         assertTrue(unmatched.notices().stream().anyMatch(notice -> notice.startsWith("투어만 방문")));
         assertTrue(unmatched.recommendation().contains("보류"));
         var unavailable = comparison.compare(request(tour.id(), LocalDate.of(2040, 1, 1), Map.of()));
         assertFalse(unavailable.guided().cost().isComplete());
+        assertTrue(tours.recommend(new TourRecommendationRequest("jeju", LocalDate.of(2040, 1, 1),
+                PARTY, List.of("dongmun"))).stream().noneMatch(item -> item.tour().id().equals(tour.id())));
     }
 
     /** PlanService의 일정 등록, 조회, 수정, 목록, 삭제 흐름을 검증합니다. */
@@ -269,6 +275,14 @@ class TravelPlannerTest {
                     .andExpect(content().string(org.hamcrest.Matchers.containsString("TravelPlanner")))
                     .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("샘플"))));
         }
+        http.perform(get("/")).andExpect(content().string(org.hamcrest.Matchers.allOf(
+                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("name=\"budget\"")),
+                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("name=\"type\"")),
+                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("name=\"preferredMode\"")),
+                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("id=\"destinations-heading\"")),
+                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("id=\"find-origin\"")),
+                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("id=\"find-destination\"")),
+                org.hamcrest.Matchers.containsString("id=\"city-list\""))));
         http.perform(get("/api/tours/jeju-day")).andExpect(status().isNotFound());
         http.perform(post("/api/routes/compare").contentType(MediaType.APPLICATION_JSON).content("""
                 {"trip":{"origin":"서울","destination":"jeju","start":"2027-03-10","end":"2027-03-12",
@@ -322,6 +336,43 @@ class TravelPlannerTest {
     }
 
     /** 외부 투어 제공자가 실패해도 카탈로그 투어 검색이 유지되는지 검증합니다. */
+    @Test
+    void servesVersionedHomeAssetsAndRevalidatesModules() throws Exception {
+        String html = http.perform(get("/")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var script = java.util.regex.Pattern.compile("src=\"(/[^/\"]+/js/)app\\.js\"").matcher(html);
+        var css = java.util.regex.Pattern.compile("href=\"(/css/site-[0-9a-f]+\\.css)\"").matcher(html);
+        assertTrue(script.find(), "JavaScript 진입점에 버전이 필요합니다.");
+        assertTrue(css.find(), "스타일 경로에 내용 해시가 필요합니다.");
+        http.perform(get(script.group(1) + "app.js")).andExpect(status().isOk());
+        http.perform(get(script.group(1) + "common.js")).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-cache"));
+        http.perform(get(css.group(1))).andExpect(status().isOk());
+    }
+
+    @Test
+    void recommendsToursBySharedStopsWithApplicablePrices() throws Exception {
+        http.perform(get("/tours")).andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("id=\"tour-form\""))));
+        http.perform(post("/api/tours/recommend").contentType(MediaType.APPLICATION_JSON).content("""
+                {"destination":"seoul","date":"2027-03-10","party":{"adults":2,"children":1},
+                 "stops":["domestic-seoul-a-2","kakao-123"]}
+                """)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].tour.id").value("domestic-seoul-a"))
+                .andExpect(jsonPath("$[0].stops[0].name").value("경복궁"))
+                .andExpect(jsonPath("$[0].stops[1].name").value("북촌한옥마을"))
+                .andExpect(jsonPath("$[0].fare.adult").value(27000));
+
+        var busanStops = List.of("domestic-busan-a-2", "haeundae");
+        var group = tours.recommend(new TourRecommendationRequest("busan", DATE, new Party(6, 0), busanStops));
+        assertEquals(List.of("domestic-busan-a", "domestic-busan-c"),
+                group.stream().map(result -> result.tour().id()).toList());
+        amount("95000", group.get(0).fare().adult());
+        assertNull(tours.recommend(new TourRecommendationRequest("busan", DATE, PARTY, busanStops)).get(0).fare());
+        assertTrue(tours.recommend(new TourRecommendationRequest("busan", DATE, PARTY,
+                List.of("domestic-seoul-a-2"))).isEmpty());
+    }
+
     @Test
     void keepsCatalogToursWhenAPartnerProviderFails() throws Exception {
         TravelProviders.Tours failing = mock(TravelProviders.Tours.class);
