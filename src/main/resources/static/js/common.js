@@ -95,10 +95,10 @@ export const showError = error => status(error.message, 'error');
 export function panel(content, extra = '') { return '<section class="panel section ' + extra + '">' + content + '</section>'; }
 // 검색 결과나 저장 항목이 없는 상황을 공통 카드로 표시합니다.
 export const empty = message => panel('<p class="empty">' + e(message) + '</p>');
-// 여행 조건 없이 경로·일정 화면을 열었을 때 홈 검색 링크를 표시합니다.
-export function needsTrip(target) {
-    $(target).innerHTML = panel('<h2>여행 조건을 먼저 선택해 주세요</h2><p class="muted">출발지, 목적지와 여행 날짜가 필요합니다.</p><a class="primary" href="/">여행 검색</a>');
-}
+// 화면마다 빈 상태를 그리므로 공통 안내 함수는 현재 호출되지 않습니다.
+// export function needsTrip(target) {
+//     $(target).innerHTML = panel('<h2>여행 조건을 먼저 선택해 주세요</h2><p class="muted">출발지, 목적지와 여행 날짜가 필요합니다.</p><a class="primary" href="/">여행 검색</a>');
+// }
 // 경로·일정·비교 화면에 출발지, 목적지, 날짜, 인원, 예산 요약을 표시합니다.
 export function showTrip(trip, cities) {
     const node = $('#trip-summary');
@@ -250,10 +250,9 @@ export function connectLegs(root, callback) {
         callback(select.dataset.key, {mode: select.value, override: null})));
 
 }
-// 시간·거리·비용 요약에 사용할 제목과 값 한 쌍을 그립니다.
-export const metric = (label, value) => '<div><span>' + e(label) + '</span><strong>' + e(value) + '</strong></div>';
-// 요약 값 여러 개를 같은 행의 공통 레이아웃으로 묶습니다.
-export const metrics = (...items) => '<div class="metrics">' + items.join('') + '</div>';
+// 기존 시간·거리·비용 요약은 현재 화면에서 호출되지 않습니다.
+// export const metric = (label, value) => '<div><span>' + e(label) + '</span><strong>' + e(value) + '</strong></div>';
+// export const metrics = (...items) => '<div class="metrics">' + items.join('') + '</div>';
 // 화면에서 요청이 실행되는 동안 입력을 잠시 비활성화하고 완료 후 복구합니다.
 // 요청을 시작할 때 활성 상태인 입력만 찾아 잠급니다. 성공하거나 실패해도 finally에서 처음 잠갔던 요소만 다시 활성화합니다.
 export function busy(node, action) {

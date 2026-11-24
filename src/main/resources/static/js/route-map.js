@@ -5,7 +5,7 @@ let sdk;
 // 구간 지도나 지도 분할 화면이 처음 필요할 때 페이지의 JavaScript 키로 카카오맵 SDK를 불러옵니다.
 // 공통 레이아웃의 kakao-map-key 메타 값으로 SDK를 요청합니다. 여러 카드가 지도 기능을 동시에 사용해도 로딩 Promise를 공유합니다.
 // 로드가 실패하면 Promise를 비워 다음 지도 열기에서 다시 시도할 수 있게 합니다.
-export function loadSdk() {
+/* export */ function loadSdk() {
     sdk ??= new Promise((resolve, reject) => {
         const script = document.createElement('script');
         const key = $('meta[name="kakao-map-key"]').content;
