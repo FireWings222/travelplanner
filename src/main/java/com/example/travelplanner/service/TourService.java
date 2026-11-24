@@ -132,7 +132,7 @@ public class TourService {
     /**
      * 직접 등록 상품은 요청 날짜의 요금을 반환합니다. 가격 범위에는 시작일과 종료일이 모두 포함됩니다.
      *
-     * 해당 기간이 없으면 null을 반환합니다. 카탈로그는 운영 여부와 별개로 조사 기준가 또는 10인 기준 추정가를 반환합니다.
+     * 해당 기간이 없으면 null을 반환합니다. 카탈로그는 운영 여부와 별개로 공개 금액 또는 1인 예상가를 반환합니다.
      */
     public static Fare fare(Tour tour, LocalDate date) {
         if (tour.reference() != null) return tour.details().prices().get(0).fare();
@@ -141,20 +141,13 @@ public class TourService {
                 .map(Price::fare).findFirst().orElse(null);
     }
 
-    /** 카탈로그 추정가는 성인과 아동을 합한 인원으로 계산합니다. 공개 단체 할인은 확인된 성인 요금에 적용합니다. */
+    /** 공개 단체 할인 조건을 충족하면 성인 1인 요금을 바꿉니다. 그 외 상품에는 기본 1인 요금을 사용합니다. */
     public static Fare fare(Tour tour, LocalDate date, Party party) {
         Fare base = fare(tour, date);
         TourReference reference = tour.reference();
         if (reference == null) return base;
-        int people = party.size();
-        GroupEstimate estimate = reference.estimate();
-        if (estimate != null) {
-            if (!estimate.supports(people)) return null;
-            BigDecimal amount = estimate.perPerson(people);
-            return new Fare(amount, amount, null);
-        }
         GroupDiscount discount = reference.discount();
-        if (discount != null && people >= discount.minimumPeople()) {
+        if (discount != null && party.size() >= discount.minimumPeople()) {
             return new Fare(BigDecimal.valueOf(discount.adultKrw()), base.child(), null);
         }
         return base;

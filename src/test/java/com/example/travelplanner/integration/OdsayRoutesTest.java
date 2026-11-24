@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class OdsayRoutesTest {
     private final ObjectMapper json = new ObjectMapper();
@@ -17,6 +18,44 @@ class OdsayRoutesTest {
             new Place("jeju", "제주시 중심", 33.500, 126.531), Mode.AIRPORT_BUS,
             BigDecimal.valueOf(4), 20, 0, new Fare(BigDecimal.TEN, BigDecimal.ONE, null),
             Source.UNCONFIRMED, checkedAt);
+
+    @Test
+    void addsIntercityAndExpressBusesAlongsideKakaoTransit() {
+        var from = new Place("seoul", "서울", 37.57, 126.98);
+        var to = new Place("gangwon", "강릉", 37.75, 128.89);
+        var response = json.readTree("""
+                {"result":{"searchType":1,"path":[
+                  {"pathType":12,"info":{"totalTime":150,"totalPayment":21000,"totalDistance":200000},
+                   "subPath":[{"trafficType":5,"startName":"서울고속버스터미널","endName":"강릉고속버스터미널",
+                    "sectionTime":150,"distance":200000}]},
+                  {"pathType":12,"info":{"totalTime":165,"totalPayment":19500,"totalDistance":205000},
+                   "subPath":[{"trafficType":6,"startName":"동서울터미널","endName":"강릉시외버스터미널",
+                    "sectionTime":165,"distance":205000}]},
+                  {"pathType":11,"info":{"totalTime":110,"totalPayment":28000,"totalDistance":220000}}]}}
+                """);
+        var buses = OdsayRoutes.readIntercityBuses(from, to, response, checkedAt);
+        assertEquals(List.of(Mode.EXPRESS_BUS, Mode.INTERCITY_BUS), buses.stream().map(Segment::mode).toList());
+        var intercity = buses.get(1);
+        assertEquals(165, intercity.minutes());
+        assertEquals(BigDecimal.valueOf(19500), intercity.fare().adult());
+        assertNull(intercity.fare().child());
+        assertEquals("동서울터미널", intercity.boardings().get(0).start());
+        assertEquals("강릉시외버스터미널", intercity.boardings().get(0).end());
+        assertTrue(intercity.geometry().isEmpty());
+
+        var odsay = mock(OdsayRoutes.class);
+        var kakao = mock(KakaoMapRoutes.class);
+        var road = mock(KakaoRoadRoutes.class);
+        when(road.enrich(anyList())).thenAnswer(call -> call.getArgument(0));
+        when(kakao.transit(from, to)).thenReturn(List.of(new Segment(from, to, Mode.CITY_BUS,
+                BigDecimal.TEN, 20, 0, null, Source.KAKAO_ROUTING, checkedAt)));
+        when(odsay.intercityBuses(from, to)).thenReturn(buses);
+        var lookup = new RouteLookup(odsay, road, kakao);
+        var options = lookup.options("seoul", "gangwon", from, to).get(0);
+        assertEquals(List.of(Mode.CITY_BUS, Mode.CAR, Mode.TAXI, Mode.EXPRESS_BUS, Mode.INTERCITY_BUS),
+                options.stream().map(Segment::mode).toList());
+        verify(odsay, never()).enrich(anyList());
+    }
 
     /** ODsay 응답에서 요금·시간·지도 코드를 읽고 제공되지 않은 아동 운임을 비워 두는지 검증합니다. */
     @Test

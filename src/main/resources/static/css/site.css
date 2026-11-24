@@ -107,8 +107,6 @@ p { margin:0 0 9px; }
 .leg p { margin-bottom:4px; color:var(--muted); }
 details { margin:10px 0; }
 summary { color:var(--green-dark); font-weight:750; cursor:pointer; }
-.fare-edit form { margin:9px 0; }
-.fare-fields { display:grid; gap:9px; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); margin:8px 0; }
 .cost-list { padding:0; list-style:none; margin:9px 0 0; }
 .cost-list li { display:flex; align-items:start; gap:14px; justify-content:space-between; border-top:1px solid var(--line); padding:9px 0; }
 .cost-list small { display:block; color:var(--muted); font-size:13px; }
@@ -265,10 +263,6 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
 .redesign .leg small { display: block; font-size: 13.5px; color: var(--ink-2); }
 .redesign .leg > .num { font-weight: 600; white-space: nowrap; }
 .redesign .leg-extra { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-size: 13.5px; }
-.redesign .leg-extra details { margin: 0; width: 100%; }
-.redesign .leg-extra summary { color: var(--brand); font-size: 13.5px; font-weight: 700; }
-.redesign .leg-extra .fare-fields { margin: 8px 0; }
-.redesign .leg-extra form p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); }
 .redesign .boardings { grid-column: 2 / -1; margin: 4px 0 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--ink-2); }
 .redesign .rc-note { margin: 0; font-size: 13.5px; color: var(--ink-2); }
 
@@ -379,7 +373,6 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
 .redesign .stop h2 { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.45; letter-spacing: 0; }
 .redesign .stop p { margin: 0; font-size: 14px; color: var(--ink-2); }
 .redesign .stop-side { display: grid; justify-items: end; gap: 4px; }
-.redesign .stop .fee { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .redesign .stop-side .textbtn { font-size: 13px; }
 .redesign .between { margin-left: 42px; border-left: 2px dotted var(--ink-3); padding: 9px 0 9px 18px; font-size: 14px; color: var(--ink-2);
     display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -387,10 +380,6 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
     padding: 3px 26px 3px 6px; background-color: var(--paper); color: var(--ink); }
 .redesign .between .amt { font-weight: 700; color: var(--ink); }
 .redesign .hop-extra { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13.5px; }
-.redesign .hop-extra details { margin: 0; width: 100%; }
-.redesign .hop-extra summary { color: var(--brand); font-size: 13.5px; font-weight: 700; }
-.redesign .hop-extra .fare-fields { margin: 8px 0; }
-.redesign .hop-extra form p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); }
 .redesign .between .boardings { flex: 1 0 100%; grid-column: auto; margin: 0; }
 .redesign .endrow { margin-left: 42px; padding: 9px 0 2px 20px; font-size: 14px; font-weight: 700; color: var(--ink-2); }
 .redesign .emptyday { padding: 18px 4px; color: var(--ink-2); font-size: 15px; margin: 0; }
@@ -489,19 +478,21 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
     .site-header.redesign .saved-link { display: none; }
 }
 
-/* 여행 조건 카드와 검색 버튼을 가운데에 놓고 입력은 두 칸씩 정렬합니다. */
+/* 배경 이미지는 본문 전체에 깔고 여행 조건은 오른쪽 상단에 둡니다. */
 .redesign.home-screen { display: flex; flex-direction: column; min-height: 100vh; }
-.redesign .home-content { flex: 1; display: grid; place-items: center; padding-block: 20px; }
-.redesign .search-panel { width: min(100%, 400px); padding: 16px; border: 0; border-radius: 12px; box-shadow: none; }
-.redesign .home-heading { margin: 0 auto 12px; max-width: 320px; }
-.redesign .home-heading h1 { margin: 0 0 4px; font-size: 21px; font-weight: 800; line-height: 1.3; }
-.redesign .home-heading p { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.4; }
-.redesign #trip-form { display: grid; gap: 8px; max-width: 320px; margin-inline: auto; }
-.redesign .search-submit { justify-self: center; width: min(100%, 250px); margin-top: 8px; }
-.redesign #trip-form label { gap: 4px; }
-.redesign .place-grid, .redesign .trip-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.redesign .home-content { position: relative; flex: 1; display: grid; place-items: start end; padding: 20px; }
+.redesign .home-background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.redesign .search-panel { position: relative; display: flex; flex-direction: column; width: min(100%, 420px); min-height: 500px;
+    padding: 20px; border: 0; border-radius: 12px; box-shadow: none; }
+.redesign .home-heading { margin-bottom: 20px; }
+.redesign .home-heading h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; line-height: 1.3; }
+.redesign .home-heading p { margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+.redesign #trip-form { flex: 1; display: grid; gap: 16px; align-content: space-between; }
+.redesign .search-panel input, .redesign .search-submit { min-height: 52px; font-size: 16px; }
+.redesign #trip-form label { gap: 8px; font-size: 16px; }
+.redesign .place-grid, .redesign .trip-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .redesign .trip-place { min-width: 0; }
-.redesign .trip-place > input { margin-top: 4px; }
+.redesign .trip-place > input { margin-top: 8px; }
 .redesign .search-panel input::placeholder { color: var(--ink-3); }
 .redesign #trip-form .status:empty { position: absolute; }
 .redesign .place-status { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-2); overflow-wrap: anywhere; }
@@ -513,3 +504,8 @@ input[type="checkbox"] { accent-color:var(--green); width:17px; height:17px; }
 .redesign .search-panel .place-results button:focus-visible { outline-offset: -2px; }
 .redesign .search-panel .place-results small { color: var(--ink-2); }
 .redesign.home-screen .site-footer { background: var(--paper); border-color: var(--rule); }
+
+@media (max-width: 640px) {
+    .redesign .home-content { padding: 16px; }
+    .redesign .search-panel { min-height: 0; padding: 16px; }
+}

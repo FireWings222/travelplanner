@@ -12,14 +12,14 @@ export const modes = {
     BUS_SUBWAY: '버스 + 지하철'
 };
 export const platforms = {KLOOK: '클룩', MYREALTRIP: '마이리얼트립', NOL: 'NOL / 야놀자', KKDAY: 'KKday', OTHER: '기타'};
-export const inclusions = {transportIncluded: '관광지 간 이동', admissionIncluded: '입장료', mealIncluded: '식사', guideIncluded: '가이드'};
-// 투어 목록과 비용 비교 카드에 교통·입장료·식사·가이드 포함 여부를 표시합니다.
+const inclusions = {transportIncluded: '관광지 간 이동', mealIncluded: '식사', guideIncluded: '가이드'};
+// 투어 목록과 비용 비교 카드에 교통, 식사, 가이드 포함 여부를 표시합니다.
 export const inclusionTags = detail => '<div class="tags">' + Object.entries(inclusions).map(([key, label]) =>
     '<span class="tag ' + (detail[key] ? 'included' : '') + '">' + label + (detail[key] ? ' 포함' : ' 불포함') + '</span>').join('') + '</div>';
 export const sources = {UNCONFIRMED: '조회 미확인', CATALOG: '관광지 참고 정보', MANUAL: '사용자 입력 요금',
     PROVIDER: '제공업체 가격', ODSAY: 'ODsay 예상 요금·시간',
     KAKAO_MOBILITY: '카카오모빌리티 예상 정보', KAKAO_MAP: '카카오맵 검색 장소', KAKAO_ROUTING: '카카오맵 예상 경로',
-    PUBLISHED: '공개 요금', ESTIMATED: '단체 추정가'};
+    PUBLISHED: '공개 요금', ESTIMATED: '1인 예상가'};
 // 비용과 거리를 한국어 숫자 형식으로 표시합니다.
 export const number = value => new Intl.NumberFormat('ko-KR', {maximumFractionDigits: 2}).format(value);
 // 합계·요금에 원 단위를 붙이고 데이터가 없으면 미확인으로 표시합니다.
@@ -142,7 +142,8 @@ export function itemRow(item) {
 }
 
 /** 지도 선과 이동 내역이 같은 교통수단 색을 사용하도록 단계별 분류를 공유합니다. */
-export const transitStepKind = mode => ({WALK: 'walk', CITY_BUS: 'bus', SUBWAY: 'rail'}[mode]);
+export const transitStepKind = mode => ({WALK: 'walk', CITY_BUS: 'bus', SUBWAY: 'rail', EXPRESS_BUS: 'bus', INTERCITY_BUS: 'bus'}[mode]);
+export const isIntercityBus = mode => mode === 'EXPRESS_BUS' || mode === 'INTERCITY_BUS';
 
 // 공급자가 반환한 단계 순서대로 도보와 탑승을 함께 표시합니다. 역이나 정류장 이름이 없으면 미확인입니다.
 export function transitSteps(segment, listClass = 'boardings') {
@@ -161,36 +162,13 @@ export function transitSteps(segment, listClass = 'boardings') {
         }).join('') + '</ol>';
 }
 
-// 구간, 투어, 비교 폼에서 공통으로 쓰는 금액 입력 필드를 만듭니다.
-// prefix로 구간·가격 행마다 입력 필드 이름을 구분합니다. 투어 상품 가격 행에서는 성인 1인 요금을 필수로 받고 공동 요금 칸을 숨깁니다.
-export function fareFields(fare, prefix, requiredAdult = false) {
-    // 요금 입력 폼의 금액 필드 하나에 현재 금액과 필수 입력 여부를 적용합니다.
-    const amount = (field, label, required = false) => '<label>' + label + '<input type="number" min="0" max="999999999.99" step="0.01" name="'
-        + prefix + field + '" value="' + e(fare?.[field]) + '"' + (required ? ' required' : '') + '></label>';
-    return '<div class="fare-fields">'
-        + amount('adult', '성인 1인 (원)', requiredAdult) + amount('child', '아동 1인 (원)')
-        + (requiredAdult ? '' : amount('shared', '일행 공동 (원)')) + '</div>';
-}
-// 사용자가 입력한 금액을 서버의 Fare 요청 형식으로 바꾸고 전부 비어 있으면 null을 반환합니다.
-// fareFields와 같은 prefix를 사용해 성인·아동·공동 원화 요금을 읽습니다. 숫자 0은 유효한 무료 요금이고 빈 칸은 null로 남깁니다.
-export function readFare(root, prefix) {
-    // 해당 요금 편집 폼에서 접두사와 필드 이름으로 입력값을 찾습니다.
-    const field = name => $('[name="' + prefix + name + '"]', root).value;
-    // 폼 입력값이 비어 있으면 미확인으로, 입력되어 있으면 숫자 금액으로 해석합니다.
-    const amount = name => field(name) === '' ? null : Number(field(name));
-    const fare = {adult: amount('adult'), child: amount('child'), shared:
-        $('[name="' + prefix + 'shared"]', root) ? amount('shared') : null};
-    return [fare.adult, fare.child, fare.shared].some(value => value != null) ? fare : null;
-}
-// 서버의 구간별 견적을 교통수단·요금 편집·지도 버튼이 있는 카드로 그립니다.
-// sections에는 서버가 선택한 교통수단, 전체 후보와 비용 항목이 들어 있습니다. day는 일정 화면이 수정 대상을 구분하는 날짜입니다.
+// 서버의 구간별 견적을 교통수단 선택과 지도 버튼이 있는 카드로 그립니다.
+// sections에는 서버가 선택한 교통수단, 전체 후보와 비용 항목이 들어 있습니다.
 // 노선 코드와 지도 키가 있으면 앱 안에서 지도를 열고, 좌표가 있는 구간은 카카오맵 길찾기로도 연결합니다.
-export function legCards(sections, choices = {}, day = '') {
+export function legCards(sections) {
     if (!sections.length) return '<p class="empty">이동 구간이 없습니다.</p>';
     return sections.map(section => {
         const chosen = section.chosen;
-        const selection = choices?.[section.key];
-        const override = selection?.mode === chosen.mode ? selection.override : null;
         const mapLink = kakaoDirectionsUrl(chosen);
         const total = section.cost.missing.length && Number(section.cost.totalKrw) === 0
             ? '요금 미확인' : '일행 ' + won(section.cost.totalKrw) + (section.cost.missing.length ? ' (부분 합계)' : '');
@@ -198,13 +176,9 @@ export function legCards(sections, choices = {}, day = '') {
             + e(chosen.to.name) + '</h3><p>' + distance(chosen.kilometers) + ', ' + minutes(chosen.minutes)
             + (chosen.transfers == null ? '' : ', 환승 ' + chosen.transfers + '회') + ', ' + total + '</p>'
             + priceType(chosen.source, chosen.checkedAt) + '</div><label>교통수단<select class="leg-mode" data-key="' + e(section.key)
-            + '" data-day="' + e(day) + '">' + options(section.options.map(option => [option.mode,
+            + '">' + options(section.options.map(option => [option.mode,
                 legOptionLabel(option)]), chosen.mode) + '</select></label></div>'
             + transitSteps(chosen, 'transit-boardings')
-            + '<details class="fare-edit"' + (override ? ' open' : '') + '><summary>요금 직접 입력</summary>'
-            + '<form class="leg-fare" data-key="' + e(section.key) + '" data-day="' + e(day) + '">'
-            + '<p class="muted">성인·아동 1인 요금 또는 일행 공동 요금을 입력하세요. 값을 비우고 적용하면 기본 요금으로 돌아갑니다.</p>'
-            + fareFields(override, 'leg-') + '<button type="submit" class="soft">요금 적용</button></form></details>'
             + '<ul class="cost-list">' + itemRow(section.cost) + '</ul>'
             + (mapLink ? '<a class="soft" href="' + e(mapLink)
                 + '" target="_blank" rel="noopener noreferrer">카카오맵에서 길찾기</a>' : '')
@@ -222,7 +196,8 @@ export function legCards(sections, choices = {}, day = '') {
 export function kakaoDirectionsUrl(segment) {
     const mode = {
         CITY_BUS: 'traffic', SUBWAY: 'traffic', BUS_SUBWAY: 'traffic', AIRPORT_RAIL: 'traffic',
-        AIRPORT_BUS: 'traffic', TRAIN: 'traffic', CAR: 'car', TAXI: 'car', RENTAL_CAR: 'car', WALK: 'walk'
+        AIRPORT_BUS: 'traffic', TRAIN: 'traffic', EXPRESS_BUS: 'traffic', INTERCITY_BUS: 'traffic',
+        CAR: 'car', TAXI: 'car', RENTAL_CAR: 'car', WALK: 'walk'
     }[segment.mode];
     if (!mode) return '';
     const place = ({name, latitude, longitude}) => [encodeURIComponent(name), latitude, longitude].join(',');
@@ -236,8 +211,8 @@ function legOptionLabel(option) {
         : fare?.adult != null ? '성인 ' + won(fare.adult) : '요금 미확인';
     return (modes[option.mode] ?? option.mode) + ', ' + minutes(option.minutes) + ', ' + amount;
 }
-// 구간 카드의 교통수단·요금 변경을 각 화면의 재계산 함수에 연결하고 지도 버튼의 조회를 처리합니다.
-// 교통수단 변경 시 이전 수단의 직접 요금을 초기화합니다. 요금 입력은 현재 선택한 수단과 구간 ID를 콜백에 전달합니다.
+// 구간 카드의 교통수단 변경을 각 화면의 재계산 함수에 연결하고 지도 버튼의 조회를 처리합니다.
+// 교통수단 변경 시 이전 수단에 저장된 요금을 초기화합니다.
 // 지도는 버튼을 처음 열 때 조회하고, 같은 카드에서 다시 열면 이미 그린 지도의 범위를 다시 맞춥니다.
 export function connectLegs(root, callback) {
     $$('.leg-map-toggle', root).forEach(button => {
@@ -272,13 +247,8 @@ export function connectLegs(root, callback) {
     });
     // 선택한 교통수단을 상위 화면에 전달해 이 구간을 다시 계산합니다.
     $$('.leg-mode', root).forEach(select => select.addEventListener('change', () =>
-        callback(select.dataset.key, {mode: select.value, override: null}, select.dataset.day)));
-    // 구간 요금 폼의 값을 읽어 현재 교통수단과 함께 재계산 함수에 전달합니다.
-    $$('.leg-fare', root).forEach(form => form.addEventListener('submit', event => {
-        event.preventDefault();
-        const select = $('.leg-mode', form.closest('.leg'));
-        callback(form.dataset.key, {mode: select.value, override: readFare(form, 'leg-')}, form.dataset.day);
-    }));
+        callback(select.dataset.key, {mode: select.value, override: null})));
+
 }
 // 시간·거리·비용 요약에 사용할 제목과 값 한 쌍을 그립니다.
 export const metric = (label, value) => '<div><span>' + e(label) + '</span><strong>' + e(value) + '</strong></div>';

@@ -97,19 +97,17 @@ public class CatalogService {
     }
 
     /**
-     * 일정·투어의 관광지 ID를 순서대로 조회하고 중복 방문지와 다른 도시의 방문지를 확인합니다.
-     *
-     * 방문지 배열의 순서를 유지해 이동 순서로 사용합니다. 중복 ID, 존재하지 않는 ID, 목적지 외의 관광지는 입력 오류로 연결됩니다.
+     * 투어 상품의 관광지를 등록된 순서대로 조회합니다. 상품에서는 중복 관광지를 허용하지 않습니다.
      */
     public List<Attraction> stops(String destination, List<String> ids) {
+        if (ids.stream().distinct().count() != ids.size()) {
+            throw new IllegalArgumentException("투어 상품에 동일한 관광지가 두 번 들어 있습니다.");
+        }
         return stops(destination, ids, List.of());
     }
 
-    /** 저장된 카카오맵 장소는 해당 일정의 목적지와 좌표를 확인한 뒤 기존 관광지와 같은 순서로 처리합니다. */
+    /** 일정의 반복 방문을 그대로 유지하고, 카카오맵 장소의 주소와 좌표는 ID당 한 번 검증합니다. */
     public List<Attraction> stops(String destination, List<String> ids, List<SearchedPlace> places) {
-        if (ids.stream().distinct().count() != ids.size()) {
-            throw new IllegalArgumentException("같은 날에 동일한 관광지를 두 번 추가할 수 없습니다.");
-        }
         Destination city = destination(destination);
         Map<String, Attraction> selected = new HashMap<>();
         if (places != null) {

@@ -64,20 +64,20 @@ public class DomesticTours implements TravelProviders.Tours {
     }
 
     private record Entry(String id, String destination, String name, List<String> stops, Mode mode,
-                         boolean guideIncluded, Platform platform, Integer adultKrw, GroupEstimate estimate,
+                         boolean guideIncluded, Platform platform, Integer adultKrw, Integer estimatedKrw,
                          GroupDiscount discount, Boolean fromPrice, String sourceUrl, String priceUrl,
                          String notes, Integer durationMinutes, List<String> coveredAdmissionStops) {
-        /** 검색 카드의 기본 요금과 비용 비교에 필요한 출처, 인원별 계산 정보를 함께 구성합니다. */
+        /** 공개 성인 요금 또는 성인과 아동에게 공통으로 적용할 1인 예상가를 구성합니다. */
         Tour tour() {
-            BigDecimal adult = estimate == null ? BigDecimal.valueOf(adultKrw) : estimate.perPerson(GroupEstimate.DEFAULT_PEOPLE);
-            Fare fare = new Fare(adult, adult.signum() == 0 || estimate != null ? adult : null, null);
+            boolean estimated = estimatedKrw != null;
+            BigDecimal adult = BigDecimal.valueOf(estimated ? estimatedKrw : adultKrw);
+            Fare fare = new Fare(adult, adult.signum() == 0 || estimated ? adult : null, null);
             // Price에는 기준일과 표시 금액을 담습니다. 카탈로그에는 해당 날짜의 예약 가능 여부와 집합 시각 정보가 없습니다.
             TourInput details = new TourInput(destination, platform == null ? Platform.OTHER : platform, name,
                     null, null, null, null, null, null, null, mode, true, false, false,
                     guideIncluded, stops, List.of(new Price(REFERENCE_DATE, REFERENCE_DATE, fare)), Pricing.free(), null);
-            return new Tour(id, details, estimate == null ? Source.PUBLISHED : Source.ESTIMATED,
-                    estimate == null ? CHECKED_AT : null,
-                    new TourReference(sourceUrl, priceUrl, notes, Boolean.TRUE.equals(fromPrice), durationMinutes, estimate, discount,
+            return new Tour(id, details, estimated ? Source.ESTIMATED : Source.PUBLISHED, estimated ? null : CHECKED_AT,
+                    new TourReference(sourceUrl, priceUrl, notes, Boolean.TRUE.equals(fromPrice), durationMinutes, discount,
                             coveredAdmissionStops == null ? List.of() : List.copyOf(coveredAdmissionStops)));
         }
     }

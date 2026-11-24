@@ -33,7 +33,13 @@ public class RouteLookup implements TravelProviders.Routes {
         if (samePoint(from, to)) return List.of();
         boolean fromJeju = origin.equals("jeju");
         boolean toJeju = destination.equals("jeju");
-        if (fromJeju == toJeju) return List.of(local(from, to));
+        if (fromJeju && toJeju) return List.of(local(from, to));
+        if (!fromJeju && !toJeju) {
+            // 시내 대중교통이 있어도 도시 간 버스는 독립적으로 검색해 같은 비교 목록에 추가합니다.
+            List<Segment> choices = new ArrayList<>(local(from, to));
+            choices.addAll(odsay.intercityBuses(from, to));
+            return List.of(List.copyOf(choices));
+        }
 
         Place departure = fromJeju ? JEJU : gateway(from);
         Place arrival = toJeju ? JEJU : gateway(to);

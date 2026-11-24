@@ -25,8 +25,7 @@ public class PlanService {
     private final PlanRepository repository;
     private final ObjectMapper json;
 
-    public record DayQuote(LocalDate date, List<Attraction> stops, Journey journey,
-                           List<Item> admissions, Total total, Integer visitMinutes) {}
+    public record DayQuote(LocalDate date, List<Attraction> stops, Journey journey, Total total, Integer visitMinutes) {}
     public record PlanQuote(Plan plan, List<DayQuote> days, Total total) {}
     public record StoredPlan(UUID id, Plan plan, Instant updatedAt) {}
     public record PlanSummary(UUID id, Trip trip, Instant updatedAt) {}
@@ -60,11 +59,11 @@ public class PlanService {
     }
 
     /**
-     * 날짜와 방문지를 확인한 뒤 일차별 교통비·입장료와 전체 일정 합계를 계산합니다.
+     * 날짜와 방문지를 확인한 뒤 일차별 교통비와 전체 일정 합계를 계산합니다.
      *
      * plan.trip으로 기본 여행 조건을 검증하고 plan.days의 날짜가 시작일부터 종료일까지 순서대로 있는지 확인합니다.
      *
-     * 방문지 간 이동은 JourneyService에서, 입장료는 admissions에서 계산합니다. 반환되는 PlanQuote에는 정규화된 계획, 일차별 견적, 전체 합계가 들어 있습니다.
+     * 방문지 간 이동은 JourneyService에서 계산합니다. 반환되는 PlanQuote에는 정규화된 계획, 일차별 견적, 전체 합계가 들어 있습니다.
      */
     public PlanQuote quote(Plan plan) {
         Trip trip = catalog.validateTrip(plan.trip());
@@ -80,24 +79,10 @@ public class PlanService {
             var legs = journeys.visitLegs(trip.destination(), stops, day.legs());
             Journey journey = journeys.visits(stops, legs, trip.preferredMode(), trip.party());
             normalizedDays.add(new Day(day.date(), day.stops(), legs, day.places()));
-            List<Item> admissions = admissions(stops, trip.party());
-            List<Item> costs = new ArrayList<>(admissions);
-            costs.addAll(journey.sections().stream().map(JourneyService.Section::cost).toList());
-            all.addAll(costs);
-            days.add(new DayQuote(day.date(), stops, journey, admissions, pricing.total(costs, trip.party()),
-                    visitMinutes(stops)));
+            journey.sections().forEach(section -> all.add(section.cost()));
+            days.add(new DayQuote(day.date(), stops, journey, journey.cost(), visitMinutes(stops)));
         }
         return new PlanQuote(new Plan(trip, List.copyOf(normalizedDays)), List.copyOf(days), pricing.total(all, trip.party()));
-    }
-
-    /**
-     * 방문 관광지별 입장료를 인원에 맞춰 계산합니다. 일정과 투어 비교에서 함께 사용합니다.
-     *
-     * stops는 방문 순서가 확인된 관광지이고 party는 성인·아동 인원입니다. 반환 목록도 방문 순서를 유지해 화면이 관광지와 입장료를 같은 위치에서 읽을 수 있습니다.
-     */
-    public List<Item> admissions(List<Attraction> stops, Party party) {
-        return stops.stream().map(stop -> pricing.item(stop.name() + " 입장료", stop.admission(),
-                stop.id().startsWith("kakao-") ? Source.KAKAO_MAP : Source.CATALOG, party)).toList();
     }
 
     /** 체류 시간을 모르는 방문지가 있으면 일정 전체의 체류 시간도 미확인입니다. */

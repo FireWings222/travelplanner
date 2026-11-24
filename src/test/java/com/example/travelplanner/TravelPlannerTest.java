@@ -60,25 +60,25 @@ class TravelPlannerTest {
                 .map(Tour::id).toList());
         http.perform(get("/api/tours/domestic-gangwon-a"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.reference.estimate.minimumPartyPrice").value(95000))
-                .andExpect(jsonPath("$.reference.estimate.maximumPartyPrice").value(32000));
+                .andExpect(jsonPath("$.source").value("ESTIMATED"))
+                .andExpect(jsonPath("$.details.prices[0].fare.adult").value(59000))
+                .andExpect(jsonPath("$.details.prices[0].fare.child").value(59000));
     }
 
     @Test
-    void usesActualPartySizeForEstimatedAndPublishedGroupRates() {
-        var estimate = tours.get("domestic-gangwon-a");
-        amount("95000", TourService.fare(estimate, DATE, new Party(6, 0)).adult());
-        amount("50000", TourService.fare(estimate, DATE, new Party(10, 2)).child());
-        amount("32000", TourService.fare(estimate, DATE, new Party(20, 0)).adult());
-        assertNull(TourService.fare(estimate, DATE, new Party(5, 0)));
-        assertNull(TourService.fare(estimate, DATE, new Party(21, 0)));
+    void multipliesEstimatedUnitFareByPartySizeAndPreservesPublishedDiscounts() {
+        var estimate = tours.get("domestic-gangwon-b");
+        for (Party party : List.of(new Party(1, 0), new Party(2, 1), new Party(6, 0), new Party(21, 0))) {
+            var result = comparison.compare(new CompareRequest(estimate.id(), DATE, party,
+                    null, Map.of(), null, null, null));
+            var tourFare = result.guided().items().get(0);
+            assertEquals("투어 예상 요금", tourFare.label());
+            assertEquals(BigDecimal.valueOf(53000L * party.size()), tourFare.totalKrw());
+            assertNull(result.guided().scheduledMinutes());
+        }
         var incheon = tours.get("domestic-incheon-a");
         amount("9000", TourService.fare(incheon, DATE, new Party(9, 0)).adult());
         amount("7000", TourService.fare(incheon, DATE, new Party(10, 0)).adult());
-        var result = comparison.compare(new CompareRequest(estimate.id(), DATE, new Party(10, 2),
-                null, Map.of(), null, null, null));
-        amount("600000", result.guided().items().get(0).totalKrw());
-        assertNull(result.guided().scheduledMinutes());
     }
 
     /** Pricing이 성인과 아동 요금을 각 인원수에 맞게 합산하는지 검증합니다. */
@@ -110,13 +110,24 @@ class TravelPlannerTest {
         assertNull(comparisonAfter.tourMinusIndependentKrw());
     }
 
-    /** 투어에 포함된 입장료가 투어 쪽에 중복 계산되지 않는지 검증합니다. */
+    /** 투어와 자유여행 양쪽의 견적에서 관광지 입장료 항목을 제외합니다. */
     @Test
-    void includedAdmissionIsOnlyChargedToIndependentVisitors() {
+    void excludesAdmissionsFromBothSidesOfTourComparison() {
         var result = comparison.compare(request(registerDatedTour().id(), DATE, Map.of()));
         assertTrue(result.tour().details().admissionIncluded());
         assertTrue(result.guided().items().stream().noneMatch(item -> item.label().endsWith("입장료")));
-        assertEquals(4, result.independent().items().stream().filter(item -> item.label().endsWith("입장료")).count());
+        assertTrue(result.independent().items().stream().noneMatch(item -> item.label().endsWith("입장료")));
+        assertEquals(result.journey().cost().totalKrw(), result.independent().cost().totalKrw());
+    }
+
+    @Test
+    void itineraryCostDoesNotIncludeCatalogAdmission() {
+        var trip = new Trip("seoul", "gyeongnam", DATE, DATE, PARTY, null, null, TripType.OTHER);
+        var day = new Day(DATE, List.of("domestic-gyeongnam-b-1"), Map.of());
+        var quote = plans.quote(new Plan(trip, List.of(day)));
+        amount("0", quote.days().get(0).total().totalKrw());
+        amount("0", quote.total().totalKrw());
+        assertTrue(quote.total().missing().isEmpty());
     }
 
     /** 제주행 공항 연결을 유지하고 조회하지 않은 항공편의 요금과 시간을 비워 두는지 검증합니다. */
@@ -221,7 +232,38 @@ class TravelPlannerTest {
         assertThrows(com.example.travelplanner.exception.NotFound.class, () -> plans.get(saved.id()));
     }
 
-    /** 검색한 장소의 좌표와 입장료 미확인 상태가 일정 저장·조회·재견적에 이어지는지 확인합니다. */
+    @Test
+    void savesRepeatedVisitsAndAppliesSeparateTransportChoices() {
+        var place = new SearchedPlace("kakao-123", "제주목 관아", "제주특별자치도 제주시 관덕로 25", 33.513, 126.522);
+        var trip = new Trip("seoul", "jeju", DATE, DATE, PARTY, null, null, TripType.OTHER);
+        var stops = List.of(place.id(), place.id(), "seongsan", place.id(), "seongsan");
+        var legs = Map.of("kakao-123~seongsan", new Leg(Mode.CAR, null),
+                "kakao-123~seongsan~2", new Leg(Mode.TAXI, null));
+        var saved = plans.save(null, new Plan(trip, List.of(new Day(DATE, stops, legs, List.of(place)))));
+        try {
+            var restored = plans.get(saved.id()).plan();
+            assertEquals(stops, restored.days().get(0).stops());
+            assertEquals(List.of(place), restored.days().get(0).places());
+            var quote = plans.quote(restored).days().get(0);
+            assertEquals(stops, quote.stops().stream().map(Attraction::id).toList());
+            var sections = quote.journey().sections();
+            assertEquals(List.of("kakao-123~kakao-123", "kakao-123~seongsan", "seongsan~kakao-123", "kakao-123~seongsan~2"),
+                    sections.stream().map(JourneyService.Section::key).toList());
+            assertEquals(0, sections.get(0).chosen().minutes());
+            amount("0", sections.get(0).cost().totalKrw());
+            assertTrue(sections.get(0).cost().missing().isEmpty());
+            assertEquals(Mode.CAR, sections.get(1).chosen().mode());
+            assertEquals(Mode.TAXI, sections.get(3).chosen().mode());
+            var comparisonResult = comparison.compare(new CompareRequest("domestic-jeju-a", DATE, PARTY,
+                    stops, legs, null, null, null, List.of(place)));
+            assertEquals(stops, comparisonResult.independentStops().stream().map(Attraction::id).toList());
+            assertThrows(IllegalArgumentException.class, () -> catalog.stops("jeju", List.of("seongsan", "seongsan")));
+        } finally {
+            plans.delete(saved.id());
+        }
+    }
+
+    /** 검색한 장소의 좌표를 유지하고, 장소 한 곳에는 일정 교통비가 생기지 않는지 확인합니다. */
     @Test
     void addsKakaoPlacesToSavedItinerary() throws Exception {
         var place = new SearchedPlace("kakao-123", "제주목 관아", "제주특별자치도 제주시 관덕로 25", 33.513, 126.522);
@@ -248,8 +290,8 @@ class TravelPlannerTest {
             assertEquals(address.name(), quote.stops().get(0).name());
             assertTrue(restored.days().get(0).legs().isEmpty());
             assertTrue(quote.journey().sections().isEmpty());
-            assertEquals(Source.KAKAO_MAP, quote.admissions().get(0).source());
-            assertFalse(quote.admissions().get(0).missing().isEmpty());
+            amount("0", quote.total().totalKrw());
+            assertTrue(quote.total().missing().isEmpty());
 
             days.set(0, new Day(DATE, List.of(address.id(), "seongsan"),
                     Map.of(address.id() + "~seongsan", new Leg(Mode.TAXI, null)), List.of(address)));
@@ -282,7 +324,7 @@ class TravelPlannerTest {
                 org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("id=\"destinations-heading\"")),
                 org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("id=\"find-origin\"")),
                 org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("id=\"find-destination\"")),
-                org.hamcrest.Matchers.containsString("id=\"city-list\""))));
+                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("<datalist")))));
         http.perform(get("/api/tours/jeju-day")).andExpect(status().isNotFound());
         http.perform(post("/api/routes/compare").contentType(MediaType.APPLICATION_JSON).content("""
                 {"trip":{"origin":"서울","destination":"jeju","start":"2027-03-10","end":"2027-03-12",
@@ -367,8 +409,8 @@ class TravelPlannerTest {
         var group = tours.recommend(new TourRecommendationRequest("busan", DATE, new Party(6, 0), busanStops));
         assertEquals(List.of("domestic-busan-a", "domestic-busan-c"),
                 group.stream().map(result -> result.tour().id()).toList());
-        amount("95000", group.get(0).fare().adult());
-        assertNull(tours.recommend(new TourRecommendationRequest("busan", DATE, PARTY, busanStops)).get(0).fare());
+        amount("59000", group.get(0).fare().adult());
+        amount("59000", tours.recommend(new TourRecommendationRequest("busan", DATE, PARTY, busanStops)).get(0).fare().child());
         assertTrue(tours.recommend(new TourRecommendationRequest("busan", DATE, PARTY,
                 List.of("domestic-seoul-a-2"))).isEmpty());
     }
@@ -403,8 +445,8 @@ class TravelPlannerTest {
                 .filter(tour -> tour.details().name().equals("직접 등록")).findFirst().orElseThrow();
         assertEquals(Source.MANUAL, tours.get(saved.id()).source());
         var result = comparison.compare(new CompareRequest(saved.id(), DATE, PARTY, null, null, null, null, null));
-        assertEquals(List.of("숙소 → 집합 장소 가격", "성산일출봉 입장료 가격"), result.guided().cost().missing());
-        assertTrue(result.guided().items().stream().anyMatch(item -> item.label().equals("성산일출봉 입장료")));
+        assertEquals(List.of("숙소 → 집합 장소 가격"), result.guided().cost().missing());
+        assertTrue(result.guided().items().stream().noneMatch(item -> item.label().endsWith("입장료")));
     }
 
     /** 날짜별 요금이 필요한 비용 비교 테스트의 상품을 인메모리 DB에 등록합니다. */

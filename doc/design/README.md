@@ -24,7 +24,8 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 화면�
 | 0012 | [홈 여행 조건 입력을 간소화](decisions/0012-simplify-trip-form.md) | 대체됨(0014) | 2026-11-24 |
 | 0013 | [현지 일정에서 관련 일일투어 안내](decisions/0013-related-day-tours.md) | 결정 | 2026-11-24 |
 | 0014 | [홈 여행 조건 폼의 폭과 입력 줄 정리](decisions/0014-compact-trip-form.md) | 대체됨(0015) | 2026-11-24 |
-| 0015 | [홈 여행 조건 폼을 가운데에 배치](decisions/0015-center-trip-form.md) | 결정 | 2026-11-24 |
+| 0015 | [홈 여행 조건 폼을 가운데에 배치](decisions/0015-center-trip-form.md) | 대체됨(0016) | 2026-11-24 |
+| 0016 | [여행 조건을 오른쪽 상단에 확대 배치](decisions/0016-home-trip-panel.md) | 결정 | 2026-11-24 |
 
 ## 시안 목록
 
@@ -50,7 +51,7 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 화면�
 | 경로 비교 | `search.html`, `routes.js` | 적용(2026-11-23) |
 | 여행 일정 | `itinerary.html`, `plan.js` | 적용(2026-11-23) |
 | 공통 머리글 | `layout.html` | 적용(2026-11-23) |
-| 홈 | `index.html`, `app.js` | 적용(2026-11-24, 0015) |
+| 홈 | `index.html`, `app.js` | 적용(2026-11-24, 0016) |
 | 일일투어 | `tours.html`, `tours.js` | 남음(시안 먼저) |
 | 비용 비교 | `compare.html`, `compare.js` | 남음(시안 먼저) |
 

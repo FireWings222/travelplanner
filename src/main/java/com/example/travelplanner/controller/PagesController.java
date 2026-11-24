@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 public class PagesController {
     private final String kakaoMapJavaScriptKey;
 
-    /** Spring 설정에서 카카오맵 JavaScript 키를 읽어 뷰에 전달할 준비를 합니다. */
+    /** 실행 환경에서 카카오맵 JavaScript 키를 읽습니다. */
     public PagesController(@Value("${KAKAO_MAP_JS_KEY:}") String kakaoMapJavaScriptKey) {
         this.kakaoMapJavaScriptKey = kakaoMapJavaScriptKey.strip();
     }

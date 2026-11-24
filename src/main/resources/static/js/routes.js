@@ -1,5 +1,5 @@
-import {$, $$, api, read, write, e, modes, won, minutes, distance, status, showError, fareFields, readFare,
-    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader, transitSteps} from './common.js';
+import {$, $$, api, read, write, e, modes, won, minutes, distance, status, showError,
+    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader, transitSteps, isIntercityBus} from './common.js';
 import {createMap, drawJourney} from './route-map.js';
 
 // 서버 추천 이름을 경로 카드 꼬리표에 쓰는 짧은 이름으로 바꿉니다. 목록에 없는 추천은 서버 이름을 그대로 씁니다.
@@ -83,26 +83,23 @@ export async function init(cities) {
     }
     const sameModes = (a, b) => a.length === b.length && a.every((mode, i) => mode === b[i]);
 
-    // 선택한 경로 카드 안에 펼치는 구간 내역: 교통수단, 구간, 시간과 거리, 요금, 탑승 순서, 길찾기 링크, 요금 직접 입력
+    // 선택한 경로의 교통수단, 구간, 시간과 거리, 요금, 탑승 순서와 길찾기 링크를 표시합니다.
     function legRows(sections) {
         return sections.map(section => {
             const chosen = section.chosen;
-            const override = legs[section.key]?.mode === chosen.mode ? legs[section.key].override : null;
+            const terminalRoute = isIntercityBus(chosen.mode);
+            const start = terminalRoute ? chosen.boardings[0]?.start : chosen.from.name;
+            const end = terminalRoute ? chosen.boardings.at(-1)?.end : chosen.to.name;
             const link = kakaoDirectionsUrl(chosen);
             const unknown = section.cost.missing.length > 0;
             return '<div class="leg">' + modeIcon(chosen.mode, 20)
-                + '<span><b>' + e(modes[chosen.mode] ?? chosen.mode) + '</b> ' + e(chosen.from.name) + '에서 ' + e(chosen.to.name)
+                + '<span><b>' + e(modes[chosen.mode] ?? chosen.mode) + '</b> ' + e(start) + '에서 ' + e(end)
                 + '<small class="num">' + minutes(chosen.minutes) + ', ' + distance(chosen.kilometers)
                 + (chosen.transfers ? ', 환승 ' + chosen.transfers + '회' : '') + '</small></span>'
                 + '<span class="num">' + (unknown && Number(section.cost.totalKrw) === 0 ? '<span class="warntext">미확인</span>' : e(fare(section.cost))) + '</span>'
                 + transitSteps(chosen)
-                + '<div class="leg-extra">'
-                + (link ? '<a class="textbtn" href="' + e(link) + '" target="_blank" rel="noopener noreferrer">카카오맵에서 길찾기</a>' : '')
-                + '<details' + (override || unknown ? ' open' : '') + '><summary>요금 직접 입력</summary>'
-                + '<form class="leg-fare" data-key="' + e(section.key) + '" data-mode="' + e(chosen.mode) + '">'
-                + fareFields(override, 'leg-') + '<button type="submit" class="outline">요금 적용</button>'
-                + '<p>성인, 아동 1인 요금이나 일행 공동 요금을 입력하세요. 값을 비우고 적용하면 기본 요금으로 돌아갑니다.</p></form></details>'
-                + '</div></div>';
+                + (link ? '<div class="leg-extra"><a class="textbtn" href="' + e(link)
+                    + '" target="_blank" rel="noopener noreferrer">카카오맵에서 길찾기</a></div>' : '') + '</div>';
         }).join('');
     }
 
@@ -112,18 +109,20 @@ export async function init(cities) {
         const cost = option.journey.cost;
         const picks = tags(option);
         const unknown = cost.missing.length > 0;
+        const terminalRoute = option.modes.some(isIntercityBus);
         const price = unknown && Number(cost.totalKrw) === 0 ? '미확인' : won(cost.totalKrw);
         return '<article class="routecard' + (on ? ' on' : '') + '" data-option="' + e(option.modes.join('/')) + '">'
             + '<button type="button" class="rc-main" aria-pressed="' + on + '" data-apply="' + e(option.id) + '">'
             + '<span class="rc-title">' + e(option.modes.map(mode => modes[mode] ?? mode).join(', ')) + '</span>'
             + '<span class="rc-price num' + (unknown ? ' none' : '') + '">' + price + '</span>'
             + '<span class="rc-meta"><span class="icons">' + option.modes.map(mode => modeIcon(mode)).join('') + '</span>'
-            + '<span class="num">' + minutes(option.journey.minutes) + '</span>'
+            + '<span class="num">' + (terminalRoute ? '터미널 간 ' : '') + minutes(option.journey.minutes) + '</span>'
             + (picks.length ? '<span class="tag' + (picks.includes('최저가') ? ' low' : '') + '">' + e(picks.join(', ')) + '</span>' : '') + '</span>'
-            + '<span class="rc-sub num">' + (unknown ? '<span class="warntext">부분 합계, 요금 입력 필요</span>' : '1인 ' + won(cost.perPersonKrw)) + '</span>'
+            + '<span class="rc-sub num">' + (unknown ? '<span class="warntext">요금 일부 미확인</span>' : '1인 ' + won(cost.perPersonKrw)) + '</span>'
             + '</button>'
             + (on ? '<div class="rc-legs">' + legRows(result.selected.sections)
-                + '<p class="rc-note">' + e(costNote(result.selected.cost)) + '</p></div>' : '')
+                + '<p class="rc-note">' + e(costNote(result.selected.cost)) + '</p>'
+                + (terminalRoute ? '<p class="rc-note">터미널까지의 이동 시간과 교통비는 별도입니다.</p>' : '') + '</div>' : '')
             + '</article>';
     }
 
@@ -131,12 +130,13 @@ export async function init(cities) {
     function renderEstimate() {
         const selected = result.selected;
         const transportUnknown = selected.cost.missing.length > 0;
+        const terminalRoute = selected.sections.some(({chosen}) => isIntercityBus(chosen.mode));
         estimate.hidden = false;
         estimate.innerHTML = estimateCard({
             budget: trip.budget,
             open: estimate.classList.contains('open'),
             rows: [
-                {key: 'transport', label: '왕복 교통 (편도의 2배)', partial: transportUnknown,
+                {key: 'transport', label: terminalRoute ? '터미널 간 왕복 (편도의 2배)' : '왕복 교통 (편도의 2배)', partial: transportUnknown,
                     value: transportUnknown && Number(result.roundTripKrw) === 0 ? null : result.roundTripKrw},
                 {key: 'local', label: '현지 일정', value: local?.value ?? null, partial: Boolean(local?.partial),
                     text: local === undefined ? '계산 중' : '만들기 전'},
@@ -260,13 +260,6 @@ export async function init(cities) {
             return [section.key, {mode, override: legs[section.key]?.mode === mode ? legs[section.key].override : null}];
         }));
         update(next, button.closest('.routecard'));
-    });
-    // 구간 요금 직접 입력을 적용합니다. 지금 고른 교통수단과 함께 보냅니다.
-    list.addEventListener('submit', event => {
-        const form = event.target.closest('.leg-fare');
-        if (!form) return;
-        event.preventDefault();
-        update({...legs, [form.dataset.key]: {mode: form.dataset.mode, override: readFare(form, 'leg-')}}, form.closest('.routecard'));
     });
     // 정렬 버튼
     $('#route-sort').addEventListener('click', event => {

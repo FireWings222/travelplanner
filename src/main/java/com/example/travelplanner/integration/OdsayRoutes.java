@@ -18,7 +18,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import com.example.travelplanner.exception.NotFound;
 
@@ -49,9 +51,60 @@ public class OdsayRoutes {
         if (apiKey.isEmpty() || Thread.currentThread().isInterrupted()) return samples;
         Place from = samples.get(0).from();
         Place to = samples.get(0).to();
-        JsonNode response = query("searchPubTransPathT?SX=" + from.longitude() + "&SY=" + from.latitude()
-                + "&EX=" + to.longitude() + "&EY=" + to.latitude() + "&SearchType=0");
+        JsonNode response = search(from, to, 0);
         return response == null ? samples : apply(samples, response, Instant.now());
+    }
+
+    /** 도시 간 버스를 시내 대중교통 조회와 별도로 찾습니다. */
+    List<Segment> intercityBuses(Place from, Place to) {
+        if (apiKey.isEmpty() || Thread.currentThread().isInterrupted()) return List.of();
+        JsonNode response = search(from, to, 1);
+        return response == null ? List.of() : readIntercityBuses(from, to, response, Instant.now());
+    }
+
+    private JsonNode search(Place from, Place to, int searchType) {
+        return query("searchPubTransPathT?SX=" + from.longitude() + "&SY=" + from.latitude()
+                + "&EX=" + to.longitude() + "&EY=" + to.latitude() + "&SearchType=" + searchType);
+    }
+
+    /** ODsay 도시 간 버스 응답에서 터미널 간 요약과 탑승 순서를 읽습니다. */
+    static List<Segment> readIntercityBuses(Place from, Place to, JsonNode response, Instant checkedAt) {
+        JsonNode result = response.path("result");
+        if (result.path("searchType").asInt(-1) != 1) return List.of();
+        Map<Mode, Segment> choices = new LinkedHashMap<>();
+        for (JsonNode path : result.path("path")) {
+            if (path.path("pathType").asInt(-1) != 12) continue;
+            List<Boarding> boardings = new ArrayList<>();
+            for (JsonNode leg : path.path("subPath")) {
+                Mode mode = switch (leg.path("trafficType").asInt(-1)) {
+                    case 5 -> Mode.EXPRESS_BUS;
+                    case 6 -> Mode.INTERCITY_BUS;
+                    default -> null;
+                };
+                String departure = leg.path("startName").asText("");
+                String arrival = leg.path("endName").asText("");
+                if (mode == null || departure.isBlank() || arrival.isBlank()) {
+                    boardings.clear();
+                    break;
+                }
+                int minutes = leg.path("sectionTime").asInt(-1);
+                int meters = leg.path("distance").asInt(-1);
+                boardings.add(new Boarding(mode, List.of(), departure, arrival,
+                        minutes < 0 ? null : minutes, meters < 0 ? null : meters, List.of()));
+            }
+            if (boardings.isEmpty()) continue;
+            Mode mode = boardings.stream().anyMatch(boarding -> boarding.mode() == Mode.INTERCITY_BUS)
+                    ? Mode.INTERCITY_BUS : Mode.EXPRESS_BUS;
+            JsonNode info = path.path("info");
+            int minutes = info.path("totalTime").asInt(-1);
+            int meters = info.path("totalDistance").asInt(-1);
+            int payment = info.path("totalPayment").asInt(-1);
+            if (minutes <= 0 || meters <= 0) continue;
+            Fare fare = payment < 0 ? null : new Fare(BigDecimal.valueOf(payment), null, null);
+            choices.putIfAbsent(mode, new Segment(from, to, mode, BigDecimal.valueOf(meters, 3), minutes,
+                    boardings.size() - 1, fare, Source.ODSAY, checkedAt, null, List.copyOf(boardings)));
+        }
+        return List.copyOf(choices.values());
     }
 
     /**

@@ -313,11 +313,18 @@ export async function drawDays(view, days, focus, rightPad = () => 0) {
             if (on) casedLine(view, path, style.color, 4, 20, style.style);
             else view.items.push(new maps.Polyline({map: view.map, path, strokeWeight: 2.5, strokeColor: ink2, strokeOpacity: 0.8, strokeStyle: 'shortdash', zIndex: 5}));
         });
-        day.stops.forEach((stop, n) => {
+        // 같은 위치에 핀이 겹치지 않도록 첫 번호를 핀에, 전체 방문 순번을 이름표에 표시합니다.
+        const stopsById = new Map();
+        day.stops.forEach((stop, index) => {
+            if (!stopsById.has(stop.id)) stopsById.set(stop.id, {stop, numbers: []});
+            stopsById.get(stop.id).numbers.push(index + 1);
+        });
+        stopsById.forEach(({stop, numbers}) => {
             const at = position(stop);
             if (!on) { put(view, at, overlayNode('kdim', ''), 'c', 20); return; }
-            put(view, at, overlayNode('kpin', dayPin(n + 1, color, 28)), 'pin', 35 + n);
-            put(view, at, overlayNode('kpinlabel', e(stop.name)), 'b', 34);
+            put(view, at, overlayNode('kpin', dayPin(numbers[0], color, 28)), 'pin', 34 + numbers[0]);
+            const suffix = numbers.length > 1 ? ' (' + numbers.join(', ') + '번)' : '';
+            put(view, at, overlayNode('kpinlabel', e(stop.name + suffix)), 'b', 34);
         });
     });
     const fit = () => {
@@ -332,5 +339,7 @@ export async function drawDays(view, days, focus, rightPad = () => 0) {
         // 장소가 한 곳이거나 서로 가까워도 지도가 지나치게 확대되지 않도록 조정합니다.
         if (view.map.getLevel() < 6) view.map.setLevel(6);
     };
-    return {fit, hasMissingGeometry: shapes[focus]?.some(lines => !lines.length)};
+    const hasMissingGeometry = days[focus]?.journey.sections.some(({chosen}, index) =>
+        chosen.from.id !== chosen.to.id && !shapes[focus][index].length);
+    return {fit, hasMissingGeometry};
 }

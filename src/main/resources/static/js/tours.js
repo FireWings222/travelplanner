@@ -27,7 +27,7 @@ export async function init(cities) {
     // 투어 ID와 날짜를 세션의 comparison에 저장해 compare.js가 비교 API 요청을 만들 수 있게 합니다.
     function compareTour(tour) {
         write('comparison', {tourId: tour.id, date: tour.date,
-            party: trip?.party ?? {adults: tour.estimated ? 10 : 1, children: 0}});
+            party: trip?.party ?? {adults: 1, children: 0}});
         location.assign('/compare?tour=' + encodeURIComponent(tour.id));
     }
 
@@ -79,23 +79,23 @@ export async function init(cities) {
             + '</div></div></article>';
     }
 
-    // 카탈로그는 날짜별 판매 여부 대신 확인한 공개가 또는 10인 기준 추정가를 보여 줍니다.
-    // date는 비교 화면으로 넘길 여행일이고, 6인과 20인 금액은 서버가 계산한 값을 그대로 표시합니다.
+    // 카탈로그는 공개 요금이나 1인 예상가를 보여 줍니다. 예상가는 여행 조건의 인원으로 합계를 함께 표시합니다.
     function catalogCard(tour, date) {
         const {details, reference} = tour;
-        const {estimate, discount} = reference;
+        const {discount} = reference;
         const amount = details.prices[0].fare.adult;
-        const label = estimate ? '10인 기준 · 1인' : '성인 1인';
-        const groupPrices = estimate ? '<p class="muted">6인 기준 1인 ' + won(estimate.minimumPartyPrice)
-            + ' · 20인 기준 1인 ' + won(estimate.maximumPartyPrice) + '</p>' : '';
+        const estimated = tour.source === 'ESTIMATED';
+        const label = estimated ? '1인 예상가' : '성인 1인';
+        const people = trip?.party ? trip.party.adults + trip.party.children : null;
+        const total = estimated && people ? '<small>' + people + '명 합계 ' + won(amount * people) + '</small>' : '';
         const transport = details.mode === 'WALK' ? '도보' : '투어버스';
         const schedule = reference.durationMinutes == null ? transport : transport + ' · 약 ' + minutes(reference.durationMinutes);
         return '<article class="panel tour-card catalog-tour"><div class="tour-body"><div class="tour-top"><div>'
             + (details.platform === 'OTHER' ? '' : '<span class="eyebrow">' + e(platforms[details.platform]) + '</span>')
             + '<h2>' + e(details.name) + '</h2></div><div class="tour-price"><small>' + label + '</small><strong>'
-            + (amount === 0 ? '무료' : won(amount)) + (reference.fromPrice ? '부터' : '') + '</strong></div></div>'
+            + (amount === 0 ? '무료' : won(amount)) + (reference.fromPrice ? '부터' : '') + '</strong>' + total + '</div></div>'
             + '<p class="muted">' + e(schedule) + '</p><p>' + details.stops.map(id => e(nameOf(id))).join(' → ') + '</p>'
-            + groupPrices + (discount ? '<p class="muted">' + e(discount.minimumPeople) + '인 이상 성인 1인 '
+            + (discount ? '<p class="muted">' + e(discount.minimumPeople) + '인 이상 성인 1인 '
                 + won(discount.adultKrw) + '</p>' : '')
             + (reference.notes ? '<p>' + e(reference.notes) + '</p>' : '')
             + '<div>' + priceType(tour.source, tour.checkedAt) + '</div><div class="actions">'
@@ -123,15 +123,14 @@ export async function init(cities) {
         // 검색 카드에서 선택한 상품과 날짜를 비용 비교 화면으로 넘깁니다.
         $$('[data-tour]').forEach(button => button.onclick = () => {
             const id = button.dataset.tour;
-            compareTour({id, date: button.dataset.date || dateAfter(0),
-                estimated: !!result.tours.find(tour => tour.id === id)?.reference?.estimate});
+            compareTour({id, date: button.dataset.date || dateAfter(0)});
         });
         // 검색 카드의 상품과 날짜를 비교 목록에 추가합니다.
         $$('[data-pin]').forEach(button => button.onclick = () => {
             const id = button.dataset.pin;
             const tour = result.tours.find(tour => tour.id === id);
             shortlist = [...shortlist.filter(item => item.id !== id), {
-                id, name: tour.details.name, date: button.dataset.date || dateAfter(0), estimated: !!tour.reference?.estimate
+                id, name: tour.details.name, date: button.dataset.date || dateAfter(0)
             }];
             write('tourShortlist', shortlist);
             renderShortlist();

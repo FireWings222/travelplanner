@@ -82,7 +82,6 @@ async function home(cities) {
         fields.end.min = fields.start.value;
         if (fields.end.value && fields.end.value < fields.start.value) fields.end.value = fields.start.value;
     });
-    $('#city-list').innerHTML = cities.map(city => '<option value="' + e(city.name) + '"></option>').join('');
     if (previous) {
         fields.origin.value = cityName(previous.origin);
         fields.destination.value = cityName(previous.destination);

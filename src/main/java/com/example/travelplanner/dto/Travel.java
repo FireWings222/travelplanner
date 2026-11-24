@@ -140,35 +140,11 @@ public final class Travel {
                             @Valid Fare requiredExtras,
                             @Valid Fare excludedTransport) {}
 
-    /** 차량, 기사 등 일행 공통 비용과 인원수에 따라 달라지는 비용으로 1인 예상가를 계산합니다. */
-    public record GroupEstimate(int fixedKrw, int perPersonKrw) {
-        public static final int MIN_PEOPLE = 6;
-        public static final int MAX_PEOPLE = 20;
-        public static final int DEFAULT_PEOPLE = 10;
-
-        public boolean supports(int people) { return people >= MIN_PEOPLE && people <= MAX_PEOPLE; }
-
-        @JsonProperty(value = "minimumPartyPrice", access = JsonProperty.Access.READ_ONLY)
-        public BigDecimal minimumPartyPrice() { return perPerson(MIN_PEOPLE); }
-
-        @JsonProperty(value = "maximumPartyPrice", access = JsonProperty.Access.READ_ONLY)
-        public BigDecimal maximumPartyPrice() { return perPerson(MAX_PEOPLE); }
-
-        /** 일행 전체 비용을 인원으로 나누고, 1,000원 단위로 올림한 뒤 30,000~120,000원 범위를 적용합니다. */
-        public BigDecimal perPerson(int people) {
-            if (!supports(people)) throw new IllegalArgumentException("예상 투어는 6~20인 기준입니다.");
-            long unit = people * 1_000L;
-            long total = fixedKrw + (long) perPersonKrw * people;
-            long rounded = ((total + unit - 1) / unit) * 1_000;
-            return BigDecimal.valueOf(Math.max(30_000, Math.min(120_000, rounded)));
-        }
-    }
-
     public record GroupDiscount(int minimumPeople, int adultKrw) {}
 
     /** 카탈로그 투어의 출처와 요금 조건입니다. 포함 입장료는 방문지 ID로 기록해 비용 비교에서 중복 합산을 막습니다. */
     public record TourReference(String sourceUrl, String priceUrl, String notes, boolean fromPrice,
-                                Integer durationMinutes, GroupEstimate estimate, GroupDiscount discount,
+                                Integer durationMinutes, GroupDiscount discount,
                                 List<String> coveredAdmissionStops) {}
 
     public record Tour(String id, TourInput details, Source source, Instant checkedAt, TourReference reference) {

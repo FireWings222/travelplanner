@@ -104,8 +104,16 @@ public class JourneyService {
     /** 내 일정에서는 첫 장소에서 출발해 마지막 장소까지 방문 순서대로 이동합니다. 한 장소만 있으면 교통비는 없습니다. */
     public Journey visits(List<Attraction> stops, Map<String, Leg> legs, Mode preferred, Party party) {
         List<List<Segment>> options = new ArrayList<>();
+        Map<String, List<Segment>> byPair = new HashMap<>();
         for (int index = 1; index < stops.size(); index++) {
-            options.add(routes.local(catalog.place(stops.get(index - 1)), catalog.place(stops.get(index))));
+            Place from = catalog.place(stops.get(index - 1));
+            Place to = catalog.place(stops.get(index));
+            // 같은 방향으로 다시 이동할 때 조회 결과를 재사용하되, 견적에서는 구간마다 비용을 계산합니다.
+            options.add(byPair.computeIfAbsent(from.id() + "~" + to.id(), key -> {
+                if (from.id().equals(to.id())) return List.of(new Segment(from, to, Mode.WALK,
+                        BigDecimal.ZERO, 0, 0, Pricing.free(), Source.CATALOG, null));
+                return routes.local(from, to);
+            }));
         }
         return resolve(options, legs, preferred, party);
     }
@@ -122,7 +130,8 @@ public class JourneyService {
     /**
      * 구간별 교통수단과 직접 입력 요금을 적용하고 거리·시간·환승·비용을 합칩니다.
      *
-     * options의 바깥 목록은 이동 순서이고 안쪽 목록은 해당 구간의 교통수단 후보입니다. overrides의 키는 출발지ID~도착지ID입니다.
+     * options의 바깥 목록은 이동 순서이고 안쪽 목록은 해당 구간의 교통수단 후보입니다.
+     * 첫 구간의 키는 출발지ID~도착지ID이며, 같은 방향이 반복되면 ~2, ~3을 붙여 선택을 구분합니다.
      *
      * 조회 가능한 교통수단이 바뀌면 첫 후보를 사용합니다. 이전 수단에 직접 입력한 요금은 새 수단에 적용하지 않습니다.
      *
@@ -131,16 +140,20 @@ public class JourneyService {
     private Journey resolve(List<List<Segment>> options, Map<String, Leg> overrides,
                             Mode preferred, Party party) {
         Map<String, Leg> choices = overrides == null ? Map.of() : overrides;
+        Map<String, Integer> occurrences = new HashMap<>();
         List<Section> sections = new ArrayList<>();
         for (List<Segment> legs : options) {
             if (legs.isEmpty()) throw new TravelProviders.Unavailable("이동 구간 정보를 확인할 수 없습니다.", null);
             Segment first = legs.get(0);
-            String key = first.from().id() + "~" + first.to().id();
+            String pair = first.from().id() + "~" + first.to().id();
+            int occurrence = occurrences.merge(pair, 1, Integer::sum);
+            String key = occurrence == 1 ? pair : pair + "~" + occurrence;
             Leg choice = choices.get(key);
             Mode requestedMode = choice == null ? preferred : choice.mode();
             Segment chosen = legs.stream().filter(leg -> leg.mode() == requestedMode)
                     .findFirst().orElse(first);
-            if (choice != null && chosen.mode() == choice.mode() && choice.override() != null) {
+            if (choice != null && chosen.mode() == choice.mode() && choice.override() != null
+                    && !chosen.from().id().equals(chosen.to().id())) {
                 chosen = new Segment(chosen.from(), chosen.to(), chosen.mode(), chosen.kilometers(),
                         chosen.minutes(), chosen.transfers(), choice.override(), Source.MANUAL, Instant.now(),
                         chosen.mapObject(), chosen.boardings(), chosen.geometry());
