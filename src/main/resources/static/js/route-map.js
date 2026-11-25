@@ -1,4 +1,4 @@
-import {$, api, e, modes, won, minutes, distance, modeKind, PLANE_PATH, transitStepKind, isIntercityBus} from './common.js';
+import {$, api, e, modes, won, minutes, distance, modeKind, PLANE_PATH, transitStepKind, intercityStopLabel} from './common.js';
 
 let sdk;
 
@@ -73,7 +73,7 @@ async function routeParts(segment, includeWalkConnections = true) {
     return lines.map(points => ({points, kind: segment.mode === 'WALK' ? 'walk' : null}));
 }
 
-// 터미널 접근은 승차·하차 위치가 실제 여행지와 다를 때만 조회합니다.
+// 역이나 터미널 접근은 승차·하차 위치가 실제 여행지와 다를 때만 조회합니다.
 // 첫 번째 후보의 상세 좌표 조회에 실패하면 다음 후보를 확인합니다.
 async function terminalAccess(from, to) {
     if (!from || !to) return {lines: [], missing: true};
@@ -90,6 +90,7 @@ async function terminalAccess(from, to) {
     return {lines: [], missing: true};
 }
 
+// 도시 간 이동은 각 탑승 구간의 연결선과 양쪽 접근 경로를 독립적으로 그립니다.
 async function intercityShape(segment) {
     const steps = segment.boardings ?? [];
     const departure = steps[0]?.terminalFrom;
@@ -97,7 +98,7 @@ async function intercityShape(segment) {
     const [access, onward] = await Promise.all([
         terminalAccess(segment.from, departure), terminalAccess(arrival, segment.to)
     ]);
-    // 각 버스 탑승 구간의 두 터미널끼리만 연결합니다. 실제 버스 도로 좌표로 해석하지 않습니다.
+    // 탑승 구간의 양 끝을 연결해 표시합니다. 철로와 도로를 따라가는 상세 경로는 조회하지 않습니다.
     const connections = steps.filter(step => step.terminalFrom && step.terminalTo)
         .map(step => ({points: [step.terminalFrom, step.terminalTo], terminalLink: true}));
     return {lines: [...connections, ...access.lines, ...onward.lines], connections, steps, access, onward,
@@ -232,7 +233,7 @@ function distanceKm(a, b) {
 }
 
 // 경로 비교 응답의 구간(sections)을 교통수단 색 선, 환승 점, 도착 핀, 이름표로 그립니다.
-// 항공 곡선과 시외버스 점선은 연결 안내입니다. 터미널 접근을 포함한 그 밖의 지상 이동은 조회한 좌표로 그립니다.
+// 항공 곡선과 도시 간 교통의 점선은 연결 안내입니다. 역과 터미널 접근은 조회한 좌표로 그립니다.
 // 반환하는 fit(focus)는 전체(all), 출발지 주변(start), 도착지 주변(end) 범위로 지도를 맞춥니다. focuses는 고를 수 있는 범위 목록입니다.
 // rightPad는 지도 오른쪽을 가리는 견적 카드 폭을 돌려주는 함수입니다.
 export async function drawJourney(view, sections, rightPad = () => 0) {
@@ -244,7 +245,7 @@ export async function drawJourney(view, sections, rightPad = () => 0) {
     const segments = sections.map(section => section.chosen);
     const shapes = await Promise.all(segments.map(async segment => {
         if (segment.mode === 'FLIGHT') return {arc: arcPoints(segment.from, segment.to)};
-        if (isIntercityBus(segment.mode)) return intercityShape(segment);
+        if (intercityStopLabel(segment.mode)) return intercityShape(segment);
         return {lines: await routeParts(segment).catch(() => [])};
     }));
     if (token !== view.drawing) return null;
@@ -265,11 +266,12 @@ export async function drawJourney(view, sections, rightPad = () => 0) {
         if (shape.steps) {
             const terminals = new Map();
             shape.steps.forEach((step, index) => {
-                const access = shape.access.mode ? '승차, 터미널까지 ' + modes[shape.access.mode] : '승차';
+                const access = shape.access.mode ? '승차, ' + intercityStopLabel(segment.mode)
+                    + '까지 ' + modes[shape.access.mode] : '승차';
                 const onward = shape.onward.mode ? '하차, 목적지까지 ' + modes[shape.onward.mode] : '하차';
                 for (const [point, name, label] of [
-                    [step.terminalFrom, step.start, index === 0 ? access : '환승 버스 승차'],
-                    [step.terminalTo, step.end, index === shape.steps.length - 1 ? onward : '환승 버스 하차']
+                    [step.terminalFrom, step.start, index === 0 ? access : '환승 승차'],
+                    [step.terminalTo, step.end, index === shape.steps.length - 1 ? onward : '환승 하차']
                 ]) {
                     if (point) terminals.set(point.latitude + ',' + point.longitude, {point, name, label});
                 }

@@ -19,8 +19,9 @@ class OdsayRoutesTest {
             BigDecimal.valueOf(4), 20, 0, new Fare(BigDecimal.TEN, BigDecimal.ONE, null),
             Source.UNCONFIRMED, checkedAt);
 
+    /** 한 번의 도시 간 응답에서 버스와 열차를 골라 기존 카카오 대중교통과 함께 반환합니다. */
     @Test
-    void addsIntercityAndExpressBusesAlongsideKakaoTransit() {
+    void addsTrainsAndBusesAlongsideKakaoTransit() {
         var from = new Place("seoul", "서울", 37.57, 126.98);
         var to = new Place("gangwon", "강릉", 37.75, 128.89);
         var response = json.readTree("""
@@ -32,11 +33,20 @@ class OdsayRoutesTest {
                    "subPath":[{"trafficType":6,"startName":"동서울터미널","endName":"강릉시외버스터미널",
                     "sectionTime":165,"distance":205000,"startX":"127.09","startY":37.54,
                     "endX":128.89,"endY":37.75}]},
-                  {"pathType":11,"info":{"totalTime":110,"totalPayment":28000,"totalDistance":220000}}]}}
+                  {"pathType":11,"info":{"totalTime":110,"totalPayment":28000,"totalDistance":220000},
+                   "subPath":[{"trafficType":4,"trainType":1,"startName":"청량리역","endName":"강릉역",
+                    "sectionTime":110,"distance":220000,"startX":127.048,"startY":37.58,"endX":128.899,"endY":37.765}]},
+                  {"pathType":11,"info":{"totalTime":140,"totalPayment":40000,"totalDistance":285000},
+                   "subPath":[{"trafficType":4,"trainType":8,"startName":"수서역","endName":"부산역"}]},
+                  {"pathType":11,"info":{"totalTime":210,"totalDistance":220000},
+                   "subPath":[{"trafficType":4,"trainType":3,"startName":"청량리역","endName":"강릉역"}]},
+                  {"pathType":11,"info":{"totalTime":45,"totalPayment":10000,"totalDistance":44000},
+                   "subPath":[{"trafficType":6,"startName":"경로 분류 오류","endName":"경로 분류 오류"}]}]}}
                 """);
-        var buses = OdsayRoutes.readIntercityBuses(from, to, response, checkedAt);
-        assertEquals(List.of(Mode.EXPRESS_BUS, Mode.INTERCITY_BUS), buses.stream().map(Segment::mode).toList());
-        var intercity = buses.get(1);
+        var intercityRoutes = OdsayRoutes.readIntercity(from, to, response, checkedAt);
+        assertEquals(List.of(Mode.EXPRESS_BUS, Mode.INTERCITY_BUS, Mode.KTX, Mode.SRT, Mode.TRAIN),
+                intercityRoutes.stream().map(Segment::mode).toList());
+        var intercity = intercityRoutes.get(1);
         assertEquals(165, intercity.minutes());
         assertEquals(BigDecimal.valueOf(19500), intercity.fare().adult());
         assertNull(intercity.fare().child());
@@ -44,9 +54,19 @@ class OdsayRoutesTest {
         assertEquals("강릉시외버스터미널", intercity.boardings().get(0).end());
         assertEquals(new RoutePoint(37.54, 127.09), intercity.boardings().get(0).terminalFrom());
         assertEquals(new RoutePoint(37.75, 128.89), intercity.boardings().get(0).terminalTo());
-        assertNull(buses.get(0).boardings().get(0).terminalFrom());
-        assertNull(buses.get(0).boardings().get(0).terminalTo());
+        assertNull(intercityRoutes.get(0).boardings().get(0).terminalFrom());
+        assertNull(intercityRoutes.get(0).boardings().get(0).terminalTo());
         assertTrue(intercity.geometry().isEmpty());
+        var ktx = intercityRoutes.get(2);
+        assertEquals(110, ktx.minutes());
+        assertEquals(BigDecimal.valueOf(28000), ktx.fare().adult());
+        assertNull(ktx.fare().child());
+        assertEquals("청량리역", ktx.boardings().get(0).start());
+        assertEquals("강릉역", ktx.boardings().get(0).end());
+        assertEquals(new RoutePoint(37.58, 127.048), ktx.boardings().get(0).terminalFrom());
+        assertEquals(new RoutePoint(37.765, 128.899), ktx.boardings().get(0).terminalTo());
+        assertEquals(List.of("무궁화"), intercityRoutes.get(4).boardings().get(0).lines());
+        assertNull(intercityRoutes.get(4).fare());
 
         var odsay = mock(OdsayRoutes.class);
         var kakao = mock(KakaoMapRoutes.class);
@@ -54,10 +74,10 @@ class OdsayRoutesTest {
         when(road.enrich(anyList())).thenAnswer(call -> call.getArgument(0));
         when(kakao.transit(from, to)).thenReturn(List.of(new Segment(from, to, Mode.CITY_BUS,
                 BigDecimal.TEN, 20, 0, null, Source.KAKAO_ROUTING, checkedAt)));
-        when(odsay.intercityBuses(from, to)).thenReturn(buses);
+        when(odsay.intercity(from, to)).thenReturn(intercityRoutes);
         var lookup = new RouteLookup(odsay, road, kakao);
         var options = lookup.options("seoul", "gangwon", from, to).get(0);
-        assertEquals(List.of(Mode.CITY_BUS, Mode.CAR, Mode.TAXI, Mode.EXPRESS_BUS, Mode.INTERCITY_BUS),
+        assertEquals(List.of(Mode.CITY_BUS, Mode.CAR, Mode.TAXI, Mode.EXPRESS_BUS, Mode.INTERCITY_BUS, Mode.KTX, Mode.SRT, Mode.TRAIN),
                 options.stream().map(Segment::mode).toList());
         verify(odsay, never()).enrich(anyList());
     }

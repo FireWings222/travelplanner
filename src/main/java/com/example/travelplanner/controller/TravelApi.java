@@ -99,7 +99,7 @@ public class TravelApi {
         return mapRoutes.walkingGeometry(new RoutePoint(fromLat, fromLng), new RoutePoint(toLat, toLng));
     }
 
-    /** 선택한 시외버스의 터미널과 실제 여행지 사이에 지도에 그릴 수 있는 연결 경로를 조회합니다. */
+    /** 선택한 열차역 또는 버스터미널과 실제 여행지 사이의 지도 경로를 조회합니다. */
     @GetMapping("/routes/terminal-access")
     public List<Segment> terminalAccess(@RequestParam double fromLat, @RequestParam double fromLng,
                                         @RequestParam double toLat, @RequestParam double toLng) {

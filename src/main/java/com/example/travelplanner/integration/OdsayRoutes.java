@@ -55,11 +55,11 @@ public class OdsayRoutes {
         return response == null ? samples : apply(samples, response, Instant.now());
     }
 
-    /** 도시 간 버스를 시내 대중교통 조회와 별도로 찾습니다. */
-    List<Segment> intercityBuses(Place from, Place to) {
+    /** 한 번의 도시 간 조회에서 열차와 시외·고속버스를 찾습니다. */
+    List<Segment> intercity(Place from, Place to) {
         if (apiKey.isEmpty() || Thread.currentThread().isInterrupted()) return List.of();
         JsonNode response = search(from, to, 1);
-        return response == null ? List.of() : readIntercityBuses(from, to, response, Instant.now());
+        return response == null ? List.of() : readIntercity(from, to, response, Instant.now());
     }
 
     private JsonNode search(Place from, Place to, int searchType) {
@@ -67,18 +67,24 @@ public class OdsayRoutes {
                 + "&EX=" + to.longitude() + "&EY=" + to.latitude() + "&SearchType=" + searchType);
     }
 
-    /** ODsay 도시 간 버스 응답에서 터미널 간 요약과 탑승 순서를 읽습니다. */
-    static List<Segment> readIntercityBuses(Place from, Place to, JsonNode response, Instant checkedAt) {
+    /** ODsay 도시 간 응답에서 역·터미널 사이의 시간, 운임과 탑승 순서를 읽습니다. */
+    static List<Segment> readIntercity(Place from, Place to, JsonNode response, Instant checkedAt) {
         JsonNode result = response.path("result");
         if (result.path("searchType").asInt(-1) != 1) return List.of();
         Map<Mode, Segment> choices = new LinkedHashMap<>();
         for (JsonNode path : result.path("path")) {
-            if (path.path("pathType").asInt(-1) != 12) continue;
+            // 11은 열차, 12는 시외·고속버스입니다. 항공과 수단이 섞인 경로는 이 비교 대상에서 제외합니다.
+            int pathType = path.path("pathType").asInt(-1);
+            if (pathType != 11 && pathType != 12) continue;
+            boolean train = pathType == 11;
             List<Boarding> boardings = new ArrayList<>();
             for (JsonNode leg : path.path("subPath")) {
-                Mode mode = switch (leg.path("trafficType").asInt(-1)) {
-                    case 5 -> Mode.EXPRESS_BUS;
-                    case 6 -> Mode.INTERCITY_BUS;
+                int trainType = leg.path("trainType").asInt(-1);
+                int trafficType = leg.path("trafficType").asInt(-1);
+                Mode mode = switch (trafficType) {
+                    case 4 -> train ? trainMode(trainType) : null;
+                    case 5 -> train ? null : Mode.EXPRESS_BUS;
+                    case 6 -> train ? null : Mode.INTERCITY_BUS;
                     default -> null;
                 };
                 String departure = leg.path("startName").asText("");
@@ -89,18 +95,21 @@ public class OdsayRoutes {
                 }
                 int minutes = leg.path("sectionTime").asInt(-1);
                 int meters = leg.path("distance").asInt(-1);
-                boardings.add(new Boarding(mode, List.of(), departure, arrival,
+                boardings.add(new Boarding(mode, mode == Mode.TRAIN ? trainName(trainType) : List.of(), departure, arrival,
                         minutes < 0 ? null : minutes, meters < 0 ? null : meters, List.of(), null, null,
                         terminalPoint(leg, "start"), terminalPoint(leg, "end")));
             }
             if (boardings.isEmpty()) continue;
-            Mode mode = boardings.stream().anyMatch(boarding -> boarding.mode() == Mode.INTERCITY_BUS)
-                    ? Mode.INTERCITY_BUS : Mode.EXPRESS_BUS;
+            Mode first = boardings.get(0).mode();
+            // 열차 종류가 섞인 경로는 기차로 묶되, 탑승 순서에는 각 열차의 종류를 남깁니다.
+            boolean mixed = boardings.stream().anyMatch(boarding -> boarding.mode() != first);
+            Mode mode = mixed ? (train ? Mode.TRAIN : Mode.INTERCITY_BUS) : first;
             JsonNode info = path.path("info");
             int minutes = info.path("totalTime").asInt(-1);
             int meters = info.path("totalDistance").asInt(-1);
             int payment = info.path("totalPayment").asInt(-1);
             if (minutes <= 0 || meters <= 0) continue;
+            // 역·터미널 간 편도 일반 운임만 사용합니다. 응답에 없는 아동 운임은 비워 둡니다.
             Fare fare = payment < 0 ? null : new Fare(BigDecimal.valueOf(payment), null, null);
             choices.putIfAbsent(mode, new Segment(from, to, mode, BigDecimal.valueOf(meters, 3), minutes,
                     boardings.size() - 1, fare, Source.ODSAY, checkedAt, null, List.copyOf(boardings)));
@@ -108,7 +117,29 @@ public class OdsayRoutes {
         return List.copyOf(choices.values());
     }
 
-    /** ODsay의 X는 경도, Y는 위도입니다. 누락되거나 0으로 채워진 좌표로 터미널을 표시하지 않습니다. */
+    /** ODsay 열차 코드에서 KTX와 SRT는 별도 후보로 분류하고 나머지는 기차로 묶습니다. */
+    private static Mode trainMode(int type) {
+        return switch (type) {
+            case 1 -> Mode.KTX;
+            case 8 -> Mode.SRT;
+            default -> Mode.TRAIN;
+        };
+    }
+
+    /** 일반열차 후보의 탑승 단계에서 표시할 열차 종류입니다. */
+    private static List<String> trainName(int type) {
+        return switch (type) {
+            case 2 -> List.of("새마을");
+            case 3 -> List.of("무궁화");
+            case 4 -> List.of("누리로");
+            case 5 -> List.of("통근");
+            case 6 -> List.of("ITX");
+            case 7 -> List.of("ITX-청춘");
+            default -> List.of();
+        };
+    }
+
+    /** ODsay의 X는 경도, Y는 위도입니다. 누락되거나 0으로 채워진 좌표는 생략합니다. */
     private static RoutePoint terminalPoint(JsonNode leg, String prefix) {
         RoutePoint point = new RoutePoint(leg.path(prefix + "Y").asDouble(Double.NaN),
                 leg.path(prefix + "X").asDouble(Double.NaN));
@@ -178,7 +209,7 @@ public class OdsayRoutes {
                 return json.readTree(response.body());
             }
         } catch (IOException | JacksonException ignored) {
-            // A failed lookup leaves the labeled sample options available. The request URL contains the key.
+            // 조회에 실패하면 기존 후보를 유지합니다. 키가 포함된 요청 주소는 로그에 남기지 않습니다.
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
         }

@@ -28,6 +28,7 @@ TravelPlanner 화면 디자인에 관한 조사와 결정 기록이다. 화면�
 | 0016 | [여행 조건을 오른쪽 상단에 확대 배치](decisions/0016-home-trip-panel.md) | 결정 | 2026-11-24 |
 | 0017 | [시외버스 터미널 연결과 접근 경로 표시](decisions/0017-intercity-terminal-paths.md) | 결정 | 2026-11-24 |
 | 0018 | [날짜별 의견 코스를 독립 편집](decisions/0018-daily-route-opinions.md) | 결정 | 2026-11-24 |
+| 0019 | [이동 경로에 열차 후보 표시](decisions/0019-intercity-trains.md) | 결정 | 2026-11-25 |
 
 ## 시안 목록
 

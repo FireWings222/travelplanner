@@ -1,5 +1,5 @@
 import {$, $$, api, read, write, e, busy, status, showError, modes, won, minutes, distance,
-    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader, transitSteps, isIntercityBus} from './common.js';
+    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader, transitSteps, intercityStopLabel} from './common.js';
 import {createMap, drawDays, dayPin, dayColor} from './route-map.js';
 import {connectPlanTours} from './plan-tours.js';
 
@@ -132,9 +132,10 @@ export async function init(cities) {
             try { result = await api('/routes/compare', {trip, legs: read('legs') ?? {}}); }
             // 저장된 구간 선택을 적용한 요청이 실패하면 같은 여행의 기본 경로로 다시 시도합니다.
             catch { result = await api('/routes/compare', {trip}); }
+            // 이동 경로에서 선택한 도시 간 후보의 견적 범위를 현지 일정에서도 유지합니다.
             const unknown = result.selected.cost.missing.length > 0;
             transport = {value: unknown && Number(result.roundTripKrw) === 0 ? null : result.roundTripKrw, partial: unknown,
-                terminalRoute: result.selected.sections.some(({chosen}) => isIntercityBus(chosen.mode))};
+                boardingPoint: result.selected.sections.map(({chosen}) => intercityStopLabel(chosen.mode)).find(Boolean)};
         } catch {
             transport = null;
         }
@@ -282,7 +283,7 @@ export async function init(cities) {
             budget: plan.trip.budget,
             open: estimate.classList.contains('open'),
             rows: [
-                {key: 'transport', label: transport?.terminalRoute ? '터미널 간 왕복 (편도의 2배)' : '왕복 교통 (편도의 2배)',
+                {key: 'transport', label: transport?.boardingPoint ? transport.boardingPoint + ' 간 왕복 (편도의 2배)' : '왕복 교통 (편도의 2배)',
                     value: transport?.value ?? null, partial: Boolean(transport?.partial),
                     text: transport === undefined ? '계산 중' : '미확인'},
                 {key: 'local', label: (plan.days.some(day => day.opinions?.length) ? '기본 현지 일정 ' : '현지 일정 ')

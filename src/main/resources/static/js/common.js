@@ -142,8 +142,11 @@ export function itemRow(item) {
 }
 
 /** 지도 선과 이동 내역이 같은 교통수단 색을 사용하도록 단계별 분류를 공유합니다. */
-export const transitStepKind = mode => ({WALK: 'walk', CITY_BUS: 'bus', SUBWAY: 'rail', EXPRESS_BUS: 'bus', INTERCITY_BUS: 'bus'}[mode]);
-export const isIntercityBus = mode => mode === 'EXPRESS_BUS' || mode === 'INTERCITY_BUS';
+export const transitStepKind = mode => ({WALK: 'walk', CITY_BUS: 'bus', SUBWAY: 'rail', EXPRESS_BUS: 'bus',
+    INTERCITY_BUS: 'bus', KTX: 'rail', SRT: 'rail', TRAIN: 'rail'}[mode]);
+// 도시 간 교통의 요금·시간은 실제 출발지와 목적지 대신 승하차 지점 사이를 기준으로 표시합니다.
+export const intercityStopLabel = mode => ({EXPRESS_BUS: '터미널', INTERCITY_BUS: '터미널',
+    KTX: '역', SRT: '역', TRAIN: '역'}[mode]);
 
 // 공급자가 반환한 단계 순서대로 도보와 탑승을 함께 표시합니다. 역이나 정류장 이름이 없으면 미확인입니다.
 export function transitSteps(segment, listClass = 'boardings') {
@@ -196,7 +199,7 @@ export function legCards(sections) {
 export function kakaoDirectionsUrl(segment) {
     const mode = {
         CITY_BUS: 'traffic', SUBWAY: 'traffic', BUS_SUBWAY: 'traffic', AIRPORT_RAIL: 'traffic',
-        AIRPORT_BUS: 'traffic', TRAIN: 'traffic', EXPRESS_BUS: 'traffic', INTERCITY_BUS: 'traffic',
+        AIRPORT_BUS: 'traffic', KTX: 'traffic', SRT: 'traffic', TRAIN: 'traffic', EXPRESS_BUS: 'traffic', INTERCITY_BUS: 'traffic',
         CAR: 'car', TAXI: 'car', RENTAL_CAR: 'car', WALK: 'walk'
     }[segment.mode];
     if (!mode) return '';

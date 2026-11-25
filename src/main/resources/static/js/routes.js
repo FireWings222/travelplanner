@@ -1,5 +1,5 @@
 import {$, $$, api, read, write, e, modes, won, minutes, distance, status, showError,
-    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader, transitSteps, isIntercityBus} from './common.js';
+    kakaoDirectionsUrl, modeIcon, estimateCard, connectEstimate, animateValues, renderHeader, transitSteps, intercityStopLabel} from './common.js';
 import {createMap, drawJourney} from './route-map.js';
 
 // 서버 추천 이름을 경로 카드 꼬리표에 쓰는 짧은 이름으로 바꿉니다. 목록에 없는 추천은 서버 이름을 그대로 씁니다.
@@ -83,13 +83,13 @@ export async function init(cities) {
     }
     const sameModes = (a, b) => a.length === b.length && a.every((mode, i) => mode === b[i]);
 
-    // 선택한 경로의 교통수단, 구간, 시간과 거리, 요금, 탑승 순서와 길찾기 링크를 표시합니다.
+    // 도시 간 열차와 버스는 탑승 내역의 역이나 터미널 이름으로 시간과 요금의 범위를 표시합니다.
     function legRows(sections) {
         return sections.map(section => {
             const chosen = section.chosen;
-            const terminalRoute = isIntercityBus(chosen.mode);
-            const start = terminalRoute ? chosen.boardings[0]?.start : chosen.from.name;
-            const end = terminalRoute ? chosen.boardings.at(-1)?.end : chosen.to.name;
+            const boardingRoute = intercityStopLabel(chosen.mode);
+            const start = boardingRoute ? chosen.boardings[0]?.start : chosen.from.name;
+            const end = boardingRoute ? chosen.boardings.at(-1)?.end : chosen.to.name;
             const link = kakaoDirectionsUrl(chosen);
             const unknown = section.cost.missing.length > 0;
             return '<div class="leg">' + modeIcon(chosen.mode, 20)
@@ -109,20 +109,21 @@ export async function init(cities) {
         const cost = option.journey.cost;
         const picks = tags(option);
         const unknown = cost.missing.length > 0;
-        const terminalRoute = option.modes.some(isIntercityBus);
+        const boardingPoint = option.modes.map(intercityStopLabel).find(Boolean);
         const price = unknown && Number(cost.totalKrw) === 0 ? '미확인' : won(cost.totalKrw);
         return '<article class="routecard' + (on ? ' on' : '') + '" data-option="' + e(option.modes.join('/')) + '">'
             + '<button type="button" class="rc-main" aria-pressed="' + on + '" data-apply="' + e(option.id) + '">'
             + '<span class="rc-title">' + e(option.modes.map(mode => modes[mode] ?? mode).join(', ')) + '</span>'
             + '<span class="rc-price num' + (unknown ? ' none' : '') + '">' + price + '</span>'
             + '<span class="rc-meta"><span class="icons">' + option.modes.map(mode => modeIcon(mode)).join('') + '</span>'
-            + '<span class="num">' + (terminalRoute ? '터미널 간 ' : '') + minutes(option.journey.minutes) + '</span>'
+            + '<span class="num">' + (boardingPoint ? e(boardingPoint) + ' 간 ' : '') + minutes(option.journey.minutes) + '</span>'
             + (picks.length ? '<span class="tag' + (picks.includes('최저가') ? ' low' : '') + '">' + e(picks.join(', ')) + '</span>' : '') + '</span>'
             + '<span class="rc-sub num">' + (unknown ? '<span class="warntext">요금 일부 미확인</span>' : '1인 ' + won(cost.perPersonKrw)) + '</span>'
             + '</button>'
             + (on ? '<div class="rc-legs">' + legRows(result.selected.sections)
                 + '<p class="rc-note">' + e(costNote(result.selected.cost)) + '</p>'
-                + (terminalRoute ? '<p class="rc-note">점선은 터미널 간 연결을 표시합니다. 터미널과 여행지 사이의 이동 시간과 교통비는 별도입니다.</p>' : '') + '</div>' : '')
+                + (boardingPoint ? '<p class="rc-note">점선은 ' + e(boardingPoint)
+                    + ' 간 연결을 표시합니다. 여행지와 승하차 지점 사이의 이동 시간과 교통비는 별도입니다.</p>' : '') + '</div>' : '')
             + '</article>';
     }
 
@@ -130,13 +131,13 @@ export async function init(cities) {
     function renderEstimate() {
         const selected = result.selected;
         const transportUnknown = selected.cost.missing.length > 0;
-        const terminalRoute = selected.sections.some(({chosen}) => isIntercityBus(chosen.mode));
+        const boardingPoint = selected.sections.map(({chosen}) => intercityStopLabel(chosen.mode)).find(Boolean);
         estimate.hidden = false;
         estimate.innerHTML = estimateCard({
             budget: trip.budget,
             open: estimate.classList.contains('open'),
             rows: [
-                {key: 'transport', label: terminalRoute ? '터미널 간 왕복 (편도의 2배)' : '왕복 교통 (편도의 2배)', partial: transportUnknown,
+                {key: 'transport', label: boardingPoint ? boardingPoint + ' 간 왕복 (편도의 2배)' : '왕복 교통 (편도의 2배)', partial: transportUnknown,
                     value: transportUnknown && Number(result.roundTripKrw) === 0 ? null : result.roundTripKrw},
                 {key: 'local', label: '현지 일정', value: local?.value ?? null, partial: Boolean(local?.partial),
                     text: local === undefined ? '계산 중' : '만들기 전'},

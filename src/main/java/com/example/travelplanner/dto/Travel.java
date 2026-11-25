@@ -63,7 +63,7 @@ public final class Travel {
     }
 
     public record Price(@NotNull LocalDate from, @NotNull LocalDate to, @Valid @NotNull Fare fare) {}
-    /** path는 실제 경로 좌표입니다. 시외버스는 별도의 승차·하차 터미널 좌표를 제공합니다. */
+    /** path는 실제 경로 좌표입니다. 도시 간 교통은 terminalFrom과 terminalTo에 승차·하차 지점을 담습니다. */
     public record Boarding(Mode mode, List<String> lines, String start, String end, Integer minutes,
                            Integer meters, List<RoutePoint> path, RoutePoint walkFrom, RoutePoint walkTo,
                            RoutePoint terminalFrom, RoutePoint terminalTo) {
